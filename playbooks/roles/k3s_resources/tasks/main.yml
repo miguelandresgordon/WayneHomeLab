@@ -1,0 +1,14 @@
+---
+- name: Create waynehomelab namespace
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: waynehomelab
+
+- name: Deploy git-sync daemon
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('file', 'roles/k3s_resources/files/git-sync-deployment.yml') }}"

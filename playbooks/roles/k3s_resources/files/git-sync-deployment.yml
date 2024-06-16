@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: git-sync
+  namespace: waynehomelab
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: git-sync
+  template:
+    metadata:
+      labels:
+        app: git-sync
+    spec:
+      containers:
+        - name: git-sync
+          image: k8s.gcr.io/git-sync/git-sync:v3.1.7
+          env:
+            - name: GIT_SYNC_REPO
+              value: "git@github.com:miguelandresgordon/WayneHomeLab.git"
+            - name: GIT_SYNC_BRANCH
+              value: "main"
+            - name: GIT_SYNC_ROOT
+              value: "/git"
+            - name: GIT_SYNC_DEST
+              value: "repo"
+            - name: GIT_SYNC_ONE_TIME

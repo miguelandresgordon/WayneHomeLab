@@ -60,7 +60,7 @@ Setting up a loadbalancer or VIP beforehand to use as the API endpoint is possib
 Start provisioning of the cluster using the following command:
 
 ```bash
-ansible-playbook playbook/site.yml -i inventory.yml
+ansible-playbook playbooks/site.yml -i inventory.yml
 ```
 
 ## Upgrading

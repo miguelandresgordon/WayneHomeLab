@@ -1,0 +1,54 @@
+name: Deploy Cluster
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Perform git pull
+      run: |
+        cd ~/WayneHomeLab
+        git fetch origin
+        git pull --rebase origin main
+
+    - name: Read Python version from requirements.yml
+      run: echo "PYTHON_VERSION=$(cat requirements.yml | grep 'python_version:' | awk '{print $2}')" >> $GITHUB_ENV
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install dependencies
+      run: |
+        pip install ansible
+
+    - name: Set environment variables for token and private key
+      run: |
+        echo "K3S_TOKEN=${{ secrets.K3S_TOKEN }}" >> $GITHUB_ENV
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > /home/runner/.ssh/id_rsa
+        chmod 600 /home/runner/.ssh/id_rsa
+        echo "PRIV_KEY_PATH=/home/runner/.ssh/id_rsa" >> $GITHUB_ENV
+        echo "NODE1_HOST=${{ secrets.NODE1_HOST }}" >> $GITHUB_ENV
+        echo "NODE1_USER=${{ secrets.NODE1_USER }}" >> $GITHUB_ENV
+        echo "NODE2_HOST=${{ secrets.NODE2_HOST }}" >> $GITHUB_ENV
+        echo "NODE2_USER=${{ secrets.NODE2_USER }}" >> $GITHUB_ENV
+
+    - name: Run Ansible Playbook
+      env:
+        K3S_TOKEN: ${{ secrets.K3S_TOKEN }}
+        PRIV_KEY_PATH: /home/runner/.ssh/id_rsa
+        NODE1_HOST: ${{ secrets.NODE1_HOST }}
+        NODE1_USER: ${{ secrets.NODE1_USER }}
+        NODE2_HOST: ${{ secrets.NODE2_HOST }}
+        NODE2_USER: ${{ secrets.NODE2_USER }}
+      run: |
+        ansible-playbook playbooks/site.yml -i inventory.yml
