@@ -1,0 +1,8 @@
+---
+- hosts: all
+  tasks:
+    - name: Pull latest changes from git
+      ansible.builtin.git:
+        repo: 'git@github.com:miguelandresgordon/WayneHomeLab.git'
+        dest: '~'
+        update: yes
