@@ -1,0 +1,6 @@
+---
+- name: Install k3s agent
+  shell: curl -sfL https://get.k3s.io | K3S_URL=https://{{ groups['master'][0] }}:6443 K3S_TOKEN={{ lookup('file', '/var/lib/rancher/k3s/server/node-token') }} sh -
+  args:
+    creates: /usr/local/bin/k3s-agent
+  become: true

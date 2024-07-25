@@ -1,0 +1,10 @@
+---
+- name: Ensure required packages are installed
+  apt:
+    name:
+      - curl
+      - socat
+      - conntrack
+      - ipset
+      - software-properties-common
+    state: present

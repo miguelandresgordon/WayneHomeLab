@@ -1,0 +1,23 @@
+name: Sync Nodes
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  update-nodes:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Run Ansible Playbook
+        uses: actions/checkout@v2
+        with:
+          repository: miguelandresgordon/WayneHomeLab.git
+          path: ansible
+
+      - name: Run Ansible Playbook
+        run: |
+          ansible-playbook ansible/playbooks/update-nodes.yml -i ansible/inventory/hosts.ini --key-file ~/.ssh/id_rsa
