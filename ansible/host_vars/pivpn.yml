@@ -1,3 +1,0 @@
----
-ansible_user: pivpn
-node_role: node
