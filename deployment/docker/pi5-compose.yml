@@ -1,0 +1,176 @@
+version: '3.8'
+
+# Docker Compose para Raspberry Pi 5
+# Servicios: Home Assistant, Charo Core, PostgreSQL, Redis, Piper TTS
+
+services:
+  #################################
+  # PostgreSQL Database
+  #################################
+  postgres:
+    image: postgres:15-alpine
+    container_name: charo-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: homeassistant
+      POSTGRES_USER: homeassistant
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - charo_private
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U homeassistant"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  #################################
+  # Redis Cache
+  #################################
+  redis:
+    image: redis:7-alpine
+    container_name: charo-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    networks:
+      - charo_private
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  #################################
+  # Home Assistant
+  #################################
+  homeassistant:
+    image: ghcr.io/home-assistant/home-assistant:stable
+    container_name: charo-homeassistant
+    restart: unless-stopped
+    privileged: true
+    network_mode: host
+    environment:
+      TZ: Europe/Madrid
+    volumes:
+      - ../../services/home-assistant/config:/config
+      - /run/dbus:/run/dbus:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # Nota: network_mode: host permite descubrimiento automático de dispositivos
+    # Si usas bridge, necesitarás exponer puerto 8123
+
+  #################################
+  # Charo Core - Voice Controller
+  #################################
+  charo-core:
+    build:
+      context: ../../services/charo-core
+      dockerfile: Dockerfile
+    container_name: charo-core
+    restart: unless-stopped
+    environment:
+      # Home Assistant
+      HOME_ASSISTANT_HOST: ${HOME_ASSISTANT_HOST:-localhost}
+      HOME_ASSISTANT_TOKEN: ${HOME_ASSISTANT_TOKEN}
+
+      # Database
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: homeassistant
+      POSTGRES_USER: homeassistant
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+
+      # RunPod
+      RUNPOD_API_KEY: ${RUNPOD_API_KEY}
+      RUNPOD_ENDPOINT_ID: ${RUNPOD_ENDPOINT_ID}
+
+      # Audio Service
+      AUDIO_SERVICE_URL: ${AUDIO_SERVICE_URL:-http://192.168.1.XXX:8081}
+
+      # TTS
+      PIPER_HOST: piper-tts
+      PIPER_PORT: 5000
+
+      # General
+      TZ: Europe/Madrid
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    ports:
+      - "8080:8080"  # API HTTP
+      - "8765:8765"  # WebSocket para audio streaming
+    volumes:
+      - charo_data:/app/data
+      - charo_logs:/app/logs
+    networks:
+      - charo_public
+      - charo_private
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      piper-tts:
+        condition: service_started
+
+  #################################
+  # Piper TTS - Text to Speech
+  #################################
+  piper-tts:
+    image: rhasspy/piper:latest
+    container_name: charo-piper-tts
+    restart: unless-stopped
+    environment:
+      TZ: Europe/Madrid
+    command: >
+      --model /models/es_ES-davefx-medium.onnx
+      --output-dir /tmp
+      --port 5000
+    volumes:
+      - piper_models:/models
+      - piper_cache:/tmp
+    networks:
+      - charo_private
+    # Nota: En el primer inicio, descargará el modelo es_ES-davefx-medium
+    # Tamaño aprox: 50MB
+
+#################################
+# Networks
+#################################
+networks:
+  charo_public:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+  charo_private:
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16
+
+#################################
+# Volumes
+#################################
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  charo_data:
+    driver: local
+  charo_logs:
+    driver: local
+  piper_models:
+    driver: local
+  piper_cache:
+    driver: local

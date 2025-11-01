@@ -149,7 +149,41 @@ ping 192.168.1.101  # Pi5
 
 ## Instalación Raspberry Pi 5
 
-### 1. Dependencias Base
+### Opción A: Instalación Automática (Recomendado)
+
+```bash
+ssh pi@192.168.1.101
+
+# Clonar repositorio temporalmente
+git clone https://github.com/tu-usuario/WayneHomeLab.git /tmp/WayneHomeLab
+cd /tmp/WayneHomeLab
+git checkout charo
+
+# Ejecutar script de instalación
+sudo deployment/scripts/install_pi5.sh
+
+# El script hará automáticamente:
+# - Actualizar sistema
+# - Configurar SSD (si está disponible)
+# - Instalar Docker y Docker Compose
+# - Configurar Docker para usar SSD
+# - Clonar repositorio en ubicación final
+# - Copiar archivos .env
+# - Construir servicios Docker
+# - Configurar auto-inicio con systemd
+# - Iniciar todos los servicios
+```
+
+**IMPORTANTE**: Después de la instalación automática:
+1. Editar `/opt/charo/.env` (o `/mnt/ssd/charo/.env` si usas SSD) con tus valores reales
+2. Editar `/opt/charo/services/home-assistant/config/secrets.yaml` con tus credenciales
+3. Reiniciar servicios: `cd /opt/charo/deployment/docker && docker compose -f pi5-compose.yml restart`
+
+### Opción B: Instalación Manual
+
+Si prefieres tener más control sobre cada paso:
+
+#### 1. Dependencias Base
 
 ```bash
 ssh pi@192.168.1.101
@@ -272,7 +306,59 @@ chmod +x deployment/scripts/install_pi5.sh
 
 ## Instalación Raspberry Pi 4
 
-### 1. Dependencias Base
+### Opción A: Instalación Automática (Recomendado)
+
+```bash
+ssh pi@192.168.1.100
+
+# Clonar repositorio temporalmente
+git clone https://github.com/tu-usuario/WayneHomeLab.git /tmp/WayneHomeLab
+cd /tmp/WayneHomeLab
+git checkout charo
+
+# Ejecutar script de instalación
+sudo deployment/scripts/install_pi4.sh
+
+# El script hará automáticamente:
+# - Actualizar sistema
+# - Instalar Docker y Docker Compose
+# - Configurar PulseAudio en modo system
+# - Configurar Bluetooth
+# - Emparejar altavoz Bluetooth (interactivo)
+# - Probar micrófono USB
+# - Clonar repositorio en ubicación final
+# - Copiar archivos .env
+# - Construir audio-service
+# - Configurar auto-inicio con systemd
+# - Iniciar servicio de audio
+```
+
+**IMPORTANTE**: Después de la instalación automática:
+1. Editar `/opt/charo/.env` con:
+   - `CHARO_CORE_HOST=192.168.1.101` (IP de la Pi5)
+   - `BLUETOOTH_MAC=[MAC de tu altavoz]` (obtenida durante el emparejamiento)
+2. Reiniciar servicio: `cd /opt/charo/deployment/docker && docker compose -f pi4-compose.yml restart`
+
+### Script de Configuración de Bluetooth
+
+Si necesitas reconfigurar el Bluetooth después:
+
+```bash
+cd /opt/charo
+sudo deployment/scripts/setup_bluetooth.sh
+
+# Este script te ayudará a:
+# - Escanear dispositivos Bluetooth cercanos
+# - Emparejar tu altavoz UE BOOM 2
+# - Configurar PulseAudio
+# - Obtener la MAC address para el .env
+```
+
+### Opción B: Instalación Manual
+
+Si prefieres tener más control sobre cada paso:
+
+#### 1. Dependencias Base
 
 ```bash
 ssh pi@192.168.1.100

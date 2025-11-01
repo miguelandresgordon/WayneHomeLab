@@ -1,0 +1,81 @@
+version: '3.8'
+
+# Docker Compose para Raspberry Pi 4
+# Servicios: Audio Service (Wake Word, VAD, Capture, Bluetooth)
+
+services:
+  #################################
+  # Audio Service - Wake Word & Capture
+  #################################
+  audio-service:
+    build:
+      context: ../../services/audio-service
+      dockerfile: Dockerfile
+    container_name: charo-audio-service
+    restart: unless-stopped
+    privileged: true  # Necesario para acceso a audio devices
+    environment:
+      # Voice Controller Connection
+      CHARO_CORE_HOST: ${CHARO_CORE_HOST}  # IP de la Pi5
+      CHARO_CORE_WS_PORT: 8765
+
+      # Audio Configuration
+      AUDIO_INPUT_DEVICE: ${AUDIO_INPUT_DEVICE:-plughw:1,0}  # USB Webcam
+      AUDIO_OUTPUT_DEVICE: ${AUDIO_OUTPUT_DEVICE:-bluealsa}  # Bluetooth Speaker
+      SAMPLE_RATE: 16000
+      CHANNELS: 1
+      CHUNK_SIZE: 1024
+
+      # Wake Word Configuration
+      WAKE_WORD_MODEL: /models/wake_word.onnx
+      WAKE_WORD_THRESHOLD: 0.5
+      WAKE_WORD_PHRASE: "oye charo"
+
+      # VAD Configuration
+      VAD_THRESHOLD: 0.5
+      VAD_MIN_SPEECH_DURATION: 0.3  # segundos
+      VAD_MAX_SPEECH_DURATION: 10.0  # segundos
+      VAD_SILENCE_DURATION: 1.5  # segundos de silencio para terminar
+
+      # Bluetooth Speaker
+      BLUETOOTH_MAC: ${BLUETOOTH_MAC}  # MAC de UE BOOM 2
+      BLUETOOTH_DEVICE_NAME: ${BLUETOOTH_DEVICE_NAME:-UE BOOM 2}
+
+      # General
+      TZ: Europe/Madrid
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    ports:
+      - "8081:8081"  # API HTTP para health check
+    volumes:
+      # Models
+      - audio_models:/models
+      # Audio samples para debug
+      - audio_samples:/app/samples
+      # Logs
+      - audio_logs:/app/logs
+      # Acceso a devices
+      - /dev/snd:/dev/snd
+      - /run/dbus:/run/dbus:ro
+    devices:
+      - /dev/snd  # Audio devices
+    networks:
+      - audio_network
+    # Nota: PulseAudio o ALSA deben estar configurados en el host
+
+#################################
+# Networks
+#################################
+networks:
+  audio_network:
+    driver: bridge
+
+#################################
+# Volumes
+#################################
+volumes:
+  audio_models:
+    driver: local
+  audio_samples:
+    driver: local
+  audio_logs:
+    driver: local

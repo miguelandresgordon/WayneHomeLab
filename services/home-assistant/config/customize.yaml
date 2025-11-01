@@ -1,0 +1,25 @@
+# Entity Customization for Proyecto Charo
+# https://www.home-assistant.io/docs/configuration/customizing-devices/
+
+# Personalización de entidades para mejor visualización e integración con Charo
+
+# Luz Xiaomi
+light.luz_xiaomi:
+  friendly_name: "Luz Xiaomi Salón"
+  icon: mdi:lightbulb
+  assumed_state: false
+
+# TV Sony
+media_player.tv_sony:
+  friendly_name: "TV Sony del Salón"
+  icon: mdi:television
+  assumed_state: false
+
+# Bombillas Antela (Tuya) - se actualizarán cuando estén configuradas
+# light.antela_bulb_1:
+#   friendly_name: "Luz Antela Habitación 1"
+#   icon: mdi:lightbulb-outline
+#
+# light.antela_bulb_2:
+#   friendly_name: "Luz Antela Habitación 2"
+#   icon: mdi:lightbulb-outline

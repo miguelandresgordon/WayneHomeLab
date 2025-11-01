@@ -1,0 +1,40 @@
+# Scenes for Proyecto Charo
+# https://www.home-assistant.io/docs/scene/
+
+# Escena: Cine en casa
+- name: "Cine"
+  icon: mdi:movie-open
+  entities:
+    light.luz_xiaomi:
+      state: off
+    # Antela bulbs se apagarán cuando estén configuradas
+    media_player.tv_sony:
+      state: on
+      source: "Netflix"
+
+# Escena: Lectura
+- name: "Lectura"
+  icon: mdi:book-open-variant
+  entities:
+    light.luz_xiaomi:
+      state: on
+      brightness: 200
+      kelvin: 3500
+
+# Escena: Noche
+- name: "Noche"
+  icon: mdi:weather-night
+  entities:
+    light.luz_xiaomi:
+      state: on
+      brightness: 30
+      kelvin: 2200
+
+# Escena: Fiesta
+- name: "Fiesta"
+  icon: mdi:party-popper
+  entities:
+    light.luz_xiaomi:
+      state: on
+      brightness: 255
+      effect: "disco"
