@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Script de instalación para Raspberry Pi 4 (Audio Node)
+# Script de instalación para Raspberry Pi 3/4 (Audio Node)
 # Configura Docker, PulseAudio, Bluetooth y Audio Service para captura de voz
 #
 # Uso:
@@ -8,8 +8,10 @@
 #   ./install_pi4.sh
 #
 # Requisitos:
+#   - Raspberry Pi 3 Model B o Raspberry Pi 4
 #   - Raspberry Pi OS 64-bit (Debian Bookworm recomendado)
-#   - microSD con al menos 16GB
+#   - microSD con al menos 16GB (para boot)
+#   - HDD/SSD externo (opcional, para almacenamiento de datos)
 #   - Webcam USB con micrófono
 #   - Altavoz Bluetooth (UE BOOM 2 o similar)
 #   - Conexión a Internet
@@ -28,6 +30,7 @@ NC='\033[0m' # No Color
 REPO_URL="https://github.com/tu-usuario/WayneHomeLab.git"
 REPO_BRANCH="main"
 INSTALL_DIR="/opt/charo"
+HDD_MOUNT_POINT="/mnt/hdd"
 
 # Functions
 log_info() {
@@ -233,6 +236,37 @@ test_microphone() {
     log_info "Micrófono funcionando correctamente"
 }
 
+setup_hdd_storage() {
+    log_info "Configurando almacenamiento en HDD..."
+
+    # Check if HDD is mounted
+    if mountpoint -q "$HDD_MOUNT_POINT"; then
+        log_info "HDD detectado en $HDD_MOUNT_POINT"
+
+        # Create directories for Docker data on HDD
+        log_info "Creando directorios de almacenamiento en HDD..."
+        sudo mkdir -p "$HDD_MOUNT_POINT/docker"
+        sudo mkdir -p "$HDD_MOUNT_POINT/charo"
+        sudo mkdir -p "$HDD_MOUNT_POINT/audio-models"
+        sudo mkdir -p "$HDD_MOUNT_POINT/audio-samples"
+        sudo mkdir -p "$HDD_MOUNT_POINT/logs"
+
+        # Set permissions
+        sudo chown -R "$SUDO_USER":"$SUDO_USER" "$HDD_MOUNT_POINT/charo"
+        sudo chown -R "$SUDO_USER":"$SUDO_USER" "$HDD_MOUNT_POINT/audio-models"
+        sudo chown -R "$SUDO_USER":"$SUDO_USER" "$HDD_MOUNT_POINT/audio-samples"
+        sudo chown -R "$SUDO_USER":"$SUDO_USER" "$HDD_MOUNT_POINT/logs"
+
+        # Update INSTALL_DIR to use HDD
+        INSTALL_DIR="$HDD_MOUNT_POINT/charo"
+
+        log_info "Almacenamiento configurado en HDD: $INSTALL_DIR"
+    else
+        log_warn "HDD no detectado en $HDD_MOUNT_POINT"
+        log_warn "Usando almacenamiento en microSD: $INSTALL_DIR"
+    fi
+}
+
 clone_repository() {
     log_info "Clonando repositorio..."
 
@@ -351,7 +385,7 @@ print_next_steps() {
 
 # Main execution
 main() {
-    log_info "Iniciando instalación de Proyecto Charo Audio Service en Raspberry Pi 4..."
+    log_info "Iniciando instalación de Proyecto Charo Audio Service en Raspberry Pi 3/4..."
 
     check_root
     check_raspberry_pi
@@ -361,6 +395,7 @@ main() {
     setup_bluetooth
     detect_audio_devices
     test_microphone
+    setup_hdd_storage  # Configurar HDD si está disponible
     clone_repository
     setup_environment
     build_services
