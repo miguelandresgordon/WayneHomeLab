@@ -304,7 +304,37 @@ chmod +x deployment/scripts/install_pi5.sh
 
 ---
 
-## Instalación Raspberry Pi 4
+## Instalación Raspberry Pi 3/4 (Audio Node)
+
+### Paso 0: Formatear HDD Externo (Opcional pero Recomendado)
+
+Si tienes un HDD/SSD externo, formatealo **antes** de instalar:
+
+```bash
+ssh pi@192.168.1.100  # Pi4 o Pi3
+
+# Clonar repositorio temporalmente
+git clone https://github.com/tu-usuario/WayneHomeLab.git /tmp/WayneHomeLab
+cd /tmp/WayneHomeLab
+git checkout charo
+
+# Formatear HDD (requiere confirmación)
+sudo deployment/scripts/format_hdd.sh
+
+# El script:
+# - Formatea a ext4
+# - Crea punto de montaje en /mnt/hdd
+# - Configura auto-montaje en /etc/fstab
+# - Establece permisos correctos
+```
+
+**Cuando el script pregunte:** Escribe exactamente `SI BORRAR TODO` para confirmar.
+
+**Verificar que funcionó:**
+```bash
+df -h | grep hdd
+# Deberías ver: /dev/sda1  458G  28K  435G  1% /mnt/hdd
+```
 
 ### Opción A: Instalación Automática (Recomendado)
 
@@ -326,7 +356,8 @@ sudo deployment/scripts/install_pi4.sh
 # - Configurar Bluetooth
 # - Emparejar altavoz Bluetooth (interactivo)
 # - Probar micrófono USB
-# - Clonar repositorio en ubicación final
+# - Detectar HDD y configurar almacenamiento
+# - Clonar repositorio (en HDD si está disponible)
 # - Copiar archivos .env
 # - Construir audio-service
 # - Configurar auto-inicio con systemd
@@ -334,7 +365,7 @@ sudo deployment/scripts/install_pi4.sh
 ```
 
 **IMPORTANTE**: Después de la instalación automática:
-1. Editar `/opt/charo/.env` con:
+1. Editar `/opt/charo/.env` o `/mnt/hdd/charo/.env` (si usas HDD) con:
    - `CHARO_CORE_HOST=192.168.1.101` (IP de la Pi5)
    - `BLUETOOTH_MAC=[MAC de tu altavoz]` (obtenida durante el emparejamiento)
 2. Reiniciar servicio: `cd /opt/charo/deployment/docker && docker compose -f pi4-compose.yml restart`
@@ -898,17 +929,60 @@ chmod +x test_integration.sh
 
 ---
 
+## Verificación del Setup Completo
+
+Una vez completada la instalación en ambas Raspberry Pis:
+
+```bash
+# En Pi5 (Main Node)
+ssh pi@192.168.1.101
+
+# Verificar servicios corriendo
+docker ps
+
+# Deberías ver:
+# - homeassistant
+# - charo-core
+# - postgres
+# - redis
+# - piper-tts
+
+# En Pi3/Pi4 (Audio Node)
+ssh pi@192.168.1.100
+
+# Verificar servicios
+docker ps
+
+# Deberías ver:
+# - audio-service
+
+# Verificar almacenamiento HDD (si existe)
+df -h /mnt/hdd
+```
+
 ## Próximos Pasos
 
 Una vez completado este setup:
 
-1. ✅ Revisar que todos los tests pasan
-2. ✅ Verificar que el archivo `.env` está completo
-3. ✅ Documentar las IPs y MACs de tus dispositivos
-4. ✅ Hacer backup de tokens y secrets
-5. ➡️ Proceder a implementar los servicios Python (Fase 1)
+1. ✅ Revisar que todos los servicios Docker están corriendo
+2. ✅ Verificar conectividad entre Pi5 y Pi3/Pi4
+3. ✅ Verificar que los archivos `.env` están configurados
+4. ✅ Documentar las IPs, MACs y UUIDs de tus dispositivos
+5. ✅ Hacer backup de tokens y secrets
+6. ➡️ Proceder a implementar los servicios Python (Fase 2: Audio Pipeline)
 
 Ver [ARCHITECTURE.md](ARCHITECTURE.md) para detalles de implementación.
+
+## Resumen de Directorios
+
+| Ubicación | Propósito | Pi5 | Pi3/Pi4 |
+|-----------|-----------|-----|---------|
+| `/opt/charo` | Instalación principal (fallback) | ✅ | ✅ |
+| `/mnt/ssd` | SSD externo (Pi5 con SSD) | ✅ | - |
+| `/mnt/hdd` | HDD externo (Pi3/Pi4 con HDD) | - | ✅ |
+| `/mnt/hdd/charo` | Código del proyecto (con HDD) | - | ✅ |
+| `/mnt/hdd/audio-models` | Modelos de IA (con HDD) | - | ✅ |
+| `/mnt/hdd/logs` | Logs de aplicación (con HDD) | - | ✅ |
 
 ---
 

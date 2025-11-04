@@ -41,10 +41,20 @@
 ```
 services/
 ├── charo-core/          # Pi5 - Voice Controller, Intent Engine, HA Client
-├── audio-service/       # Pi4 - Wake Word, VAD, Audio Capture
+├── audio-service/       # Pi3/Pi4 - Wake Word, VAD, Audio Capture
 ├── runpod-gateway/      # RunPod Client (Whisper, Mistral)
 └── home-assistant/      # HA Configuration
 ```
+
+### Hardware Soportado
+
+| Componente | Pi3 Model B | Pi4 | Pi5 |
+|-----------|-----------|-----|-----|
+| Boot | microSD | SSD/microSD | SSD |
+| Audio Service | ✅ Sí | ✅ Sí | N/A |
+| Almacenamiento externo | HDD USB | HDD/SSD USB | SSD |
+| Bluetooth | ✅ Sí | ✅ Sí | ✅ Sí |
+| Docker | ✅ Sí | ✅ Sí | ✅ Sí |
 
 ### Archivos Clave
 
@@ -517,6 +527,42 @@ plugins = ["pydantic.mypy"]
 
 ---
 
+## Scripts de Instalación y Configuración
+
+### Para Raspberry Pi 3/4 (Audio Node)
+
+```bash
+# 1. Formatear HDD/SSD externo (si disponible)
+sudo deployment/scripts/format_hdd.sh
+# Requiere confirmar: "SI BORRAR TODO"
+
+# 2. Instalar servicios de audio
+sudo deployment/scripts/install_pi4.sh
+
+# 3. (Opcional) Reconfigurar Bluetooth
+sudo deployment/scripts/setup_bluetooth.sh
+```
+
+**Características automáticas:**
+- ✅ Detección automática de HDD
+- ✅ Configuración de almacenamiento en HDD si está disponible
+- ✅ Fallback a microSD si HDD no está disponible
+- ✅ Auto-montaje en /mnt/hdd
+- ✅ Directorios para modelos, samples y logs
+
+### Estructura de Almacenamiento con HDD
+
+```
+/mnt/hdd/
+├── charo/           # Código del proyecto
+├── docker/          # Volúmenes de Docker
+├── audio-models/    # Modelos de IA (wake word, VAD)
+├── audio-samples/   # Grabaciones de audio de test
+└── logs/            # Logs de aplicación
+```
+
+---
+
 ## Links Útiles
 
 - [Documentación Arquitectura](../docs/ARCHITECTURE.md)
@@ -529,4 +575,4 @@ plugins = ["pydantic.mypy"]
 
 **Recuerda**: TDD no es opcional. Tests primero, código después.
 
-*Última actualización: Enero 2025*
+*Última actualización: Noviembre 2025*
