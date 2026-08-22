@@ -1,0 +1,38 @@
+# Fragmento ESPHome — añadir tras Take Control del Satellite1
+#
+# 1. HA → ESPHome Device Builder → Take Control → EDIT
+# 2. Buscar sección `micro_wake_word:` y añadir el modelo mariano
+# 3. Ajustar MODEL_URL con la IP de tu Mac (serve_model.sh) o GitHub raw
+# 4. Opcional: ajustar voice_assistant (noise_suppression, auto_gain)
+#
+# Referencia firmware oficial:
+# https://github.com/FutureProofHomes/Satellite1-ESPHome/blob/develop/config/common/voice_assistant.yaml
+
+# --- Sustituir/añadir en micro_wake_word.models ---
+# probability_cutoff: subir (92%) si hay falsos positivos con TV; bajar (75%) si no te oye
+
+micro_wake_word:
+  id: mww
+  models:
+    - model: http://192.168.1.XXX:8765/mariano.json
+      id: mariano
+      probability_cutoff: 85%
+    - model: https://fph-firmware-assets.s3.us-east-1.amazonaws.com/wake-word/okay_nabu.json
+      id: okay_nabu
+    - model: https://fph-firmware-assets.s3.us-east-1.amazonaws.com/wake-word/hey_jarvis.json
+      id: hey_jarvis
+    - model: https://fph-firmware-assets.s3.us-east-1.amazonaws.com/wake-word/stop.json
+      id: stop
+      internal: true
+
+# --- Tras Take Control, probar en voice_assistant (mejora STT post-wake) ---
+voice_assistant:
+  noise_suppression_level: 2
+  auto_gain: 12 dBFS
+  volume_multiplier: 2.0
+
+# --- En select.mww_sensitivity_select, extender lambda para mariano (opcional) ---
+# Añadir dentro del on_value lambda existente:
+#   id(mariano).set_probability_cutoff(217);  # Slightly sensitive (~85%)
+#   id(mariano).set_probability_cutoff(176);  # Moderately sensitive (~69%)
+#   id(mariano).set_probability_cutoff(143);  # Very sensitive (~56%)

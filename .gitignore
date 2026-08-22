@@ -1,148 +1,89 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-pip-log.txt
-pip-delete-this-directory.txt
-
-# Virtual environments
-venv/
-env/
-ENV/
-env.bak/
-venv.bak/
-.venv/
-
-# PyCharm
-.idea/
-
-# VSCode
-.vscode/
-*.code-workspace
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# pytest
-.pytest_cache/
-.coverage
-htmlcov/
-*.cover
-.hypothesis/
-
-# mypy
-.mypy_cache/
-.dmypy.json
-dmypy.json
-
-# Docker
-*.log
-docker-compose.override.yml
-
-# Environment variables and secrets
-.env
-.env.local
-.env.*.local
-secrets.yaml
-*.pem
-*.key
-*.crt
-
-# Home Assistant
-services/home-assistant/config/secrets.yaml
-services/home-assistant/config/*.db
-services/home-assistant/config/*.db-shm
-services/home-assistant/config/*.db-wal
-services/home-assistant/config/home-assistant_v2.db
-services/home-assistant/config/.storage/
-services/home-assistant/config/deps/
-services/home-assistant/config/tts/
-
-# Audio samples (pueden ser grandes)
-*.wav
-*.mp3
-*.flac
-*.ogg
-samples/
-recordings/
-
-# Models (son muy grandes, mejor descargarlos)
-*.onnx
-*.bin
-*.pt
-*.pth
-*.safetensors
-*.gguf
-models/
-!services/audio-service/models/.gitkeep
-
-# Database
-*.db
-*.sqlite
-*.sqlite3
-
-# Logs
-logs/
-*.log
-*.log.*
-
+# =========================
 # macOS
+# =========================
 .DS_Store
 .AppleDouble
 .LSOverride
 ._*
+.Spotlight-V100
+.Trashes
 
-# Linux
-*~
+# =========================
+# VS Code
+# =========================
+.vscode/settings.json
+.vscode/launch.json
+*.code-workspace
 
-# Temporary files
-tmp/
-temp/
-*.tmp
+# =========================
+# Python
+# =========================
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+
+# =========================
+# Secrets & Credentials
+# =========================
+home-assistant/secrets.yaml
+voice-pipeline/.env
+*.pem
+*.key
+id_rsa
+id_ed25519
+.ssh/
+
+# =========================
+# Home Assistant
+# =========================
+home-assistant/.storage/
+home-assistant/home-assistant_v2.db
+home-assistant/home-assistant_v2.db-shm
+home-assistant/home-assistant_v2.db-wal
+home-assistant/tts/
+home-assistant/blueprints/
+
+# =========================
+# Proxmox / VM Images
+# =========================
+*.qcow2
+*.img
+*.iso
+*.vmdk
+
+# =========================
+# Docker
+# =========================
+voice-pipeline/data/
+voice-pipeline/models/
+
+# =========================
+# Logs
+# =========================
+*.log
+logs/
+
+# =========================
+# Wake word models (trained locally)
+# =========================
+infrastructure/voice/wake-word/models/*.tflite
+infrastructure/voice/wake-word/models/mariano.json
+infrastructure/voice/wake-word/personal_samples/*.wav
+infrastructure/voice/wake-word/personal_samples/*.zip
+
+# Speaker ID artefacts (trained locally)
+infrastructure/voice/speaker-id/models/
+infrastructure/voice/speaker-id/export/
+infrastructure/voice/speaker-id/samples/
+
+# =========================
+# Misc
+# =========================
 *.swp
 *.swo
-*.bak
-
-# Redis
-dump.rdb
-
-# Kubernetes
-kubeconfig
-*.kubeconfig
-
-# Ansible
-*.retry
-ansible/inventory/hosts.ini
-
-# Terraform
-.terraform/
-*.tfstate
-*.tfstate.backup
-
-# Node (si se usa para frontend)
-node_modules/
-npm-debug.log
-yarn-error.log
-
-# Backup files
-backup/
-*.backup
+*~
+.env
+.env.local
