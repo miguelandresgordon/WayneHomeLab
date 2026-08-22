@@ -1,0 +1,11 @@
+modo_noche:
+  name: Modo noche
+  icon: mdi:weather-night
+
+modo_cine:
+  name: Modo cine
+  icon: mdi:movie-open
+
+casa_ausente:
+  name: Casa ausente
+  icon: mdi:home-export-outline

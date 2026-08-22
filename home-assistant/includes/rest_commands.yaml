@@ -1,0 +1,9 @@
+identify_speaker:
+  url: "http://127.0.0.1:10400/identify"
+  method: POST
+  content_type: "application/json"
+  payload: '{"path": "{{ path }}"}'
+
+reload_speaker_profiles:
+  url: "http://127.0.0.1:10400/reload"
+  method: POST

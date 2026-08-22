@@ -128,12 +128,21 @@ Satellite1 (MicroWakeWord "Okay Nabu")
 
 ## Automatizaciones HA
 
-| Automatización | Hora | Acciones |
-|----------------|------|---------|
-| Modo noche | 23:00 | Mute Satellite1, detener Whisper, apagar luces |
-| Modo día | 07:30 | Desmute Satellite1, arrancar Whisper |
+YAML canónico: `home-assistant/includes/automations.yaml` → `/config/automations.yaml`.
+Entity IDs reales: `switch.satellite1_c7ffe4_mute_microphones`, `media_player.tv_ga_2`,
+`light.yeelink_mono6_6409_light`, `notify.iphone_de_miguel`. Antela (dormitorio) aún no está en HA.
 
-Ver `home-assistant/includes/automations.yaml`.
+| Automatización | Trigger | Acciones |
+|----------------|---------|----------|
+| Modo noche | 23:00 | `script.buenas_noches` (luces+TVs off, mute mic). **No** arranca Whisper |
+| Modo día | 07:30 | `script.buenos_dias` (unmute si no hay cine). **No** arranca Whisper |
+| Relajado atardecer | `sun.sun` sunset + alguien en casa | Solo lámpara del salón |
+| Ausencia / llegada | `person.miguel` | Apaga todo / Relajado salón de noche |
+| Cine | `media_player.tv_ga_2` on/playing | Atenúa salón + mute Satellite1. No toca dormitorio |
+| Satellite1 Action | 1 / 2 / long press | Toggle lámpara / cine / mute mic |
+| Speaker ID | folder watcher WAV | `input_text.current_speaker` |
+
+Add-on Whisper (`core_whisper`): **parado**, boot `manual`. STT = Groq.
 
 ## Code Conventions
 
@@ -200,7 +209,7 @@ WayneHomeLab/
 ## Pendiente / Próximos pasos
 
 - [ ] RPi 3b: instalar DietPi + Docker + `voice-pipeline/` (Whisper+Piper) para descargar HA VM
-- [ ] Bombilla Antela: configurar Local Tuya con IP `.122`
+- [ ] Bombilla Antela (Dormitorio): Tuya nube → entidad `light.bombilla_dormitorio`, luego Local Tuya IP `.122`. No agrupar con la lámpara del salón.
 - [ ] Wake word personalizada «Mariano» — ver [docs/wake-word-mariano.md](docs/wake-word-mariano.md) y `infrastructure/voice/wake-word/`
 - [x] Wake word "Mariano": infra en `infrastructure/voice/wake-word/` + runbook `docs/wake-word-mariano.md`
 - [x] Captura de muestras personales (34 WAV Assist) + export `export_personal_samples.sh`

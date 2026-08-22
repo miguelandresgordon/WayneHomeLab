@@ -1,0 +1,84 @@
+# ==============================================================================
+# Home Assistant — Main Configuration
+#
+# Uses !include pattern for modular, scalable configuration.
+# Secrets are referenced via !secret (stored in secrets.yaml, never committed).
+#
+# Location on HAOS: /config/configuration.yaml
+# ==============================================================================
+
+homeassistant:
+  name: WayneLab
+  unit_system: metric
+  currency: EUR
+  country: ES
+  time_zone: !secret timezone
+  latitude: !secret latitude
+  longitude: !secret longitude
+  elevation: !secret elevation
+  internal_url: !secret internal_url
+  external_url: !secret external_url
+  allowlist_external_dirs:
+    - /share/assist_pipeline
+    - /share/speaker-id
+
+# --- Core Integrations ---
+default_config:
+
+# --- Frontend ---
+frontend:
+  themes: !include_dir_merge_named themes/
+
+# --- HTTP ---
+http:
+  use_x_forwarded_for: false
+  ip_ban_enabled: true
+  login_attempts_threshold: 5
+
+# --- Logger ---
+logger:
+  default: warning
+
+# --- Recorder (DB) ---
+recorder:
+  purge_keep_days: 10
+  commit_interval: 30
+  exclude:
+    entity_globs:
+      - sensor.*_wi_fi_signal_strength
+      - sensor.*rssi*
+      - sensor.iphone_de_miguel_bssid
+      - sensor.iphone_de_miguel_ssid
+    event_types:
+      - call_service
+
+# --- Modular Includes ---
+automation: !include includes/automations.yaml
+script: !include includes/scripts.yaml
+scene: !include includes/scenes.yaml
+sensor: !include includes/sensors.yaml
+input_text: !include includes/input_text.yaml
+input_boolean: !include includes/input_boolean.yaml
+light: !include includes/lights.yaml
+rest_command: !include includes/rest_commands.yaml
+shell_command: !include includes/shell_commands.yaml
+
+# --- Folder watcher (speaker ID) ---
+# Configurar via UI: Ajustes → Dispositivos → Añadir integración → Folder Watcher
+# Carpeta: /share/assist_pipeline | Patrones: *.wav | Eventos: created
+# Requiere allowlist_external_dirs (arriba en homeassistant)
+
+# --- Voice Assistant (Wyoming) ---
+# Configured via UI integration after deploying Whisper/Piper containers.
+# Wyoming STT endpoint: http://<edge-ip>:10300
+# Wyoming TTS endpoint: http://<edge-ip>:10200
+
+# --- Assist pipeline debug (temporal — desactivar tras diagnosticar STT) ---
+# Graba WAV en /share/assist_pipeline para revisar calidad de audio vs transcripción.
+# Descomentar solo durante pruebas; llena disco si se deja activo.
+assist_pipeline:
+  debug_recording_dir: /share/assist_pipeline
+
+# --- Gemini Integration ---
+# API key stored in secrets.yaml as 'gemini_api_key'
+# Configure via HA UI: Settings → Integrations → Google Generative AI

@@ -1,0 +1,7 @@
+# Grupos de luces. No mezclar salón (Xiaomi) y dormitorio (Antela).
+# Cuando exista light.bombilla_dormitorio, añadirla solo a todas_las_luces.
+- platform: group
+  name: Todas las luces
+  unique_id: todas_las_luces
+  entities:
+    - light.yeelink_mono6_6409_light
