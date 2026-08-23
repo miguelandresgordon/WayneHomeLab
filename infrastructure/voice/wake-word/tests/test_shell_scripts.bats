@@ -100,6 +100,45 @@ setup() {
   [[ "$output" == *"mariano"* ]]
 }
 
+@test "setup_trainer_runpod prints help" {
+  run "$WAKE_WORD_DIR/setup_trainer_runpod.sh" --help
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"--dry-run"* ]]
+  [[ "$output" == *"Spot"* ]] || [[ "$output" == *"spot"* ]]
+}
+
+@test "setup_trainer_runpod dry-run prints tater image and stop-after" {
+  run "$WAKE_WORD_DIR/setup_trainer_runpod.sh" --dry-run
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"ghcr.io/tatertotterson/microwakeword"* ]]
+  [[ "$output" == *"/data"* ]]
+  [[ "$output" == *"--stop-after"* ]]
+  [[ "$output" == *"COMMUNITY"* ]] || [[ "$output" == *"Community"* ]]
+  [[ "$output" != *"--spot"* ]]
+}
+
+@test "train_mariano_runpod prints help" {
+  run "$WAKE_WORD_DIR/train_mariano_runpod.sh" --help
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"mariano"* ]]
+  [[ "$output" == *"personal_samples"* ]]
+}
+
+@test "teardown_runpod_trainer prints help" {
+  run "$WAKE_WORD_DIR/teardown_runpod_trainer.sh" --help
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"--dry-run"* ]]
+  [[ "$output" == *"--delete-volume"* ]]
+  [[ "$output" == *"--watch"* ]]
+}
+
+@test "teardown_runpod_trainer dry-run prints pod stop without volume delete" {
+  run "$WAKE_WORD_DIR/teardown_runpod_trainer.sh" --dry-run
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"pod stop"* ]]
+  [[ "$output" != *"network-volume delete"* ]] || [[ "$output" == *"omit"* ]]
+}
+
 @test "pad_personal_samples copies wav with extra duration" {
   SRC="$(mktemp -d)"
   DEST="$(mktemp -d)"

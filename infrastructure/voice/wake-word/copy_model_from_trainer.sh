@@ -4,23 +4,31 @@
 # Artefactos reales viven en WAKEWORD_TRAINER_DATA_DIR (por defecto
 # ~/.taterwakewordtrainer/app/current/trained_wake_words/), no en el clone.
 # En Windows/Docker también busca $HOME/mww-data (MWW_NVIDIA_DATA_DIR).
+# Descarga RunPod: $HOME/mww-runpod (MWW_RUNPOD_DATA_DIR).
 #
 # Uso: ./copy_model_from_trainer.sh
+# macOS zsh: zsh ./copy_model_from_trainer.sh
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+_this="$0"
+if [ -n "${BASH_VERSION:-}" ]; then
+  _this="${BASH_SOURCE[0]}"
+fi
+SCRIPT_DIR="$(cd "$(dirname "$_this")" && pwd)"
 TRAINER_DIR="${MWW_TRAINER_DIR:-$HOME/Proyectos/microWakeWord-Trainer-AppleSilicon}"
 SUPPORT_DIR="${WAKEWORD_TRAINER_SUPPORT_DIR:-$HOME/.taterwakewordtrainer}"
 DATA_DIR="${WAKEWORD_TRAINER_DATA_DIR:-$SUPPORT_DIR/app/current}"
 NVIDIA_DATA="${MWW_NVIDIA_DATA_DIR:-$HOME/mww-data}"
+RUNPOD_DATA="${MWW_RUNPOD_DATA_DIR:-$HOME/mww-runpod}"
 DEST="$SCRIPT_DIR/models"
 WAKE_WORD="${MWW_WAKE_WORD:-mariano}"
 
-# Prefer data dir; fall back to Windows Docker volume and clone paths (legacy)
+# Prefer data dir; fall back to Windows Docker volume, RunPod download, clone paths
 CANDIDATES=(
   "$DATA_DIR/trained_wake_words"
   "$NVIDIA_DATA/trained_wake_words"
+  "$RUNPOD_DATA/trained_wake_words"
   "$TRAINER_DIR/trained_wake_words"
   "$SUPPORT_DIR/trained_wake_words"
 )

@@ -12,7 +12,7 @@ Satellite1 (MicroWakeWord "Mariano" on-device)
 
 ## 1. Entrenar el modelo
 
-El Mac M3 **no tiene disco suficiente** para un train completo (~25–80 GB de TTS, features y negativos). El camino actual es **Windows 11 + Docker**. El trainer de Apple Silicon se mantiene como Plan B.
+El Mac M3 **no tiene disco suficiente** para un train completo (~25–80 GB de TTS, features y negativos). El camino **recomendado** es un **GPU Pod on-demand en RunPod** (1× NVIDIA). Windows 11 + Docker CPU (RX 6750 XT) queda como fallback local. El trainer de Apple Silicon se mantiene como Plan B si hay disco.
 
 ### Hardware del PC de entrenamiento
 
@@ -116,10 +116,92 @@ tail -f ~/Proyectos/microWakeWord-Trainer-AppleSilicon/training_mariano.log
 
 Notebook [PrismaKisar/micro-wake-word](https://github.com/PrismaKisar/micro-wake-word), `language="Spanish"`. Menos fiable por desconexiones. Útil si Docker CPU en 16 GB RAM hace OOM.
 
+### D) Método recomendado — RunPod GPU Pod (1× NVIDIA, on-demand)
+
+**Guía de inicio paso a paso:** [runpod-train-mariano.md](runpod-train-mariano.md) (billing, volume vs GPU, cuánto recargar, checklist).
+
+**No uses Instant Cluster.** Ese producto es multi-nodo (H100/A100) para LLM. MicroWakeWord cabe en **1 GPU**. **Nunca Spot**: RunPod puede matarlo con SIGTERM a 5 s.
+
+Imagen: la misma Tater que el trainer NVIDIA local (`ghcr.io/tatertotterson/microwakeword:latest`). RTX 50-series: `--blackwell`. Scripts:
+
+```bash
+./infrastructure/voice/wake-word/setup_trainer_runpod.sh --dry-run
+./infrastructure/voice/wake-word/train_mariano_runpod.sh --dry-run
+# Al acabar (modelo ya en el PC): teardown_runpod_trainer.sh [--delete-volume]
+```
+
+`--dry-run` **no crea** el pod (hace falta tu API key / consola). Pega el `runpodctl pod create` que imprime el setup, o despliega a mano.
+
+#### Precios (verificar en la consola al Deploy)
+
+La [página oficial](https://docs.runpod.io/pods/pricing) no fija tarifas: el $/h sale al crear el Pod. Referencias on-demand (ago 2026):
+
+| GPU | Cloud | ~$/h | Notas |
+|-----|-------|------|--------|
+| RTX A4000 / A5000 | Community | 0.16–0.17 | Barata, 16–24 GB, suficiente |
+| RTX 3090 | Community | 0.22 | 24 GB |
+| **RTX 4090** | **Community** | **0.34** | **Recomendada** |
+| RTX 4090 | Secure | 0.69–0.74 | Si Community no tiene stock |
+| A40 / L40S / A100 / H100 | — | 0.44–2.89 | Overkill para este train |
+
+Network volume: **$0.07/GB/mes** (&lt;1 TB) → 100 GB ≈ **$0.23/día**. Ingress/egress: $0.
+
+La 1ª pasada gasta horas sobre todo en TTS/features (CPU+disco, 25–80 GB), no en el fit TensorFlow. Estimación realista: **4–24 h**. A $0.34/h, 24 h ≈ $8; 48 h ≈ $16. El riesgo de presupuesto es **olvidarse de parar el pod**.
+
+`$5` de saldo ≈ 14 h de 4090 Community: **no bastan** para garantizar continuidad. Recarga **antes** de desplegar.
+
+#### Techo de gasto 40–50€
+
+RunPod **no** tiene «no gastes más de 50€». El *Spend limit* de [billing](https://docs.runpod.io/accounts-billing/billing) es **$80/hora** (tasa anti-fraude), no un cap de campaña. Los créditos **no se reembolsan**.
+
+1. [Billing](https://www.console.runpod.io/user/billing): **Auto-pay OFF**.
+2. Deposita **un solo tramo de $50–55** (≈46–51€). Esa cartera **es** el máximo.
+3. Low balance alert: umbral **$10** (email; no para el pod).
+4. Deploy con `--stop-after 48h` (conserva el network volume). **No** uses `--terminate-after` sin volume: borra el disco local.
+5. On-demand, **nunca Spot**. Community Cloud; Secure solo si no hay stock.
+6. Al terminar: **Stop** el pod, descarga el modelo, **borra el volume** ($0.23/día si lo dejas).
+
+Si el saldo llega a $0, RunPod para todos los pods. **Con network volume los datos se conservan**; sin él se **pierden**.
+
+#### Continuidad (que no se corte)
+
+| Riesgo | Mitigación |
+|--------|------------|
+| Saldo a $0 | Recargar $50–55 **antes**; alerta $10 |
+| Spot / Instant Cluster | Pod on-demand, 1 GPU |
+| Caída de SSH / browser | `train_wake_word` en `tmux`/`nohup`; UI `8789/http` |
+| Host Community inestable | Volume en el **mismo datacenter**; reanudar montando el mismo volume |
+| Disco efímero | Mount **`/data`** (contrato Tater) |
+| Olvidar parar | `--stop-after 48h` + Stop manual al ver artefactos |
+
+#### Pasos
+
+1. Network volume **100 GB** (EU-RO-1 si hay GPU allí).
+2. GPU Pod: 1× RTX 4090 Community, container disk 40–50 GB, volume en `/data`, puertos `8789/http` (y `22/tcp` si montas SSH).
+3. Subir WAV (gitignored): `train_mariano_runpod.sh` → `runpodctl send` a `/data/personal_samples/`.
+4. En el pod: `nvidia-smi` debe ver CUDA. Preferible CLI:
+
+   ```bash
+   tmux new -s mariano
+   train_wake_word --language=Spanish mariano
+   ```
+
+   UI: Connect → HTTP 8789 → Trainer → **mariano** / **Spanish** → confirma `personal_samples` → Start training.
+
+   La imagen Tater **no** trae `/start.sh` de RunPod: SSH/Jupyter pueden no arrancar. Usa Web Terminal + proxy HTTP. SSH: ver [use-ssh](https://docs.runpod.io/pods/configuration/use-ssh).
+5. Artefactos: `/data/trained_wake_words/mariano.{tflite,json}` → `runpodctl receive` a `$HOME/mww-runpod/trained_wake_words/`.
+6. En el PC: `teardown_runpod_trainer.sh` (verifica + **Stop**). El volume solo se borra con `--delete-volume`.
+
+```bash
+MWW_RUNPOD_DATA_DIR="$HOME/mww-runpod" \
+  ./infrastructure/voice/wake-word/copy_model_from_trainer.sh
+```
+
 ### Artefactos
 
 Tras un train OK:
 
+- RunPod GPU Pod: `$HOME/mww-runpod/trained_wake_words/mariano.{tflite,json}` (`MWW_RUNPOD_DATA_DIR`)
 - Windows/Docker (CPU o NVIDIA): `$HOME/mww-data/trained_wake_words/mariano.{tflite,json}`
 - Mac: `~/.taterwakewordtrainer/app/current/trained_wake_words/mariano.{tflite,json}`
 
@@ -197,5 +279,8 @@ Verificar entity_ids de media_player en HA si difieren de:
 - [ESPHome micro_wake_word](https://esphome.io/components/micro_wake_word/)
 - [TaterTotterson Trainer Apple Silicon](https://github.com/TaterTotterson/microWakeWord-Trainer-AppleSilicon)
 - [TaterTotterson Trainer NVIDIA Docker](https://github.com/TaterTotterson/microWakeWord-Trainer-Nvidia-Docker)
+- [RunPod Pods pricing](https://docs.runpod.io/pods/pricing)
+- [RunPod billing (Auto-pay, low balance, spend limit)](https://docs.runpod.io/accounts-billing/billing)
+- [RunPod SSH en templates custom](https://docs.runpod.io/pods/configuration/use-ssh)
 - [CUDA en WSL2](https://learn.microsoft.com/windows/ai/directml/gpu-cuda-in-wsl) (solo si hay NVIDIA)
 - [ROCm Windows GPU matrix](https://rocm.docs.amd.com/projects/install-on-windows/en/develop/reference/system-requirements.html) (RX 6750 XT = no soportada)

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -17,6 +18,9 @@ REQUIRED_POSIX_SCRIPTS = [
     "setup_trainer_nvidia.sh",
     "train_mariano_nvidia.sh",
     "copy_model_from_trainer.sh",
+    "setup_trainer_runpod.sh",
+    "train_mariano_runpod.sh",
+    "teardown_runpod_trainer.sh",
 ]
 
 REQUIRED_WINDOWS_SCRIPTS = [
@@ -35,6 +39,8 @@ class TestRequiredTrainerScripts:
     def test_posix_script_exists_and_executable(self, script_name: str) -> None:
         script = WAKE_WORD_DIR / script_name
         assert script.is_file(), f"Missing script: {script_name}"
+        if os.name == "nt":
+            return
         assert script.stat().st_mode & 0o111, f"Script not executable: {script_name}"
 
     @pytest.mark.parametrize("script_name", REQUIRED_WINDOWS_SCRIPTS)

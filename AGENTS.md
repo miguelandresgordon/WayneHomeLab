@@ -21,9 +21,9 @@ This project is a private voice assistant ecosystem ("Private Alexa") running on
 - **STT**: Groq API (Whisper large-v3-turbo) via HACS integration `openai_whisper_cloud` — NOT local Whisper
 - **TTS**: Piper add-on (Wyoming, `core-piper:10200`, voice `es_ES-davefx-medium`)
 - **Conversation**: Home Assistant built-in (Spanish)
-- **Wake word**: Okay Nabu on-device (objetivo: MicroWakeWord «Mariano» entrenado en Windows 11 + Docker CPU; GPU AMD Radeon RX 6750 XT — CUDA no aplica)
+- **Wake word**: Okay Nabu on-device (objetivo: MicroWakeWord «Mariano» en **RunPod GPU Pod**; fallback Windows 11 + Docker CPU, RX 6750 XT — CUDA no aplica)
 - **Dev Machine**: MacBook Air M3 (ARM64) — no tiene disco para train completo
-- **Training PC**: Windows 11, Ryzen 5 3600, RX 6750 XT, 16 GB RAM (Docker Desktop / WSL2, modo `-Cpu`). Ver [docs/wake-word-mariano.md](docs/wake-word-mariano.md)
+- **Training PC (Windows 11)**: DHCP | Ryzen 5 3600 + RX 6750 XT, 16 GB RAM (fallback Docker CPU). RunPod: [docs/runpod-train-mariano.md](docs/runpod-train-mariano.md)
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed diagrams and data flow.
 
@@ -176,7 +176,7 @@ WayneHomeLab/
 │       │   └── sysctl.conf
 │       └── edge/                # RPi 3b (no operativo aún)
 │   └── voice/
-│       ├── wake-word/           # Wake word "Mariano" (Mac trainer + Windows Docker CPU/NVIDIA)
+│       ├── wake-word/           # Wake word "Mariano" (RunPod GPU Pod + Windows Docker CPU/NVIDIA)
 │       └── speaker-id/          # Identificación de hablante (Colab + add-on HAOS)
 ├── home-assistant/              # HA configuration (modular !include pattern)
 │   ├── configuration.yaml
@@ -205,17 +205,24 @@ WayneHomeLab/
 - [x] Wake word "Mariano": infra en `infrastructure/voice/wake-word/` + runbook `docs/wake-word-mariano.md`
 - [x] Captura de muestras personales (34 WAV Assist) + export `export_personal_samples.sh`
 - [x] Disco Mac: `free_trainer_disk.sh --keep-personal` (TTS/features borrados; 34 WAV conservados)
-- [ ] Entrenar «Mariano» en Windows 11 + Docker **CPU** (RX 6750 XT; CUDA no aplica)
+- [ ] Entrenar «Mariano» en **RunPod GPU Pod** (recomendado; 1× RTX 4090 Community on-demand)
+  - Guía: [docs/runpod-train-mariano.md](docs/runpod-train-mariano.md)
+  - Recargar **$20–25** mínimo (o **$50–55** como techo); Auto-pay **OFF**, alerta saldo **$10**
+  - Probe/checklist: `setup_trainer_runpod.sh --dry-run`
+  - Train + muestras: `train_mariano_runpod.sh` (`runpodctl send` → `/data/personal_samples`)
+  - Kill switch: `--stop-after 48h`; **nunca Spot** ni Instant Cluster
+  - Artefactos: `runpodctl receive` → `teardown_runpod_trainer.sh` (stop; `--delete-volume` opt-in) → `MWW_RUNPOD_DATA_DIR=$HOME/mww-runpod copy_model_from_trainer.sh`
+- [ ] Fallback: Windows 11 + Docker **CPU** (RX 6750 XT; CUDA no aplica)
   - Transferir `infrastructure/voice/wake-word/personal_samples/*.wav` (gitignored, ~2 MB)
   - Probe: `probe_trainer_windows.ps1`
   - Setup: `setup_trainer_windows.ps1 -Cpu` o `setup_trainer_nvidia.sh --cpu`
   - Train: `train_mariano_windows.ps1 -Cpu` o `train_mariano_nvidia.sh --cpu`
-  - Si aparece GPU NVIDIA en el futuro: omitir `-Cpu` (el script usa `--gpus all`)
+  - Si aparece GPU NVIDIA local: omitir `-Cpu` (el script usa `--gpus all`)
 - [ ] Flashear Satellite1 con modelo Mariano (Take Control ESPHome + OTA en LAN)
 - [ ] Capturar muestras TV/voz y re-entrenar (`run_capture_workflow.sh retrain`)
   - Runbook: [docs/wake-word-mariano.md](docs/wake-word-mariano.md)
   - Scripts: `infrastructure/voice/wake-word/`
-  - Entrenamiento: Windows Docker CPU (`setup_trainer_windows.ps1 -Cpu`); Mac solo si hay ≥ ~25 GB libres (`train_mariano_local.sh`)
+  - Entrenamiento: RunPod GPU Pod (`setup_trainer_runpod.sh`); fallback Windows Docker CPU (`setup_trainer_windows.ps1 -Cpu`); Mac solo si hay ≥ ~25 GB libres (`train_mariano_local.sh`)
 - [ ] Asignar entidad `Lámpara` al área `Salón` en HA (para frases con «del salón»)
 - [ ] Eliminar/renombrar escenas con nombres genéricos que confunden al intent de HA
 - [ ] Configurar HTTPS en HA (para usar micrófono desde Safari/navegador)

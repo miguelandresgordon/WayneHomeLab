@@ -8,10 +8,15 @@
 #   ./export_personal_samples.sh
 #   ./export_personal_samples.sh --src ~/.taterwakewordtrainer/app/current/personal_samples
 #   ./export_personal_samples.sh --src DIR --dest DIR
+# macOS zsh: zsh ./export_personal_samples.sh
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+_this="$0"
+if [ -n "${BASH_VERSION:-}" ]; then
+  _this="${BASH_SOURCE[0]}"
+fi
+SCRIPT_DIR="$(cd "$(dirname "$_this")" && pwd)"
 SUPPORT_DIR="${WAKEWORD_TRAINER_SUPPORT_DIR:-$HOME/.taterwakewordtrainer}"
 DATA_DIR="${WAKEWORD_TRAINER_DATA_DIR:-$SUPPORT_DIR/app/current}"
 SRC="${MWW_PERSONAL_SRC:-$DATA_DIR/personal_samples}"

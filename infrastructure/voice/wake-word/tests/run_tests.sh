@@ -22,6 +22,7 @@ python3 -m pytest \
   "$SCRIPT_DIR/test_wake_word_config.py" \
   "$SCRIPT_DIR/test_pad_personal_samples.py" \
   "$SCRIPT_DIR/test_keep_personal_and_windows.py" \
+  "$SCRIPT_DIR/test_runpod_trainer.py" \
   -v
 
 log "Running BATS shell tests..."
