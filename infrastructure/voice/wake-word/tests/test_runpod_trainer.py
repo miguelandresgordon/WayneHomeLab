@@ -21,6 +21,7 @@ TRAIN = WAKE_WORD_DIR / "train_mariano_runpod.sh"
 TEARDOWN = WAKE_WORD_DIR / "teardown_runpod_trainer.sh"
 COPY_MODEL = WAKE_WORD_DIR / "copy_model_from_trainer.sh"
 RUNPOD_GUIDE = REPO_ROOT / "docs" / "runpod-train-mariano.md"
+RUNPOD_MOBILE_GUIDE = REPO_ROOT / "docs" / "runpod-train-mariano-movil.md"
 
 RUNPOD_SCRIPTS = [
     "setup_trainer_runpod.sh",
@@ -289,3 +290,21 @@ class TestRunbookAndAgentsRunpod:
         assert "teardown_runpod_trainer.sh" in guide
         assert "--delete-volume" in guide
         assert "teardown_runpod_trainer.sh" in runbook
+
+    def test_mobile_guide_covers_console_flow_without_runpodctl_send(self) -> None:
+        text = _read(RUNPOD_MOBILE_GUIDE)
+        assert "console.runpod.io" in text
+        assert "ghcr.io/tatertotterson/microwakeword" in text
+        assert "/data" in text
+        assert "8789" in text
+        assert "mariano" in text.lower()
+        assert "Spanish" in text
+        assert "Spot" in text
+        assert "Instant Cluster" in text
+        assert "Samples" in text
+        assert "trained_wake_words" in text
+        assert "runpodctl send" not in text
+        desktop = _read(RUNPOD_GUIDE)
+        assert "runpod-train-mariano-movil.md" in desktop
+        assert "runpod-train-mariano-movil.md" in _read(DOCS)
+        assert "runpod-train-mariano-movil.md" in _read(AGENTS)

@@ -2,6 +2,8 @@
 
 Guía paso a paso para el **primer entrenamiento** de la wake word «Mariano» en un **GPU Pod on-demand** (1× NVIDIA). Es un trabajo **puntual**: enciendes la GPU, entrenas, descargas el modelo y apagas.
 
+**¿Estás en el iPhone / sin Mac?** No uses esta guía (asume `runpodctl` en un PC). Sigue [runpod-train-mariano-movil.md](runpod-train-mariano-movil.md).
+
 Runbook completo (captura de muestras, flash Satellite1, afinado): [wake-word-mariano.md](wake-word-mariano.md).
 
 Scripts del repo: `infrastructure/voice/wake-word/`.

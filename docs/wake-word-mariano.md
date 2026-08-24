@@ -118,7 +118,7 @@ Notebook [PrismaKisar/micro-wake-word](https://github.com/PrismaKisar/micro-wake
 
 ### D) Método recomendado — RunPod GPU Pod (1× NVIDIA, on-demand)
 
-**Guía de inicio paso a paso:** [runpod-train-mariano.md](runpod-train-mariano.md) (billing, volume vs GPU, cuánto recargar, checklist).
+**Guía de inicio paso a paso:** [runpod-train-mariano.md](runpod-train-mariano.md) (billing, volume vs GPU, cuánto recargar, checklist). **Desde el móvil (sin Mac):** [runpod-train-mariano-movil.md](runpod-train-mariano-movil.md).
 
 **No uses Instant Cluster.** Ese producto es multi-nodo (H100/A100) para LLM. MicroWakeWord cabe en **1 GPU**. **Nunca Spot**: RunPod puede matarlo con SIGTERM a 5 s.
 
