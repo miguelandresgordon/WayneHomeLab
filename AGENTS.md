@@ -206,7 +206,7 @@ WayneHomeLab/
 - [x] Captura de muestras personales (34 WAV Assist) + export `export_personal_samples.sh`
 - [x] Disco Mac: `free_trainer_disk.sh --keep-personal` (TTS/features borrados; 34 WAV conservados)
 - [ ] Entrenar «Mariano» en **RunPod GPU Pod** (recomendado; 1× RTX 4090 Community on-demand)
-  - Guía: [docs/runpod-train-mariano.md](docs/runpod-train-mariano.md)
+  - Guía: [docs/runpod-train-mariano.md](docs/runpod-train-mariano.md) · móvil/iOS: [docs/runpod-train-mariano-movil.md](docs/runpod-train-mariano-movil.md)
   - Recargar **$20–25** mínimo (o **$50–55** como techo); Auto-pay **OFF**, alerta saldo **$10**
   - Probe/checklist: `setup_trainer_runpod.sh --dry-run`
   - Train + muestras: `train_mariano_runpod.sh` (`runpodctl send` → `/data/personal_samples`)
