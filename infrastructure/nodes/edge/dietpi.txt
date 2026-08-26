@@ -1,0 +1,47 @@
+# ==============================================================================
+# dietpi.txt — DietPi Automation Configuration for RPi 3b Edge Node
+#
+# Place this file on the DietPi boot partition before first boot
+# to enable headless, automated setup.
+#
+# Reference: https://dietpi.com/docs/usage/#dietpitxt
+# ==============================================================================
+
+# --- Language & Locale ---
+AUTO_SETUP_LOCALE=en_US.UTF-8
+AUTO_SETUP_KEYBOARD_LAYOUT=us
+AUTO_SETUP_TIMEZONE=Europe/Madrid
+
+# --- Network ---
+AUTO_SETUP_NET_ETHERNET_ENABLED=1
+AUTO_SETUP_NET_WIFI_ENABLED=0
+AUTO_SETUP_NET_USESTATIC=0
+AUTO_SETUP_DHCP_TO_STATIC=1
+AUTO_SETUP_NET_HOSTNAME=waynelab-edge
+
+# --- SSH & Security ---
+AUTO_SETUP_SSH_SERVER_INDEX=-2
+SOFTWARE_DISABLE_SSH_PASSWORD_LOGINS=0
+
+# --- Headless / Automation ---
+AUTO_SETUP_AUTOMATED=1
+AUTO_SETUP_GLOBAL_PASSWORD=CHANGE_ME_BEFORE_FIRST_BOOT
+AUTO_SETUP_INSTALL_SOFTWARE_ID=0
+AUTO_SETUP_HEADLESS=1
+
+# --- Logging ---
+AUTO_SETUP_LOGGING_INDEX=-1
+AUTO_SETUP_RAMLOG_MAXSIZE=50
+
+# --- GPU (minimal, headless) ---
+AUTO_SETUP_WEB_SERVER_INDEX=0
+GPU_MEMORY=16
+
+# --- Software to auto-install ---
+# 162 = Docker
+# 134 = Docker Compose
+AUTO_SETUP_INSTALL_SOFTWARE_ID=162
+AUTO_SETUP_INSTALL_SOFTWARE_ID=134
+
+# --- Survey opt-out ---
+SURVEY_OPTED_IN=0

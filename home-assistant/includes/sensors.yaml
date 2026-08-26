@@ -1,0 +1,44 @@
+# ==============================================================================
+# Home Assistant — Sensors
+#
+# Custom sensor definitions including API cost tracking.
+# Reference: https://www.home-assistant.io/integrations/template/
+# ==============================================================================
+
+# --- Gemini API Cost Tracking ---
+# Tracks estimated monthly cost based on conversation count.
+# Gemini 2.0 Flash pricing (as of 2025):
+#   Input:  $0.10 per 1M tokens
+#   Output: $0.40 per 1M tokens
+#   Avg conversation: ~500 input + ~200 output tokens
+- platform: template
+  sensors:
+    gemini_api_daily_cost:
+      friendly_name: "Gemini API Daily Cost (Est.)"
+      unit_of_measurement: "USD"
+      value_template: >-
+        {% set conversations = states('counter.daily_voice_conversations') | int(0) %}
+        {% set input_cost_per_token = 0.10 / 1000000 %}
+        {% set output_cost_per_token = 0.40 / 1000000 %}
+        {% set avg_input_tokens = 500 %}
+        {% set avg_output_tokens = 200 %}
+        {% set cost = conversations * ((avg_input_tokens * input_cost_per_token) + (avg_output_tokens * output_cost_per_token)) %}
+        {{ cost | round(4) }}
+      icon_template: mdi:currency-usd
+
+    gemini_api_monthly_projection:
+      friendly_name: "Gemini API Monthly Projection"
+      unit_of_measurement: "USD"
+      value_template: >-
+        {% set daily_cost = states('sensor.gemini_api_daily_cost') | float(0) %}
+        {{ (daily_cost * 30) | round(2) }}
+      icon_template: mdi:chart-line
+
+# --- System Monitoring (Edge Node) ---
+# Uncomment after configuring the System Monitor integration
+# - platform: systemmonitor
+#   resources:
+#     - type: processor_use
+#     - type: memory_use_percent
+#     - type: disk_use_percent
+#       arg: /

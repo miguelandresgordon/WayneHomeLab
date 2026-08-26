@@ -1,0 +1,33 @@
+# ==============================================================================
+# Home Assistant — Voice Assist helpers
+#
+# Entidades expuestas a Assist y alias recomendados.
+# Configurar en UI: Configuración → Asistentes de voz → Exponer
+# ==============================================================================
+
+# Checklist STT/NLU (ver docs/wake-word-mariano.md):
+#
+# Pipeline de voz (Configuración → Asistentes de voz):
+#   - Idioma: Español (es)
+#   - STT: openai_whisper_cloud (Groq) — whisper-large-v3-turbo
+#   - TTS: Wyoming Piper (core-piper:10200)
+#   - Conversation: Home Assistant (español)
+#
+# Entidades a exponer con alias en español:
+#   - light.yeelink_mono6_6409_light → alias: "lámpara", "luces del salón"
+#   - light.bombilla_dormitorio     → alias: "bombilla", "luz del dormitorio", "luz del cuarto"
+#   - media_player.tv_ga_2          → alias: "tele", "TV GA"
+#   - script.buenas_noches / buenos_dias / cine / me_voy / pon_la_radio
+#
+# No exponer: Cast duplicados (media_player.tv_ga, media_player.bravia_4k_gb_atv3),
+# media_player del satélite (salvo radio vía script), sensores temp/humedad, escenas.
+#
+# Evitar conflictos NLU:
+#   - Asignar lámpara al área "Salón" para frases con "del salón"
+#   - Renombrar escenas genéricas que coincidan con nombres de área
+#
+# Satellite1 (Configuración → Dispositivos → ESPHome):
+#   - Pipeline: el que usa Groq + Piper
+#   - Wake word: Mariano (tras flashear firmware custom)
+#   - Wake word sensitivity: Slightly sensitive (hasta calibrar mariano)
+#   - probability_cutoff inicial: 85% — subir a 92% si falsos positivos TV

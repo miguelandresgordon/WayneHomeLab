@@ -1,0 +1,183 @@
+# Scripts de rutina — exponer a Assist en UI (Ajustes → Asistentes de voz).
+# Entity IDs reales de la instancia HAOS (2026.8). Antela aún no está en HA.
+
+buenas_noches:
+  alias: Buenas noches
+  description: Apaga luces y TVs, silencia Satellite1 y activa modo noche
+  icon: mdi:weather-night
+  mode: single
+  sequence:
+    - action: input_boolean.turn_on
+      target:
+        entity_id: input_boolean.modo_noche
+    - action: input_boolean.turn_off
+      target:
+        entity_id: input_boolean.modo_cine
+    - action: switch.turn_on
+      target:
+        entity_id: switch.satellite1_c7ffe4_mute_microphones
+      continue_on_error: true
+    - action: light.turn_off
+      target:
+        entity_id: light.todas_las_luces
+      data:
+        transition: 3
+      continue_on_error: true
+    - action: media_player.turn_off
+      target:
+        entity_id:
+          - media_player.tv_ga_2
+          - media_player.bravia_4k_gb_atv3_2
+      continue_on_error: true
+    - action: notify.iphone_de_miguel
+      data:
+        title: Buenas noches
+        message: Luces y TVs apagadas. Satellite1 silenciado.
+      continue_on_error: true
+
+buenos_dias:
+  alias: Buenos días
+  description: Desactiva modo noche y reactiva el micrófono si no hay cine
+  icon: mdi:weather-sunset-up
+  mode: single
+  sequence:
+    - action: input_boolean.turn_off
+      target:
+        entity_id: input_boolean.modo_noche
+    - choose:
+        - conditions:
+            - condition: state
+              entity_id: media_player.tv_ga_2
+              state:
+                - playing
+                - "on"
+          sequence:
+            - action: input_boolean.turn_on
+              target:
+                entity_id: input_boolean.modo_cine
+      default:
+        - action: input_boolean.turn_off
+          target:
+            entity_id: input_boolean.modo_cine
+        - action: switch.turn_off
+          target:
+            entity_id: switch.satellite1_c7ffe4_mute_microphones
+          continue_on_error: true
+    - action: notify.iphone_de_miguel
+      data:
+        title: Buenos días
+        message: >-
+          Son las {{ now().strftime('%H:%M') }}.
+          Tiempo: {{ states('weather.forecast_casa') }},
+          {{ state_attr('weather.forecast_casa', 'temperature') }} °C.
+      continue_on_error: true
+
+relajado:
+  alias: Relajado
+  description: Lámpara del salón al 35 por ciento. No toca el dormitorio.
+  icon: mdi:weather-sunset
+  mode: single
+  sequence:
+    - action: scene.turn_on
+      target:
+        entity_id: scene.relajado
+      data:
+        transition: 2
+      continue_on_error: true
+
+cine:
+  alias: Cine
+  description: Atenúa solo la lámpara del salón y silencia Satellite1
+  icon: mdi:movie-open
+  mode: single
+  sequence:
+    - action: input_boolean.turn_on
+      target:
+        entity_id: input_boolean.modo_cine
+    - action: scene.turn_on
+      target:
+        entity_id: scene.cine
+      data:
+        transition: 2
+      continue_on_error: true
+    - action: switch.turn_on
+      target:
+        entity_id: switch.satellite1_c7ffe4_mute_microphones
+      continue_on_error: true
+
+salir_cine:
+  alias: Salir de cine
+  description: Sale del modo cine y reactiva el micrófono si no es de noche
+  icon: mdi:movie-off
+  mode: single
+  sequence:
+    - action: input_boolean.turn_off
+      target:
+        entity_id: input_boolean.modo_cine
+    - choose:
+        - conditions:
+            - condition: state
+              entity_id: input_boolean.modo_noche
+              state: "off"
+          sequence:
+            - action: switch.turn_off
+              target:
+                entity_id: switch.satellite1_c7ffe4_mute_microphones
+              continue_on_error: true
+
+me_voy:
+  alias: Me voy
+  description: Apaga todas las luces y TVs al salir
+  icon: mdi:walk
+  mode: single
+  sequence:
+    - action: input_boolean.turn_on
+      target:
+        entity_id: input_boolean.casa_ausente
+    - action: input_boolean.turn_off
+      target:
+        entity_id: input_boolean.modo_cine
+    - action: light.turn_off
+      target:
+        entity_id: light.todas_las_luces
+      continue_on_error: true
+    - action: media_player.turn_off
+      target:
+        entity_id:
+          - media_player.tv_ga_2
+          - media_player.bravia_4k_gb_atv3_2
+      continue_on_error: true
+
+he_llegado:
+  alias: He llegado
+  description: Vuelta a casa. De noche enciende Relajado en el salón, no el dormitorio.
+  icon: mdi:home-import-outline
+  mode: single
+  sequence:
+    - action: input_boolean.turn_off
+      target:
+        entity_id: input_boolean.casa_ausente
+    - choose:
+        - conditions:
+            - condition: state
+              entity_id: sun.sun
+              state: below_horizon
+            - condition: state
+              entity_id: input_boolean.modo_noche
+              state: "off"
+          sequence:
+            - action: script.relajado
+
+pon_la_radio:
+  alias: Pon la radio
+  description: Reproduce Cadena SER en el Satellite1
+  icon: mdi:radio
+  mode: single
+  sequence:
+    - action: media_player.play_media
+      target:
+        entity_id: media_player.satellite1_c7ffe4_media_player
+      data:
+        media_content_type: music
+        media_content_id: https://playerservices.streamtheworld.com/api/livestream-redirect/CADENASER.mp3
+      continue_on_error: true

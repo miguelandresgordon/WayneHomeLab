@@ -1,0 +1,32 @@
+name: Speaker ID Mariano
+version: "1.0.0"
+slug: speaker_id_mariano
+description: >-
+  Identifica quién habla en cada comando de voz del Satellite1 usando
+  embeddings sherpa-onnx (WeSpeaker). Expone API REST para Home Assistant.
+url: https://github.com/miguel/WayneHomeLab
+arch:
+  - aarch64
+startup: services
+boot: auto
+init: false
+ports:
+  10400/tcp: 10400
+ports_description:
+  10400/tcp: Speaker identification REST API
+map:
+  - share:rw
+options:
+  threshold: 0.6
+  margin: 0.05
+  profiles_dir: /share/speaker-id
+  model_path: /share/speaker-id/wespeaker_en_voxceleb_resnet34.onnx
+  num_threads: 1
+  log_level: info
+schema:
+  threshold: float
+  margin: float
+  profiles_dir: str
+  model_path: str
+  num_threads: int
+  log_level: list(trace|debug|info|warning|error)

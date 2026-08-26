@@ -1,6 +1,92 @@
-scripts
-wireguard
-github_actions_privatekey
-github_actions_publickey
-config
-deployments
+# =========================
+# macOS
+# =========================
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# =========================
+# VS Code
+# =========================
+.vscode/settings.json
+.vscode/launch.json
+*.code-workspace
+
+# =========================
+# Python
+# =========================
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+
+# =========================
+# Secrets & Credentials
+# =========================
+home-assistant/secrets.yaml
+voice-pipeline/.env
+*.pem
+*.key
+id_rsa
+id_ed25519
+.ssh/
+
+# =========================
+# Home Assistant
+# =========================
+home-assistant/.storage/
+home-assistant/home-assistant_v2.db
+home-assistant/home-assistant_v2.db-shm
+home-assistant/home-assistant_v2.db-wal
+home-assistant/tts/
+home-assistant/blueprints/
+
+# =========================
+# Proxmox / VM Images
+# =========================
+*.qcow2
+*.img
+*.iso
+*.vmdk
+
+# =========================
+# Docker
+# =========================
+voice-pipeline/data/
+voice-pipeline/models/
+
+# =========================
+# Logs
+# =========================
+*.log
+logs/
+
+# =========================
+# Wake word models (trained locally)
+# =========================
+infrastructure/voice/wake-word/models/*.tflite
+infrastructure/voice/wake-word/models/mariano.json
+infrastructure/voice/wake-word/personal_samples/*.wav
+infrastructure/voice/wake-word/personal_samples/*.zip
+
+# Speaker ID artefacts (trained locally)
+infrastructure/voice/speaker-id/models/
+infrastructure/voice/speaker-id/export/
+infrastructure/voice/speaker-id/samples/
+
+# =========================
+# Misc
+# =========================
+*.swp
+*.swo
+*~
+.env
+.env.local
+
+# Third-party token extractor (local only)
+Xiaomi-cloud-tokens-extractor/
