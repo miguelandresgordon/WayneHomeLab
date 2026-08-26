@@ -1,0 +1,44 @@
+# Configuración HAOS VM (WayneLab) — fuente de verdad para /config/configuration.yaml
+# Desplegar con infrastructure/voice/speaker-id/deploy_speaker_id_ha_config.sh
+# o copiar por Samba a /Volumes/config
+
+# Loads default set of integrations. Do not remove.
+default_config:
+
+homeassistant:
+  internal_url: http://192.168.1.110:8123
+  allowlist_external_dirs:
+    - /share/assist_pipeline
+    - /share/speaker-id
+
+frontend:
+  themes: !include_dir_merge_named themes
+
+automation: !include automations.yaml
+script: !include scripts.yaml
+scene: !include scenes.yaml
+input_text: !include input_text.yaml
+input_boolean: !include input_boolean.yaml
+light: !include lights.yaml
+rest_command: !include rest_commands.yaml
+shell_command: !include shell_commands.yaml
+
+logger:
+  default: warning
+
+recorder:
+  purge_keep_days: 10
+  commit_interval: 30
+  exclude:
+    entity_globs:
+      - sensor.*_wi_fi_signal_strength
+      - sensor.*rssi*
+      - sensor.iphone_de_miguel_bssid
+      - sensor.iphone_de_miguel_ssid
+    event_types:
+      - call_service
+
+# Necesario para Speaker ID (folder watcher en /share/assist_pipeline).
+# Purge de WAV en automations.yaml (15 min). No dejar logger de Assist en debug.
+assist_pipeline:
+  debug_recording_dir: /share/assist_pipeline

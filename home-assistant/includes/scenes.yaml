@@ -1,0 +1,32 @@
+# Escenas explícitas (no snapshots de UI). Nombres que no coinciden con áreas.
+# Solo salón / Xiaomi. Antela (dormitorio) se añade cuando esté en HA.
+- id: relajado
+  name: Relajado
+  icon: mdi:weather-sunset
+  entities:
+    light.yeelink_mono6_6409_light:
+      state: "on"
+      brightness: 89
+
+- id: lectura
+  name: Lectura
+  icon: mdi:book-open-page-variant
+  entities:
+    light.yeelink_mono6_6409_light:
+      state: "on"
+      brightness: 204
+
+- id: cine
+  name: Cine
+  icon: mdi:movie-open
+  entities:
+    light.yeelink_mono6_6409_light:
+      state: "on"
+      brightness: 20
+
+- id: lampara_apagada
+  name: Lámpara apagada
+  icon: mdi:lightbulb-off
+  entities:
+    light.yeelink_mono6_6409_light:
+      state: "off"

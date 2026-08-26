@@ -1,0 +1,5 @@
+current_speaker:
+  name: Current Speaker
+  initial: desconocido
+  icon: mdi:account-voice
+  max: 64

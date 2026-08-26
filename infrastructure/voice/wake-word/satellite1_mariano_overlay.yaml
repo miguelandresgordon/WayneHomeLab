@@ -25,6 +25,10 @@ micro_wake_word:
       id: stop
       internal: true
 
+# --- En logger / packages del firmware (Take Control) ---
+# log_level: info   (no debug permanente; 4 GB RAM / SSD USB)
+# packages refresh: 1d  (no 1s)
+
 # --- Tras Take Control, probar en voice_assistant (mejora STT post-wake) ---
 voice_assistant:
   noise_suppression_level: 2

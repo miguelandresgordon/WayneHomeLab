@@ -1,0 +1,2 @@
+speaker_id_purge_old_wavs: >-
+  find /share/assist_pipeline -type f -name '*.wav' -mmin +15 -delete 2>/dev/null || true
