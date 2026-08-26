@@ -30,6 +30,8 @@ venv/
 # =========================
 home-assistant/secrets.yaml
 voice-pipeline/.env
+infrastructure/nodes/pihole/pihole.toml
+infrastructure/nodes/pihole/.webpassword
 *.pem
 *.key
 id_rsa

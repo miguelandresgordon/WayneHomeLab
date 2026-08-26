@@ -6,7 +6,7 @@ Asistente de voz privado («Private Alexa») sobre Raspberry Pi + Home Assistant
 
 | Pieza | Realidad |
 |-------|----------|
-| Core | RPi 5 (`192.168.1.100`) → Proxmox → HAOS VM (`192.168.1.110`) |
+| Core | RPi 5 (`192.168.1.100`) → Proxmox → HAOS (`192.168.1.110`) + Pi-hole (`192.168.1.53`) |
 | Edge RPi 3b | Pendiente; STT/TTS viven en la VM HAOS |
 | Satellite1 | `192.168.1.85`, wake word **Okay Nabu** (objetivo: «Mariano») |
 | STT | Groq `whisper-large-v3-turbo` vía HACS `openai_whisper_cloud` |
@@ -40,6 +40,7 @@ Satellite1 (Okay Nabu)
 | [docs/runpod-train-mariano-movil.md](docs/runpod-train-mariano-movil.md) | Train desde iOS / Safari |
 | [docs/speaker-id-mariano.md](docs/speaker-id-mariano.md) | Speaker ID (Colab + add-on) |
 | [docs/reservas-dhcp-bombillas-iot.md](docs/reservas-dhcp-bombillas-iot.md) | Reservas DHCP IoT |
+| [docs/pihole.md](docs/pihole.md) | Pi-hole VM (DNS) en Proxmox |
 | [docs/api-costs.md](docs/api-costs.md) | Costes API |
 
 ## Estructura del repo
@@ -48,8 +49,8 @@ Satellite1 (Okay Nabu)
 WayneHomeLab/
 ├── AGENTS.md
 ├── infrastructure/
-│   ├── proxmox/                 # create_haos_vm.sh
-│   ├── nodes/core|edge/         # setup host, fix Proxmox cluster
+│   ├── proxmox/                 # create_haos_vm.sh, create_pihole_vm.sh
+│   ├── nodes/core|edge|pihole/  # setup host, fix Proxmox, install Pi-hole
 │   ├── provisioning/mac/        # flash SSD headless
 │   └── voice/
 │       ├── wake-word/           # Mariano (RunPod / Windows / Mac)
