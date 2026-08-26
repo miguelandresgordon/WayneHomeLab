@@ -16,8 +16,9 @@ All suggestions, code reviews, and implementations must reflect **production-gra
 
 This project is a private voice assistant ecosystem ("Private Alexa") running on Raspberry Pi hardware:
 
-- **Core Node (RPi 5)**: Proxmox (PXVIRT) host → Home Assistant OS VM (bridged networking via vmbr0)
+- **Core Node (RPi 5)**: Proxmox (PXVIRT) host → Home Assistant OS VM + **Pi-hole VM** (bridged `vmbr0`)
 - **Edge Node (RPi 3b)**: Not yet set up. Voice pipeline runs inside HAOS VM for now.
+- **DNS**: Pi-hole en `192.168.1.53` (VMID 101). DHCP sigue en el router; cutover DNS LAN pendiente (probar Mac → móvil primero). Ver [docs/pihole.md](docs/pihole.md).
 - **STT**: Groq API (Whisper large-v3-turbo) via HACS integration `openai_whisper_cloud` — NOT local Whisper
 - **TTS**: Piper add-on (Wyoming, `core-piper:10200`, voice `es_ES-davefx-medium`)
 - **Conversation**: Home Assistant built-in (Spanish)
@@ -31,8 +32,9 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed diagrams and data 
 
 | Component | IP | Details |
 |-----------|-----|---------|
-| RPi 5 Host (Proxmox) | `192.168.1.100` | hostname `waynelab-core`, user `pi` |
+| RPi 5 Host (Proxmox) | `192.168.1.100` | hostname `waynelab-core`, user `pi`; host Debian 13 (trixie), ~8 GB RAM |
 | HAOS VM (VMID 100) | `192.168.1.110` | 4 GB RAM, 64 GB disk, UEFI, `haos_generic-aarch64-13.2` |
+| Pi-hole VM (VMID 101) | `192.168.1.53` | Debian 12 bookworm; MAC `bc:24:11:69:81:fe`; 768 MiB / balloon 256 / 8G `local`; Pi-hole v6 OK (`verify_pihole.sh`). Cutover router **pendiente**. Guía: [docs/pihole.md](docs/pihole.md) |
 | Satellite1 | `192.168.1.85` | MAC `3c:0f:02:c7:ff:e4`, ESPHome encryption key in `.ha-sat1-test` |
 | Edge Node (RPi 3b) | `192.168.1.101` | Not operational yet |
 | MacBook (dev) | DHCP | — |
@@ -64,6 +66,15 @@ ssh -t pi@192.168.1.100 "sudo sed -i 's/^manage_etc_hosts:.*/manage_etc_hosts: f
 ```bash
 ssh -t pi@192.168.1.100 "sudo qm start 100"
 ```
+
+### Pi-hole VM (tras reboot del host)
+```bash
+ssh -t pi@192.168.1.100 "sudo qm start 101"   # onboot=1; order=1 si startup está configurado
+```
+- MAC: `bc:24:11:69:81:fe` → reserva DHCP `192.168.1.53`.
+- UI: `http://192.168.1.53/admin` · smoke: `bash infrastructure/nodes/pihole/verify_pihole.sh`
+- Cutover DNS del router: solo tras fases Mac → móvil (go/no-go en [docs/pihole.md](docs/pihole.md)). Rollback: DNS router → ISP/`1.1.1.1`.
+- Al crear la VM con `sudo`, pasar `SSH_KEY_FILE=/home/pi/.ssh/authorized_keys` (si no, cloud-init inyecta la clave de `root@waynelab-core`).
 
 ### SSH to Proxmox host
 - User: `pi` (not `root` — root SSH requires key, not configured)
@@ -166,6 +177,7 @@ Add-on Whisper (`core_whisper`): **parado**, boot `manual`. STT = Groq.
 - Docker service secrets go in `voice-pipeline/.env` (gitignored)
 - Satellite1 ESPHome encryption key: stored in `/Users/miguel/.ha-sat1-test/config/.storage/esphome.encryption_keys` (MAC `3c:0f:02:c7:ff:e4`)
 - Groq API key: en la integración `openai_whisper_cloud` de HA (no commitear)
+- Pi-hole web password: `PIHOLE_WEBPASSWORD` al instalar; no commitear `infrastructure/nodes/pihole/pihole.toml`
 - Always provide `.example` templates documenting required keys
 - Reference secrets via `!secret` in HA YAML or `${VAR}` in Docker Compose
 
@@ -184,12 +196,15 @@ WayneHomeLab/
 ├── infrastructure/              # IaC: Proxmox VM scripts, node setup
 │   ├── proxmox/                 # VM creation and configuration
 │   │   ├── create_haos_vm.sh    # Crea VM HAOS ARM64 (storage=local, disk=64G)
-│   │   └── vm.conf
+│   │   ├── create_pihole_vm.sh  # Crea VM Pi-hole Debian 12 ARM64 (VMID 101, .53)
+│   │   ├── vm.conf
+│   │   └── pihole.conf
 │   └── nodes/
 │       ├── core/                # RPi 5 (Proxmox host)
 │       │   ├── fix_proxmox_cluster.sh  # Fix cloud-init /etc/hosts bug (frecuente)
 │       │   ├── setup_host.sh
 │       │   └── sysctl.conf
+│       ├── pihole/              # install_pihole.sh + pihole.toml.example
 │       └── edge/                # RPi 3b (no operativo aún)
 │   └── voice/
 │       ├── wake-word/           # Wake word "Mariano" (RunPod GPU Pod + Windows Docker CPU/NVIDIA)
@@ -208,6 +223,7 @@ WayneHomeLab/
 │   └── .env.example
 └── docs/                        # Arquitectura, guías, costes
     ├── ARCHITECTURE.md
+    ├── pihole.md
     ├── setup-desde-cero-ssd-pi5-haos.md
     ├── setup-from-scratch-headless.md
     ├── wake-word-mariano.md
@@ -220,6 +236,8 @@ WayneHomeLab/
 
 ## Pendiente / Próximos pasos
 
+- [x] Pi-hole VM (VMID 101 / `.53`): scripts + install + `verify_pihole.sh` OK — [docs/pihole.md](docs/pihole.md)
+- [ ] Pi-hole: cutover DNS por fases (Mac → móvil → router); reserva DHCP MAC `bc:24:11:69:81:fe`
 - [ ] RPi 3b: instalar DietPi + Docker + `voice-pipeline/` (Whisper+Piper) para descargar HA VM
 - [ ] Bombilla Antela (Dormitorio): Tuya nube → entidad `light.bombilla_dormitorio`, luego Local Tuya IP `.122`. No agrupar con la lámpara del salón.
 - [ ] Wake word personalizada «Mariano» — ver [docs/wake-word-mariano.md](docs/wake-word-mariano.md) y `infrastructure/voice/wake-word/`
