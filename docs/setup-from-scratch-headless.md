@@ -8,7 +8,8 @@ This guide is the canonical path to rebuild WayneHomeLab from zero using a MacBo
 - Proxmox runs on Pi5
 - Home Assistant OS runs inside a VM with dedicated LAN IP
 - Pi3 runs DietPi as auxiliary/backup node
-- Remote access works through WireGuard on `vpn.waynehomelab.com`
+- Remote access works through WireGuard on `vpn.waynehomelab.com` (dedicated VM — [wireguard.md](wireguard.md))
+- HA HTTPS: `https://ha.waynehomelab.com` only inside the VPN tunnel (not exposed to the internet)
 
 ## 0) Planning and Reservations
 
@@ -16,15 +17,19 @@ Reserve these DHCP leases in your router:
 
 - `192.168.1.100` -> Pi5 host (`waynelab-core`)
 - `192.168.1.110` -> HAOS VM (`homeassistant`)
+- `192.168.1.53` -> Pi-hole VM (`pihole`)
+- `192.168.1.55` -> WireGuard VM (`wireguard`)
 - `192.168.1.101` -> Pi3 edge (`waynelab-edge`)
 
 Create DNS record:
 
 - `vpn.waynehomelab.com` -> your public IPv4
+- Do **not** publish `ha.waynehomelab.com` on the public DNS (Pi-hole local only → `10.44.0.1`)
 
 Router port forward:
 
-- UDP `51820` -> `192.168.1.100:51820`
+- UDP `51820` -> `192.168.1.55:51820` (WireGuard VM — **not** the Proxmox host)
+- Do **not** forward 80, 443, or 8123
 
 ## 1) Pi5 SSD Boot (Headless)
 
@@ -97,24 +102,21 @@ ssh dietpi@192.168.1.101 "sudo BACKUP_MOUNT=/mnt/ssd bash /tmp/setup_backup_sink
 
 Use Pi3 as backup sink and optional lightweight voice services.
 
-## 4) WireGuard on Pi5
+## 4) WireGuard VM + HTTPS privado
 
-Install server:
+**Do not** install WireGuard on the Proxmox host. Use the dedicated VM (VMID 102).
 
-```bash
-scp infrastructure/nodes/core/install_wireguard.sh root@192.168.1.100:/tmp/
-ssh root@192.168.1.100 "WG_ENDPOINT=vpn.waynehomelab.com bash /tmp/install_wireguard.sh"
-```
-
-Create peer profiles (MacBook/iPhone):
+Full runbook: [wireguard.md](wireguard.md).
 
 ```bash
-scp infrastructure/nodes/core/create_wireguard_peer.sh root@192.168.1.100:/tmp/
-ssh root@192.168.1.100 "bash /tmp/create_wireguard_peer.sh macbook"
-ssh root@192.168.1.100 "bash /tmp/create_wireguard_peer.sh iphone"
-```
+# Create VM on Proxmox host
+scp infrastructure/proxmox/create_wireguard_vm.sh pi@192.168.1.100:/tmp/
+ssh -t pi@192.168.1.100 \
+  'sudo SSH_KEY_FILE=/home/pi/.ssh/authorized_keys bash /tmp/create_wireguard_vm.sh'
 
-Download peer config and import into WireGuard app.
+# On guest 192.168.1.55: install WG + Caddy (Cloudflare DNS-01)
+# Then create peers, Pi-hole local DNS ha → 10.44.0.1, router DNAT UDP 51820
+```
 
 ## 5) Home Assistant Configuration Baseline
 
@@ -122,8 +124,10 @@ In HA (`http://192.168.1.110:8123`):
 
 1. Complete onboarding
 2. Set internal URL to `http://192.168.1.110:8123`
-3. Configure ESPHome, Satellite1, and Wyoming integrations
-4. Verify TTS/STT path if voice services are enabled on Pi3
+3. External URL: `https://ha.waynehomelab.com` (VPN-only; Settings → System → Network)
+4. Trust X-Forwarded-For + trusted proxy `192.168.1.55` (Caddy VM)
+5. Configure ESPHome, Satellite1, and Wyoming integrations
+6. Verify TTS/STT path if voice services are enabled on Pi3
 
 ## 6) Backup and Recovery Baseline
 
@@ -136,5 +140,6 @@ In HA (`http://192.168.1.110:8123`):
 - Pi5 reachable by SSH and Proxmox UI
 - HAOS reachable at `192.168.1.110:8123`
 - Pi3 reachable by SSH and mounted SSD
-- WireGuard tunnel works from mobile network
-- HA accessible over VPN without exposing HA directly to the internet
+- WireGuard tunnel works from mobile network (`vpn.waynehomelab.com:51820`)
+- HA accessible at `https://ha.waynehomelab.com` over VPN without exposing HA to the internet
+- `bash infrastructure/nodes/wireguard/verify_wireguard.sh` passes

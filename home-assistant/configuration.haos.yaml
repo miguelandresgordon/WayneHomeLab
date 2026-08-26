@@ -7,9 +7,14 @@ default_config:
 
 homeassistant:
   internal_url: http://192.168.1.110:8123
+  # external_url: https://ha.waynehomelab.com  # VPN-only; set in UI or secrets
   allowlist_external_dirs:
     - /share/assist_pipeline
     - /share/speaker-id
+
+# HA 2026.8+: HTTP / reverse proxy in Settings → System → Network
+# Trust X-Forwarded-For + trusted_proxies: 192.168.1.55 (Caddy on WireGuard VM)
+# See docs/wireguard.md
 
 frontend:
   themes: !include_dir_merge_named themes

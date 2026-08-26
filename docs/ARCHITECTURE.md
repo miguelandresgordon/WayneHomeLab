@@ -13,9 +13,11 @@ graph LR
             PVE["Proxmox VE"]
             HAOS_VM["HAOS VM<br/>192.168.1.110"]
             PIHOLE_VM["Pi-hole VM<br/>192.168.1.53"]
+            WG_VM["WireGuard + Caddy<br/>192.168.1.55"]
             RPI5 --> PVE
             PVE --> HAOS_VM
             PVE --> PIHOLE_VM
+            PVE --> WG_VM
         end
 
         subgraph EDGE["Edge Node — RPi 3b (pending)"]
@@ -34,6 +36,11 @@ graph LR
         ROUTER --- MAC
     end
 
+    CLIENT["Remote client<br/>WireGuard"]
+    CLIENT -->|"UDP 51820"| ROUTER
+    CLIENT -->|"HTTPS ha via 10.44.0.1"| WG_VM
+    WG_VM -->|"proxy :8123"| HAOS_VM
+
     GROQ["Groq API<br/>whisper-large-v3-turbo"]
     HAOS_VM -- "HTTPS" --> GROQ
 ```
@@ -44,6 +51,7 @@ graph LR
 |--------|----|----------|------|
 | RPi 5 Host | 192.168.1.100 | waynelab-core | Proxmox VE host |
 | Pi-hole VM (VMID 101) | 192.168.1.53 | pihole | DNS sinkhole (bridged vmbr0); DHCP sigue en router |
+| WireGuard VM (VMID 102) | 192.168.1.55 | wireguard | WG server + Caddy (`10.44.0.1`); HTTPS VPN-only |
 | HAOS VM | 192.168.1.110:8123 | homeassistant | Home Assistant (bridged vmbr0) |
 | RPi 3b | 192.168.1.101 | waynelab-edge | Edge (no operativo aún) |
 | Satellite1 | 192.168.1.85 | — | ESPHome mic + speaker |
@@ -81,7 +89,9 @@ flowchart LR
 
 | Service | Port | Notes |
 |---------|------|-------|
-| Home Assistant | 8123 | HTTP LAN (HTTPS pendiente) |
+| Home Assistant | 8123 | HTTP LAN (Satellite1). Remoto: HTTPS vía WireGuard |
+| Caddy (WG VM) | 443 | Solo en `10.44.0.1` (VPN); no en WAN |
+| WireGuard | 51820/udp | DNAT router → `192.168.1.55`; endpoint `vpn.waynehomelab.com` |
 | Pi-hole DNS | 53/tcp+udp | VM `192.168.1.53` (tras cutover router) |
 | Pi-hole Admin | 80 | `http://192.168.1.53/admin` |
 | Piper Wyoming | 10200 | Add-on HAOS |
@@ -124,6 +134,7 @@ Entity IDs reales documentados en `AGENTS.md` y `includes/scripts.yaml`.
 | Groq STT vs Whisper local | Calidad ES con mic Satellite1; Whisper tiny/base/small alucina |
 | Piper en HAOS vs edge | Edge RPi 3b aún no operativo; un solo nodo menos latencia de red |
 | Pi-hole en VM propia | DNS aislado de HAOS; 768 MiB en host 8 GB; DHCP permanece en el router |
+| WireGuard + Caddy en VM 102 | HTTPS privado (`ha.waynehomelab.com`) sin abrir 80/443/8123; LE DNS-01 Cloudflare; 512 MiB |
 | RunPod para Mariano | Mac sin disco; Windows solo AMD (sin CUDA); GPU on-demand puntual |
 | Network volume 200 GB | Primer train con AudioSet+FMA+CHiME supera 100 GB si no se borran tars |
 | No Spot / Instant Cluster | Preemption o multi-nodo innecesario para MicroWakeWord |
@@ -133,6 +144,7 @@ Entity IDs reales documentados en `AGENTS.md` y `includes/scripts.yaml`.
 - [setup-desde-cero-ssd-pi5-haos.md](setup-desde-cero-ssd-pi5-haos.md)
 - [setup-from-scratch-headless.md](setup-from-scratch-headless.md)
 - [pihole.md](pihole.md)
+- [wireguard.md](wireguard.md)
 - [speaker-id-mariano.md](speaker-id-mariano.md)
 - [api-costs.md](api-costs.md)
 - [reservas-dhcp-bombillas-iot.md](reservas-dhcp-bombillas-iot.md)

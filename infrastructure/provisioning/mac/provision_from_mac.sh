@@ -45,14 +45,9 @@ install_wireguard() {
     return
   fi
 
-  log "Installing WireGuard on Pi5..."
-  scp "${ROOT_DIR}/infrastructure/nodes/core/install_wireguard.sh" "root@${PI5_IP}:/tmp/"
-  ssh "root@${PI5_IP}" "WG_ENDPOINT=vpn.waynehomelab.com bash /tmp/install_wireguard.sh"
-
-  log "Creating initial peers..."
-  scp "${ROOT_DIR}/infrastructure/nodes/core/create_wireguard_peer.sh" "root@${PI5_IP}:/tmp/"
-  ssh "root@${PI5_IP}" "bash /tmp/create_wireguard_peer.sh macbook"
-  ssh "root@${PI5_IP}" "bash /tmp/create_wireguard_peer.sh iphone"
+  log "WireGuard runs on dedicated VM 102 (not on the Proxmox host)."
+  log "See docs/wireguard.md — create_wireguard_vm.sh + nodes/wireguard/*"
+  log "Skipping automatic install from this script (manual: VM + Cloudflare + DNAT)."
 }
 
 main() {

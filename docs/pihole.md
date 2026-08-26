@@ -219,6 +219,16 @@ Solo si se cumplen **todos**:
 - HTTPS en la UI  
 - Docker / LXC  
 
+### Relacionado: Local DNS para HA por VPN
+
+Para `https://ha.waynehomelab.com` solo dentro de WireGuard, añade en Pi-hole:
+
+```text
+10.44.0.1 ha.waynehomelab.com
+```
+
+Ver [wireguard.md](wireguard.md) §6. No publiques ese A en Cloudflare/WAN.
+
 ---
 
 ## Checklist
@@ -232,3 +242,4 @@ Solo si se cumplen **todos**:
 - [ ] Fase B: un móvil + IoT OK
 - [ ] Go/no-go (§4) → Fase C cutover router
 - [ ] Rollback mental / probado
+- [ ] Local DNS `ha.waynehomelab.com` → `10.44.0.1` (tras WireGuard VM)
