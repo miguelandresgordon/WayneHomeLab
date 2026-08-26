@@ -12,7 +12,10 @@ graph LR
             RPI5["RPi 5 Host<br/>192.168.1.100"]
             PVE["Proxmox VE"]
             HAOS_VM["HAOS VM<br/>192.168.1.110"]
-            RPI5 --> PVE --> HAOS_VM
+            PIHOLE_VM["Pi-hole VM<br/>192.168.1.53"]
+            RPI5 --> PVE
+            PVE --> HAOS_VM
+            PVE --> PIHOLE_VM
         end
 
         subgraph EDGE["Edge Node — RPi 3b (pending)"]
@@ -40,6 +43,7 @@ graph LR
 | Device | IP | Hostname | Role |
 |--------|----|----------|------|
 | RPi 5 Host | 192.168.1.100 | waynelab-core | Proxmox VE host |
+| Pi-hole VM (VMID 101) | 192.168.1.53 | pihole | DNS sinkhole (bridged vmbr0); DHCP sigue en router |
 | HAOS VM | 192.168.1.110:8123 | homeassistant | Home Assistant (bridged vmbr0) |
 | RPi 3b | 192.168.1.101 | waynelab-edge | Edge (no operativo aún) |
 | Satellite1 | 192.168.1.85 | — | ESPHome mic + speaker |
@@ -78,6 +82,8 @@ flowchart LR
 | Service | Port | Notes |
 |---------|------|-------|
 | Home Assistant | 8123 | HTTP LAN (HTTPS pendiente) |
+| Pi-hole DNS | 53/tcp+udp | VM `192.168.1.53` (tras cutover router) |
+| Pi-hole Admin | 80 | `http://192.168.1.53/admin` |
 | Piper Wyoming | 10200 | Add-on HAOS |
 | Proxmox UI | 8006 | Host RPi 5 |
 | SSH host | 22 | user `pi` |
@@ -117,6 +123,7 @@ Entity IDs reales documentados en `AGENTS.md` y `includes/scripts.yaml`.
 |----------|-----------|
 | Groq STT vs Whisper local | Calidad ES con mic Satellite1; Whisper tiny/base/small alucina |
 | Piper en HAOS vs edge | Edge RPi 3b aún no operativo; un solo nodo menos latencia de red |
+| Pi-hole en VM propia | DNS aislado de HAOS; 768 MiB en host 8 GB; DHCP permanece en el router |
 | RunPod para Mariano | Mac sin disco; Windows solo AMD (sin CUDA); GPU on-demand puntual |
 | Network volume 200 GB | Primer train con AudioSet+FMA+CHiME supera 100 GB si no se borran tars |
 | No Spot / Instant Cluster | Preemption o multi-nodo innecesario para MicroWakeWord |
@@ -125,6 +132,7 @@ Entity IDs reales documentados en `AGENTS.md` y `includes/scripts.yaml`.
 
 - [setup-desde-cero-ssd-pi5-haos.md](setup-desde-cero-ssd-pi5-haos.md)
 - [setup-from-scratch-headless.md](setup-from-scratch-headless.md)
+- [pihole.md](pihole.md)
 - [speaker-id-mariano.md](speaker-id-mariano.md)
 - [api-costs.md](api-costs.md)
 - [reservas-dhcp-bombillas-iot.md](reservas-dhcp-bombillas-iot.md)
