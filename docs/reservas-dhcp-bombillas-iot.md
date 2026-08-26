@@ -24,6 +24,7 @@ Adapta a tu red. Suponiendo LAN `192.168.1.0/24` y router en `192.168.1.1`:
 | Bombilla Antela | `AA:BB:CC:DD:EE:02` | `192.168.1.122` | Smart Life |
 | Host Proxmox (Pi 5) | *(ya fijada)* | `192.168.1.100` | — |
 | Home Assistant VM | *(reserva existente)* | `192.168.1.110` | — |
+| Pi-hole VM (VMID 101) | `bc:24:11:69:81:fe` | `192.168.1.53` | DNS LAN; ver [pihole.md](pihole.md) |
 
 **Consejo:** Usa IPs **fuera del rango dinámico** del router. Si el DHCP reparte `.50–`.199`, reserva en `.121–`.130` o por encima de `.200`.
 
@@ -198,6 +199,7 @@ No hace falta re-vincular Alexa tras la reserva DHCP.
 - [ ] MAC bombilla Antela anotada
 - [ ] Reserva `192.168.1.121` → MAC Xiaomi
 - [ ] Reserva `192.168.1.122` → MAC Antela
+- [ ] Reserva `192.168.1.53` → MAC Pi-hole VM (si usas Pi-hole; ver [pihole.md](pihole.md))
 - [ ] Reinicio bombillas y verificación ping
 - [ ] Alexa probada en ambas
 - [ ] HA configurado con IP fija (+ token / Tuya)
