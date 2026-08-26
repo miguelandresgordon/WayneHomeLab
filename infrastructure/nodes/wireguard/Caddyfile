@@ -1,0 +1,11 @@
+{
+	auto_https disable_redirects
+	# DNS for waynehomelab.com is on Cloudflare (NS), not Porkbun.
+	acme_dns cloudflare {env.CF_API_TOKEN}
+}
+
+# HTTPS only on the WireGuard interface — not reachable from WAN/LAN without VPN.
+ha.waynehomelab.com {
+	bind 10.44.0.1
+	reverse_proxy 192.168.1.110:8123
+}

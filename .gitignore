@@ -32,6 +32,10 @@ home-assistant/secrets.yaml
 voice-pipeline/.env
 infrastructure/nodes/pihole/pihole.toml
 infrastructure/nodes/pihole/.webpassword
+infrastructure/nodes/wireguard/porkbun.env
+infrastructure/nodes/wireguard/cloudflare.env
+# WireGuard peer configs / keys (generated on VM; never commit)
+infrastructure/nodes/wireguard/peers/
 *.pem
 *.key
 id_rsa
