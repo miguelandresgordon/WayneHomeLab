@@ -21,9 +21,9 @@ This project is a private voice assistant ecosystem ("Private Alexa") running on
 - **STT**: Groq API (Whisper large-v3-turbo) via HACS integration `openai_whisper_cloud` — NOT local Whisper
 - **TTS**: Piper add-on (Wyoming, `core-piper:10200`, voice `es_ES-davefx-medium`)
 - **Conversation**: Home Assistant built-in (Spanish)
-- **Wake word**: Okay Nabu on-device (objetivo: MicroWakeWord «Mariano» en **RunPod GPU Pod**; fallback Windows 11 + Docker CPU, RX 6750 XT — CUDA no aplica)
+- **Wake word**: Okay Nabu on-device (objetivo: MicroWakeWord «Mariano» en **RunPod GPU Pod**, volume **200 GB**; fallback Windows 11 + Docker CPU, RX 6750 XT — CUDA no aplica)
 - **Dev Machine**: MacBook Air M3 (ARM64) — no tiene disco para train completo
-- **Training PC (Windows 11)**: DHCP | Ryzen 5 3600 + RX 6750 XT, 16 GB RAM (fallback Docker CPU). RunPod: [docs/runpod-train-mariano.md](docs/runpod-train-mariano.md)
+- **Training PC (Windows 11)**: DHCP | Ryzen 5 3600 + RX 6750 XT, 16 GB RAM (fallback Docker CPU). RunPod: [docs/runpod-train-mariano.md](docs/runpod-train-mariano.md) · móvil: [docs/runpod-train-mariano-movil.md](docs/runpod-train-mariano-movil.md)
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed diagrams and data flow.
 
@@ -68,6 +68,11 @@ ssh -t pi@192.168.1.100 "sudo qm start 100"
 ### SSH to Proxmox host
 - User: `pi` (not `root` — root SSH requires key, not configured)
 - Always use `ssh -t` for sudo commands
+
+### RunPod Mariano (train en curso / reintentos)
+- Network volume mínimo **200 GB**. Con 100 GB AudioSet agota cuota → Exit **999**.
+- Wrapper obligatorio: `/usr/local/bin/tar` → `/usr/bin/tar --no-same-owner --no-same-permissions` (se pierde en cada Start del contenedor).
+- Guías: [docs/runpod-train-mariano.md](docs/runpod-train-mariano.md), [docs/runpod-train-mariano-movil.md](docs/runpod-train-mariano-movil.md).
 
 ## Voice Pipeline — Current Setup
 
@@ -142,6 +147,8 @@ Entity IDs reales: `switch.satellite1_c7ffe4_mute_microphones`, `media_player.tv
 | Satellite1 Action | 1 / 2 / long press | Toggle lámpara / cine / mute mic |
 | Speaker ID | folder watcher WAV | `input_text.current_speaker` |
 
+Scripts Assist útiles: `script.pon_la_radio` (Cadena SER en Satellite1), rutinas `buenas_noches` / `buenos_dias` / `cine` / `relajado`.
+
 Add-on Whisper (`core_whisper`): **parado**, boot `manual`. STT = Groq.
 
 ## Code Conventions
@@ -202,6 +209,11 @@ WayneHomeLab/
 └── docs/                        # Arquitectura, guías, costes
     ├── ARCHITECTURE.md
     ├── setup-desde-cero-ssd-pi5-haos.md
+    ├── setup-from-scratch-headless.md
+    ├── wake-word-mariano.md
+    ├── runpod-train-mariano.md
+    ├── runpod-train-mariano-movil.md
+    ├── speaker-id-mariano.md
     ├── reservas-dhcp-bombillas-iot.md
     └── api-costs.md
 ```
@@ -214,7 +226,8 @@ WayneHomeLab/
 - [x] Wake word "Mariano": infra en `infrastructure/voice/wake-word/` + runbook `docs/wake-word-mariano.md`
 - [x] Captura de muestras personales (34 WAV Assist) + export `export_personal_samples.sh`
 - [x] Disco Mac: `free_trainer_disk.sh --keep-personal` (TTS/features borrados; 34 WAV conservados)
-- [ ] Entrenar «Mariano» en **RunPod GPU Pod** (recomendado; 1× RTX 4090 Community on-demand)
+- [x] Path RunPod (scripts + guías PC/móvil) + lecciones: volume **200 GB**, wrapper `tar --no-same-owner`
+- [ ] Entrenar «Mariano» en **RunPod GPU Pod** (recomendado; 1× RTX 4090 on-demand; volume 200 GB)
   - Guía: [docs/runpod-train-mariano.md](docs/runpod-train-mariano.md) · móvil/iOS: [docs/runpod-train-mariano-movil.md](docs/runpod-train-mariano-movil.md)
   - Recargar **$20–25** mínimo (o **$50–55** como techo); Auto-pay **OFF**, alerta saldo **$10**
   - Probe/checklist: `setup_trainer_runpod.sh --dry-run`
@@ -242,3 +255,5 @@ WayneHomeLab/
   - Runbook: [docs/speaker-id-mariano.md](docs/speaker-id-mariano.md)
 - [ ] Enrolar voces de la casa en Colab y desplegar perfiles a `/share/speaker-id/`
 - [ ] Instalar add-on `speaker-id-mariano` en HAOS VM y verificar `input_text.current_speaker`
+- [x] Config HA modular alineada con Samba `/config` (`home-assistant/includes/`)
+- [x] Limpieza docs obsoletas «Proyecto Charo» (FASE1, API/SETUP/TROUBLESHOOTING Charo, charo-core, deployment Pi4)

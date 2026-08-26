@@ -12,7 +12,7 @@ Los **34 WAV** de Assist **no están en git** (gitignored). Desde el iPhone no p
 ## Qué puedes hacer ahora (iPhone)
 
 1. Revisar billing (Auto-pay OFF, alerta $10).
-2. Crear network volume 100 GB.
+2. Crear network volume **200 GB**.
 3. Desplegar **1× GPU Pod on-demand** (imagen Tater, volume en `/data`, HTTP 8789).
 4. Subir o grabar muestras en la UI.
 5. Lanzar `train` y dejarlo corriendo en el pod (puedes bloquear el teléfono).
@@ -38,7 +38,7 @@ Los **34 WAV** de Assist **no están en git** (gitignored). Desde el iPhone no p
 | Volume montado en **`/data`** | Dejar el mount en `/workspace` |
 | HTTP **8789** | Confiar solo en Jupyter 8888 (la imagen Tater no trae `/start.sh` de RunPod) |
 
-Con **$50** ya recargados: gasto esperado del train **~$8–20** de GPU + **~$0.23/día** del volume 100 GB. El riesgo no es el train: es **olvidarse el pod encendido**.
+Con **$50** ya recargados: gasto esperado del train **~$8–20** de GPU + **~$0.47/día** del volume **200 GB**. El riesgo no es el train: es **olvidarse el pod encendido**.
 
 Network volumes de RunPod van con **Secure Cloud** (mismo datacenter que el volume). Community es más barato (~$0.34/h) pero **sin** network volume: si terminas el pod, pierdes `/data`. Desde el móvil, usa **Secure + network volume**. $50 cubren ~48 h de 4090 Secure.
 
@@ -63,7 +63,7 @@ El volume sobrevive si el pod se para, se termina o se acaba el saldo. **Créalo
 
 1. [Storage](https://www.console.runpod.io/user/storage) → **New Network Volume**.
 2. Nombre: `waynelab-mww-data`.
-3. Tamaño: **100 GB** (se puede subir después, no bajar). Primera pasada TTS + features: 25–80 GB.
+3. Tamaño: **200 GB** (se puede subir después, no bajar). 100 GB **no basta**: AudioSet sin cleanup llena la cuota y el trainer muere con Exit 999.
 4. Tier: **Standard** (~$0.07/GB/mes). No hace falta High-Performance.
 5. Datacenter: elige uno con RTX 4090 Secure (EU si hay stock, p. ej. el que muestre 4090). **Anota el datacenter y el Volume ID.**
 6. **Create Network Volume**.
@@ -134,7 +134,17 @@ ls -la /data
 mkdir -p /data/personal_samples /data/trained_wake_words
 ```
 
-Esperado: una NVIDIA en `nvidia-smi`, `/data` con ~100 GB. Si `nvidia-smi` falla, no entrenes: eliges mal la GPU o la imagen.
+Esperado: una NVIDIA en `nvidia-smi`, `/data` con ~200 GB de cuota. Si `nvidia-smi` falla, no entrenes: eliges mal la GPU o la imagen.
+
+**Justo después**, instala el wrapper de `tar` (permisos uid 1020 en Network Volume):
+
+```bash
+cat > /usr/local/bin/tar << 'EOF'
+#!/bin/sh
+exec /usr/bin/tar --no-same-owner --no-same-permissions "$@"
+EOF
+chmod +x /usr/local/bin/tar
+```
 
 ---
 
@@ -281,7 +291,8 @@ Sin volume, un pod terminado **pierde** el disco.
 
 ```
 [ ] Auto-pay OFF · ~$50 · alerta $10 · recordatorios 12/24/48 h
-[ ] Volume 100 GB Standard · mismo DC que la GPU · ID anotado
+[ ] Volume **200 GB** Standard · mismo DC que la GPU · ID anotado
+[ ] Wrapper `tar --no-same-owner` en `/usr/local/bin/tar` tras Start
 [ ] Pod on-demand Secure · 1× 4090 (o 3090/A4000) · imagen Tater
 [ ] Container 50 GB · NV en /data · HTTP 8789 · Jupyter OFF · no Spot
 [ ] nvidia-smi OK · df /data ~100G

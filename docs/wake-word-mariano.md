@@ -144,7 +144,7 @@ La [página oficial](https://docs.runpod.io/pods/pricing) no fija tarifas: el $/
 | RTX 4090 | Secure | 0.69–0.74 | Si Community no tiene stock |
 | A40 / L40S / A100 / H100 | — | 0.44–2.89 | Overkill para este train |
 
-Network volume: **$0.07/GB/mes** (&lt;1 TB) → 100 GB ≈ **$0.23/día**. Ingress/egress: $0.
+Network volume: **$0.07/GB/mes** (&lt;1 TB) → **200 GB** ≈ **$0.47/día** (recomendado; 100 GB se agota en AudioSet). Ingress/egress: $0.
 
 La 1ª pasada gasta horas sobre todo en TTS/features (CPU+disco, 25–80 GB), no en el fit TensorFlow. Estimación realista: **4–24 h**. A $0.34/h, 24 h ≈ $8; 48 h ≈ $16. El riesgo de presupuesto es **olvidarse de parar el pod**.
 
@@ -176,7 +176,7 @@ Si el saldo llega a $0, RunPod para todos los pods. **Con network volume los dat
 
 #### Pasos
 
-1. Network volume **100 GB** (EU-RO-1 si hay GPU allí).
+1. Network volume **200 GB** (EU-RO-1 si hay GPU allí). Wrapper `tar --no-same-owner` en el pod.
 2. GPU Pod: 1× RTX 4090 Community, container disk 40–50 GB, volume en `/data`, puertos `8789/http` (y `22/tcp` si montas SSH).
 3. Subir WAV (gitignored): `train_mariano_runpod.sh` → `runpodctl send` a `/data/personal_samples/`.
 4. En el pod: `nvidia-smi` debe ver CUDA. Preferible CLI:

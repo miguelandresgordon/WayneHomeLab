@@ -1,0 +1,108 @@
+# ==============================================================================
+# Voice Pipeline — Docker Compose Manifest
+#
+# Services: Whisper (STT) + Piper (TTS) via Wyoming protocol
+# Target: RPi 3b (ARM64, 1GB RAM)
+#
+# Usage:
+#   cp .env.example .env   # Edit with your preferences
+#   docker compose up -d
+#
+# Wyoming endpoints (configure in Home Assistant):
+#   STT: http://<edge-ip>:10300
+#   TTS: http://<edge-ip>:10200
+# ==============================================================================
+
+services:
+  # --------------------------------------------------------------------------
+  # Whisper — Speech-to-Text (Wyoming protocol)
+  # --------------------------------------------------------------------------
+  whisper:
+    image: rhasspy/wyoming-whisper:${WHISPER_TAG:-latest}
+    container_name: wyoming-whisper
+    restart: unless-stopped
+    ports:
+      - "${WHISPER_PORT:-10300}:10300"
+    volumes:
+      - whisper-data:/data
+    environment:
+      - TZ=${TZ:-Europe/Madrid}
+    command:
+      - --model
+      - ${WHISPER_MODEL:-tiny-int8}
+      - --language
+      - ${WHISPER_LANGUAGE:-es}
+      - --beam-size
+      - "${WHISPER_BEAM_SIZE:-1}"
+      - --device
+      - cpu
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "2.0"
+        reservations:
+          memory: 256M
+    healthcheck:
+      test: ["CMD-SHELL", "echo '{}' | nc -w 1 localhost 10300 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - wyoming
+
+  # --------------------------------------------------------------------------
+  # Piper — Text-to-Speech (Wyoming protocol)
+  # --------------------------------------------------------------------------
+  piper:
+    image: rhasspy/wyoming-piper:${PIPER_TAG:-latest}
+    container_name: wyoming-piper
+    restart: unless-stopped
+    ports:
+      - "${PIPER_PORT:-10200}:10200"
+    volumes:
+      - piper-data:/data
+    environment:
+      - TZ=${TZ:-Europe/Madrid}
+    command:
+      - --voice
+      - ${PIPER_VOICE:-es_ES-davefx-medium}
+      - --length-scale
+      - "${PIPER_LENGTH_SCALE:-1.0}"
+      - --noise-scale
+      - "${PIPER_NOISE_SCALE:-0.667}"
+      - --noise-w
+      - "${PIPER_NOISE_W:-0.8}"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: "1.0"
+        reservations:
+          memory: 128M
+    healthcheck:
+      test: ["CMD-SHELL", "echo '{}' | nc -w 1 localhost 10200 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - wyoming
+
+# ------------------------------------------------------------------------------
+# Volumes — Persistent model storage
+# ------------------------------------------------------------------------------
+volumes:
+  whisper-data:
+    driver: local
+  piper-data:
+    driver: local
+
+# ------------------------------------------------------------------------------
+# Networks
+# ------------------------------------------------------------------------------
+networks:
+  wyoming:
+    driver: bridge
+    name: wyoming-network

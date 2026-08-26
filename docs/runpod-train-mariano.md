@@ -21,7 +21,7 @@ Son **dos cosas distintas** en la factura de RunPod:
 
 El **entrenamiento es puntual**. El gasto «recurrente» del que se habla en el runbook **no es el train**: es el alquiler del **network volume** si lo dejas creado después de terminar.
 
-RunPod cobra el volume a **~$0.07/GB/mes** (&lt;1 TB). Con 100 GB ≈ **$7/mes** ≈ **$0.23/día** mientras no lo elimines. No depende de que haya un pod encendido.
+RunPod cobra el volume a **~$0.07/GB/mes** (&lt;1 TB). Con **200 GB** ≈ **$14/mes** ≈ **$0.47/día** mientras no lo elimines (100 GB ≈ $0.23/día). No depende de que haya un pod encendido.
 
 **Cómo cerrar el ciclo sin sorpresas:**
 
@@ -94,11 +94,25 @@ Documentación: [RunPod billing](https://docs.runpod.io/accounts-billing/billing
 
 1. [Storage → Network Volumes](https://www.console.runpod.io/user/storage) → **Create**
 2. Nombre: `waynelab-mww-data`
-3. Tamaño: **100 GB** (primera pasada TTS + features puede usar 25–80 GB)
+3. Tamaño: **200 GB** (obligatorio en el primer train). Con 100 GB el extract de AudioSet (`bal_train05+`) agota la cuota → Exit **999** sin mensaje claro de `tar`.
 4. Datacenter: el mismo donde desplegarás la GPU (p. ej. región EU si hay RTX 4090)
 5. Anota el **Volume ID**
 
 Montaje obligatorio en **`/data`** (contrato de la imagen Tater). No uses solo `/workspace`.
+
+**Antes del train (Web Terminal), wrapper de `tar`** — el filesystem del volume no permite `chown` a uid 1020; sin esto `setup_audioset` falla con `Cannot change ownership`:
+
+```bash
+cat > /usr/local/bin/tar << 'EOF'
+#!/bin/sh
+exec /usr/bin/tar --no-same-owner --no-same-permissions "$@"
+EOF
+chmod +x /usr/local/bin/tar
+export TAR_OPTIONS="--no-same-owner --no-same-permissions"
+command -v tar   # debe ser /usr/local/bin/tar
+```
+
+Tras Stop/Start del pod el wrapper se pierde (disco del contenedor): hay que recrearlo.
 
 ---
 
@@ -224,7 +238,7 @@ MWW_RUNPOD_VOLUME_ID=VOLUME_ID \
 # MWW_RUNPOD_SSH='ssh root@… -p …' ./teardown_runpod_trainer.sh --watch
 ```
 
-Sin `--delete-volume` el **volume sigue cobrando** (~$0.23/día) aunque el pod esté parado.
+Sin `--delete-volume` el **volume sigue cobrando** (~$0.47/día a 200 GB) aunque el pod esté parado.
 
 Luego copia al repo:
 
@@ -250,12 +264,29 @@ Sin volume, un pod terminado **pierde** el disco local.
 
 ---
 
+## Problemas conocidos (lecciones reales)
+
+### `tar: Cannot change ownership to uid 1020`
+
+El Network Volume no permite `chown`. El trainer Tater llama a `tar` sin `--no-same-owner`. Instala el wrapper de `/usr/local/bin/tar` (paso 2) **antes** de Start en la UI. Tras Stop/Start del contenedor hay que recrearlo.
+
+### Exit code **999** a mitad de AudioSet
+
+No es un código de `tar`: el servidor pinta cualquier excepción como 999. Suele ser **cuota del volume agotada** (100 GB lleno en `bal_train05`). Amplía a **200 GB**, borra `downloads/bal_train*.tar` y `audioset/` a medias si hace falta, y reanuda. `df -h /data` muestra el pool MooseFS entero (petabytes); mide uso real con `du -sb /data`.
+
+### «Training dataset setup Elapsed time: …»
+
+Esa línea significa que la fase de **datasets** terminó bien. Aún faltan TTS, augmentación y el fit del modelo.
+
+---
+
 ## Checklist rápida
 
 ```
 [ ] Auto-pay OFF · recarga $20–25 (o $50 techo)
 [ ] Low balance alert $10
-[ ] Volume 100 GB · anotado Volume ID · mismo datacenter que GPU
+[ ] Volume **200 GB** · anotado Volume ID · mismo datacenter que GPU
+[ ] Wrapper `/usr/local/bin/tar` con `--no-same-owner` (tras cada Start del pod)
 [ ] Pod on-demand Community · 1× GPU · imagen Tater · /data · :8789 · stop 48h
 [ ] WAV en /data/personal_samples (~34)
 [ ] train_wake_word Spanish mariano (tmux o UI)

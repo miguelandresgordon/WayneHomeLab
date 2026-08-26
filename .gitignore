@@ -87,3 +87,6 @@ infrastructure/voice/speaker-id/samples/
 *~
 .env
 .env.local
+
+# Third-party token extractor (local only)
+Xiaomi-cloud-tokens-extractor/
