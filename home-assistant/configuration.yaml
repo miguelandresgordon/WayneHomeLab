@@ -30,8 +30,18 @@ frontend:
   themes: !include_dir_merge_named themes/
 
 # --- HTTP ---
+# HA 2026.8+: prefer Settings → System → Network (HTTP server section).
+# Reverse proxy (Caddy on WireGuard VM 192.168.1.55):
+#   Trust X-Forwarded-For: on
+#   Trusted proxies: 192.168.1.55  (NOT the whole LAN)
+#   Internal URL: http://192.168.1.110:8123
+#   External URL: https://ha.waynehomelab.com
+# After UI migration, remove this block if HA raises a repair issue.
+# See: https://www.home-assistant.io/integrations/http/
 http:
-  use_x_forwarded_for: false
+  use_x_forwarded_for: true
+  trusted_proxies:
+    - 192.168.1.55
   ip_ban_enabled: true
   login_attempts_threshold: 5
 

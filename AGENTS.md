@@ -16,9 +16,10 @@ All suggestions, code reviews, and implementations must reflect **production-gra
 
 This project is a private voice assistant ecosystem ("Private Alexa") running on Raspberry Pi hardware:
 
-- **Core Node (RPi 5)**: Proxmox (PXVIRT) host → Home Assistant OS VM + **Pi-hole VM** (bridged `vmbr0`)
+- **Core Node (RPi 5)**: Proxmox (PXVIRT) host → Home Assistant OS VM + **Pi-hole VM** + **WireGuard/Caddy VM** (bridged `vmbr0`)
 - **Edge Node (RPi 3b)**: Not yet set up. Voice pipeline runs inside HAOS VM for now.
 - **DNS**: Pi-hole en `192.168.1.53` (VMID 101). DHCP sigue en el router; cutover DNS LAN pendiente (probar Mac → móvil primero). Ver [docs/pihole.md](docs/pihole.md).
+- **VPN / HTTPS remoto**: WireGuard VM `192.168.1.55` (VMID 102) + Caddy en `10.44.0.1` → `https://ha.waynehomelab.com` solo con VPN. Guía: [docs/wireguard.md](docs/wireguard.md).
 - **STT**: Groq API (Whisper large-v3-turbo) via HACS integration `openai_whisper_cloud` — NOT local Whisper
 - **TTS**: Piper add-on (Wyoming, `core-piper:10200`, voice `es_ES-davefx-medium`)
 - **Conversation**: Home Assistant built-in (Spanish)
@@ -35,6 +36,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed diagrams and data 
 | RPi 5 Host (Proxmox) | `192.168.1.100` | hostname `waynelab-core`, user `pi`; host Debian 13 (trixie), ~8 GB RAM |
 | HAOS VM (VMID 100) | `192.168.1.110` | 4 GB RAM, 64 GB disk, UEFI, `haos_generic-aarch64-13.2` |
 | Pi-hole VM (VMID 101) | `192.168.1.53` | Debian 12 bookworm; MAC `bc:24:11:69:81:fe`; 768 MiB / balloon 256 / 8G `local`; Pi-hole v6 OK (`verify_pihole.sh`). Cutover router **pendiente**. Guía: [docs/pihole.md](docs/pihole.md) |
+| WireGuard VM (VMID 102) | `192.168.1.55` | Debian 12; 512 MiB / balloon 128 / 4G `local`; WG `10.44.0.1` + Caddy (HTTPS VPN-only). Guía: [docs/wireguard.md](docs/wireguard.md) |
 | Satellite1 | `192.168.1.85` | MAC `3c:0f:02:c7:ff:e4`, ESPHome encryption key in `.ha-sat1-test` |
 | Edge Node (RPi 3b) | `192.168.1.101` | Not operational yet |
 | MacBook (dev) | DHCP | — |
@@ -75,6 +77,15 @@ ssh -t pi@192.168.1.100 "sudo qm start 101"   # onboot=1; order=1 si startup est
 - UI: `http://192.168.1.53/admin` · smoke: `bash infrastructure/nodes/pihole/verify_pihole.sh`
 - Cutover DNS del router: solo tras fases Mac → móvil (go/no-go en [docs/pihole.md](docs/pihole.md)). Rollback: DNS router → ISP/`1.1.1.1`.
 - Al crear la VM con `sudo`, pasar `SSH_KEY_FILE=/home/pi/.ssh/authorized_keys` (si no, cloud-init inyecta la clave de `root@waynelab-core`).
+
+### WireGuard VM (tras reboot del host)
+```bash
+ssh -t pi@192.168.1.100 "sudo qm start 102"   # onboot=1; startup order=2
+```
+- IP `192.168.1.55` · VPN `10.44.0.1` · endpoint `vpn.waynehomelab.com:51820/udp`.
+- Router: DNAT **solo** UDP 51820 → `.54` (no 80/443/8123).
+- HTTPS: `https://ha.waynehomelab.com` solo con túnel; smoke: `bash infrastructure/nodes/wireguard/verify_wireguard.sh`
+- RAM host: si tras crear la VM quedan &lt;500 MiB libres → `sudo qm set 101 --memory 512`. Guía: [docs/wireguard.md](docs/wireguard.md).
 
 ### SSH to Proxmox host
 - User: `pi` (not `root` — root SSH requires key, not configured)
@@ -178,6 +189,8 @@ Add-on Whisper (`core_whisper`): **parado**, boot `manual`. STT = Groq.
 - Satellite1 ESPHome encryption key: stored in `/Users/miguel/.ha-sat1-test/config/.storage/esphome.encryption_keys` (MAC `3c:0f:02:c7:ff:e4`)
 - Groq API key: en la integración `openai_whisper_cloud` de HA (no commitear)
 - Pi-hole web password: `PIHOLE_WEBPASSWORD` al instalar; no commitear `infrastructure/nodes/pihole/pihole.toml`
+- Cloudflare API token (Caddy DNS-01): `/etc/caddy/cloudflare.env` en VM WireGuard (desde `cloudflare.env.example`); no commitear
+- WireGuard peer configs: `/etc/wireguard/peers/*.conf` en la VM (gitignored); no commitear claves
 - Always provide `.example` templates documenting required keys
 - Reference secrets via `!secret` in HA YAML or `${VAR}` in Docker Compose
 
@@ -197,14 +210,17 @@ WayneHomeLab/
 │   ├── proxmox/                 # VM creation and configuration
 │   │   ├── create_haos_vm.sh    # Crea VM HAOS ARM64 (storage=local, disk=64G)
 │   │   ├── create_pihole_vm.sh  # Crea VM Pi-hole Debian 12 ARM64 (VMID 101, .53)
+│   │   ├── create_wireguard_vm.sh # Crea VM WireGuard+Caddy (VMID 102, .54, 512 MiB)
 │   │   ├── vm.conf
-│   │   └── pihole.conf
+│   │   ├── pihole.conf
+│   │   └── wireguard.conf
 │   └── nodes/
 │       ├── core/                # RPi 5 (Proxmox host)
 │       │   ├── fix_proxmox_cluster.sh  # Fix cloud-init /etc/hosts bug (frecuente)
 │       │   ├── setup_host.sh
 │       │   └── sysctl.conf
 │       ├── pihole/              # install_pihole.sh + pihole.toml.example
+│       ├── wireguard/           # WG + Caddy (VM 102); peers/cloudflare.env gitignored
 │       └── edge/                # RPi 3b (no operativo aún)
 │   └── voice/
 │       ├── wake-word/           # Wake word "Mariano" (RunPod GPU Pod + Windows Docker CPU/NVIDIA)
@@ -224,6 +240,7 @@ WayneHomeLab/
 └── docs/                        # Arquitectura, guías, costes
     ├── ARCHITECTURE.md
     ├── pihole.md
+    ├── wireguard.md
     ├── setup-desde-cero-ssd-pi5-haos.md
     ├── setup-from-scratch-headless.md
     ├── wake-word-mariano.md
@@ -238,6 +255,9 @@ WayneHomeLab/
 
 - [x] Pi-hole VM (VMID 101 / `.53`): scripts + install + `verify_pihole.sh` OK — [docs/pihole.md](docs/pihole.md)
 - [ ] Pi-hole: cutover DNS por fases (Mac → móvil → router); reserva DHCP MAC `bc:24:11:69:81:fe`
+- [x] WireGuard VM scripts + runbook — [docs/wireguard.md](docs/wireguard.md) (`create_wireguard_vm.sh`, Caddy DNS-01 Cloudflare)
+- [ ] Caddy en VM `.55` + token Cloudflare + Pi-hole local DNS `ha` → `10.44.0.1` + HA Trust XFF
+- [ ] WireGuard: crear VM 102, DNAT UDP 51820, peers, Pi-hole local DNS `ha` → `10.44.0.1`, HA Network UI
 - [ ] RPi 3b: instalar DietPi + Docker + `voice-pipeline/` (Whisper+Piper) para descargar HA VM
 - [ ] Bombilla Antela (Dormitorio): Tuya nube → entidad `light.bombilla_dormitorio`, luego Local Tuya IP `.122`. No agrupar con la lámpara del salón.
 - [ ] Wake word personalizada «Mariano» — ver [docs/wake-word-mariano.md](docs/wake-word-mariano.md) y `infrastructure/voice/wake-word/`
@@ -265,7 +285,7 @@ WayneHomeLab/
   - Entrenamiento: RunPod GPU Pod (`setup_trainer_runpod.sh`); fallback Windows Docker CPU (`setup_trainer_windows.ps1 -Cpu`); Mac solo si hay ≥ ~25 GB libres (`train_mariano_local.sh`)
 - [ ] Asignar entidad `Lámpara` al área `Salón` en HA (para frases con «del salón»)
 - [ ] Eliminar/renombrar escenas con nombres genéricos que confunden al intent de HA
-- [ ] Configurar HTTPS en HA (para usar micrófono desde Safari/navegador)
+- [ ] HA HTTPS remoto vía WireGuard (`ha.waynehomelab.com`) — micrófono Safari / Companion fuera de casa
 - [ ] Gemini API como agente de conversación (cuando se quiera NLU más potente)
 - [x] Speaker ID (perfiles de voz tipo Alexa): notebook Colab + add-on HAOS + runbook
   - Notebook: `infrastructure/voice/speaker-id/notebooks/train_speaker_profiles.ipynb`
