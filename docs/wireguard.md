@@ -17,6 +17,7 @@ HA **no** se expone a Internet (ni 80, ni 443, ni 8123 en el router).
 | HTTPS | Caddy en `10.44.0.1:443` → `http://192.168.1.110:8123` |
 | TLS | Let’s Encrypt **DNS-01** vía **Cloudflare** (sin abrir 80/443) |
 | DNS split | Pi-hole: `ha.waynehomelab.com` → `10.44.0.1` |
+| Estado (2026-08-27) | **En producción.** VM + WG + Caddy + peers OK. `verify_wireguard.sh`: LAN, split DNS, túnel y `https://ha.waynehomelab.com` → HTTP 200. |
 
 Referencias:
 
@@ -246,10 +247,20 @@ bash infrastructure/nodes/wireguard/verify_wireguard.sh
 | `infrastructure/nodes/wireguard/cloudflare.env.example` | Plantilla `CF_API_TOKEN` |
 | `infrastructure/nodes/wireguard/verify_wireguard.sh` | Smoke tests |
 
-**Deprecado:** `infrastructure/nodes/core/install_wireguard.sh` y `create_wireguard_peer.sh` (instalaban WG en el host Proxmox). Usa la VM 102.
+WireGuard **solo** en la VM 102 (`infrastructure/nodes/wireguard/`). No instalar en el host Proxmox.
 
 Tras reboot del host:
 
 ```bash
 ssh -t pi@192.168.1.100 'sudo qm start 102'   # onboot=1 normalmente
 ```
+
+## Checklist operativo
+
+- [x] VM 102 creada (IP `.55`, MAC `bc:24:11:e9:6c:c9`)
+- [x] Reserva DHCP + DNAT UDP 51820 → `.55`
+- [x] `install_wireguard.sh` + peers (macbook / iphone)
+- [x] Caddy + Cloudflare DNS-01 (`CF_API_TOKEN`)
+- [x] Pi-hole local DNS `ha.waynehomelab.com` → `10.44.0.1`
+- [x] HA Trust X-Forwarded-For + trusted proxy `192.168.1.55`
+- [x] `verify_wireguard.sh` OK (con túnel: HTTPS 200)

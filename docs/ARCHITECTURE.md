@@ -92,7 +92,7 @@ flowchart LR
 | Home Assistant | 8123 | HTTP LAN (Satellite1). Remoto: HTTPS vía WireGuard |
 | Caddy (WG VM) | 443 | Solo en `10.44.0.1` (VPN); no en WAN |
 | WireGuard | 51820/udp | DNAT router → `192.168.1.55`; endpoint `vpn.waynehomelab.com` |
-| Pi-hole DNS | 53/tcp+udp | VM `192.168.1.53` (tras cutover router) |
+| Pi-hole DNS | 53/tcp+udp | VM `192.168.1.53` (Mac ya; LAN completa tras cutover router) |
 | Pi-hole Admin | 80 | `http://192.168.1.53/admin` |
 | Piper Wyoming | 10200 | Add-on HAOS |
 | Proxmox UI | 8006 | Host RPi 5 |

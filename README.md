@@ -2,11 +2,13 @@
 
 Asistente de voz privado («Private Alexa») sobre Raspberry Pi + Home Assistant, con Satellite1 (ESPHome / MicroWakeWord) y STT en la nube (Groq).
 
-## Estado actual (rama `satellite1`)
+## Estado actual
 
 | Pieza | Realidad |
 |-------|----------|
-| Core | RPi 5 (`192.168.1.100`) → Proxmox → HAOS (`.110`) + Pi-hole (`.53`) + WireGuard (`.54`) |
+| Core | RPi 5 (`192.168.1.100`) → Proxmox → HAOS (`.110`) + Pi-hole (`.53`) + WireGuard/Caddy (`.55`) |
+| DNS | Pi-hole v6 en VM 101; DHCP en router. Mac → `.53`. Cutover DNS del router: ver [docs/pihole.md](docs/pihole.md) |
+| VPN / HTTPS | WireGuard VM 102 + Caddy → `https://ha.waynehomelab.com` **solo con túnel** |
 | Edge RPi 3b | Pendiente; STT/TTS viven en la VM HAOS |
 | Satellite1 | `192.168.1.85`, wake word **Okay Nabu** (objetivo: «Mariano») |
 | STT | Groq `whisper-large-v3-turbo` vía HACS `openai_whisper_cloud` |
@@ -35,13 +37,13 @@ Satellite1 (Okay Nabu)
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Topología y flujo de datos |
 | [docs/setup-desde-cero-ssd-pi5-haos.md](docs/setup-desde-cero-ssd-pi5-haos.md) | Rebuild Pi5 + Proxmox + HAOS desde SSD |
 | [docs/setup-from-scratch-headless.md](docs/setup-from-scratch-headless.md) | Path headless completo (WireGuard, edge) |
+| [docs/pihole.md](docs/pihole.md) | Pi-hole VM (DNS) en Proxmox |
+| [docs/wireguard.md](docs/wireguard.md) | WireGuard VM + HTTPS privado (`ha.waynehomelab.com`) |
 | [docs/wake-word-mariano.md](docs/wake-word-mariano.md) | Runbook wake word «Mariano» |
 | [docs/runpod-train-mariano.md](docs/runpod-train-mariano.md) | Train en RunPod (PC) |
 | [docs/runpod-train-mariano-movil.md](docs/runpod-train-mariano-movil.md) | Train desde iOS / Safari |
 | [docs/speaker-id-mariano.md](docs/speaker-id-mariano.md) | Speaker ID (Colab + add-on) |
 | [docs/reservas-dhcp-bombillas-iot.md](docs/reservas-dhcp-bombillas-iot.md) | Reservas DHCP IoT |
-| [docs/pihole.md](docs/pihole.md) | Pi-hole VM (DNS) en Proxmox |
-| [docs/wireguard.md](docs/wireguard.md) | WireGuard VM + HTTPS privado (`ha.waynehomelab.com`) |
 | [docs/api-costs.md](docs/api-costs.md) | Costes API |
 
 ## Estructura del repo
@@ -69,6 +71,10 @@ WayneHomeLab/
 # Tras reboot inesperado del RPi 5 (rompe pve-cluster vía cloud-init):
 scp infrastructure/nodes/core/fix_proxmox_cluster.sh pi@192.168.1.100:/tmp/
 ssh -t pi@192.168.1.100 "sudo bash /tmp/fix_proxmox_cluster.sh && sudo qm start 100"
+
+# Smoke DNS / VPN+HTTPS:
+bash infrastructure/nodes/pihole/verify_pihole.sh
+bash infrastructure/nodes/wireguard/verify_wireguard.sh
 ```
 
 Config HA canónica: `home-assistant/` → desplegar a `/config` (Samba). Ver `infrastructure/voice/speaker-id/deploy_speaker_id_ha_config.sh`.
