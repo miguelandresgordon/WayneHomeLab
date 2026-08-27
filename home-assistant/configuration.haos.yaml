@@ -27,6 +27,7 @@ input_boolean: !include input_boolean.yaml
 light: !include lights.yaml
 rest_command: !include rest_commands.yaml
 shell_command: !include shell_commands.yaml
+intent_script: !include intent_scripts.yaml
 
 logger:
   default: warning

@@ -119,11 +119,14 @@ flowchart TB
 
 YAML canónico en el repo → Samba `/config`:
 
-| Repo | Destino HAOS |
+| Repo | Destino HAOS (Samba `/Volumes/config`) |
 |------|----------------|
-| `home-assistant/configuration.yaml` | `/config/configuration.yaml` |
-| `home-assistant/includes/*.yaml` | `/config/*.yaml` (o includes según `configuration.yaml`) |
+| `home-assistant/configuration.haos.yaml` | `/config/configuration.yaml` |
+| `home-assistant/includes/*.yaml` | `/config/*.yaml` |
+| `home-assistant/custom_sentences/es/*.yaml` | `/config/custom_sentences/es/*.yaml` |
 | `home-assistant/themes/` | `/config/themes/` |
+
+`.storage/` es runtime de HAOS: no se versiona. Alias Assist y prompt Whisper se documentan en `includes/voice_assist.yaml`.
 
 Entity IDs reales documentados en `AGENTS.md` y `includes/scripts.yaml`.
 

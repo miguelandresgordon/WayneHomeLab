@@ -1,0 +1,79 @@
+# Frases Assist (ES) — radio en Satellite1
+# Destino HAOS: /config/custom_sentences/es/radio.yaml
+language: "es"
+
+intents:
+  PonRadioFavorita:
+    data:
+      - sentences:
+          - "pon [la] radio"
+          - "ponme [la] radio"
+          - "reproduce [la] radio"
+          - "pon radio"
+        slots:
+          emisora: ser
+      - sentences:
+          - "pon [la] [radio] {emisora}"
+          - "ponme [la] [radio] {emisora}"
+          - "reproduce [la] [radio] {emisora}"
+          - "quiero [escuchar] [la] [radio] {emisora}"
+          - "escucha [la] [radio] {emisora}"
+          - "ponme a {emisora}"
+
+  ParaRadioFavorita:
+    data:
+      - sentences:
+          - "para [la] radio"
+          - "apaga [la] radio"
+          - "quita [la] radio"
+          - "para de (escuchar|reproducir) [la radio]"
+          - "deja de (escuchar|reproducir) [la radio]"
+          - "stop [la] radio"
+
+lists:
+  emisora:
+    values:
+      - in: "ser"
+        out: "ser"
+      - in: "la ser"
+        out: "ser"
+      - in: "cadena ser"
+        out: "ser"
+      - in: "la cadena ser"
+        out: "ser"
+      - in: "radio madrid"
+        out: "ser"
+      - in: "radiovoz"
+        out: "radiovoz"
+      - in: "radio voz"
+        out: "radiovoz"
+      - in: "radiovoz lugo"
+        out: "radiovoz"
+      - in: "radio voz lugo"
+        out: "radiovoz"
+      - in: "filispim"
+        out: "filispim"
+      - in: "filispín"
+        out: "filispim"
+      - in: "radio filispim"
+        out: "filispim"
+      - in: "radio filispín"
+        out: "filispim"
+      - in: "almenara"
+        out: "almenara"
+      - in: "radio almenara"
+        out: "almenara"
+      - in: "radio 3"
+        out: "radio3"
+      - in: "radio tres"
+        out: "radio3"
+      - in: "radio3"
+        out: "radio3"
+      - in: "rne"
+        out: "radio3"
+      - in: "rne radio 3"
+        out: "radio3"
+      - in: "roncudo"
+        out: "roncudo"
+      - in: "radio roncudo"
+        out: "roncudo"

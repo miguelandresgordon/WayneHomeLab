@@ -1,0 +1,117 @@
+# Acciones Assist (intent_script). Destino HAOS: /config/intent_scripts.yaml
+# Frases: custom_sentences/es/radio.yaml y custom_sentences/es/tv.yaml
+
+PonRadioFavorita:
+  description: Reproduce una emisora favorita en Satellite1
+  action:
+    - action: script.poner_radio
+      data:
+        emisora: "{{ emisora | default('ser') }}"
+  speech:
+    text: >-
+      {% set key = (emisora | default('ser') | lower | trim) %}
+      {% set names = {
+        'ser': 'Cadena SER',
+        'radiovoz': 'RadioVoz Lugo',
+        'filispim': 'Radio Filispim',
+        'almenara': 'Radio Almenara',
+        'radio3': 'Radio 3',
+        'roncudo': 'Radio Roncudo'
+      } %}
+      {% if key == 'roncudo' %}
+        Radio Roncudo solo emite en FM 106.1; no hay stream online disponible.
+      {% else %}
+        Pongo {{ names.get(key, 'Cadena SER') }}.
+      {% endif %}
+
+ParaRadioFavorita:
+  description: Detiene la radio en Satellite1
+  action:
+    - action: script.parar_radio
+  speech:
+    text: "Paro la radio."
+
+# TV del salón: siempre Google Streamer (media_player.tv_ga_2).
+ApagaLaTele:
+  description: Apaga el Google Streamer (TV GA)
+  action:
+    - action: media_player.turn_off
+      target:
+        entity_id: media_player.tv_ga_2
+      continue_on_error: true
+  speech:
+    text: "Apago la tele."
+
+EnciendeLaTele:
+  description: Enciende el Google Streamer (TV GA)
+  action:
+    - action: media_player.turn_on
+      target:
+        entity_id: media_player.tv_ga_2
+      continue_on_error: true
+  speech:
+    text: "Enciendo la tele."
+
+SubeVolumenTele:
+  description: Sube el volumen del Google Streamer
+  action:
+    - action: media_player.volume_up
+      target:
+        entity_id: media_player.tv_ga_2
+      continue_on_error: true
+  speech:
+    text: "Subo el volumen."
+
+BajaVolumenTele:
+  description: Baja el volumen del Google Streamer
+  action:
+    - action: media_player.volume_down
+      target:
+        entity_id: media_player.tv_ga_2
+      continue_on_error: true
+  speech:
+    text: "Bajo el volumen."
+
+SilenciaLaTele:
+  description: Silencia el Google Streamer
+  action:
+    - action: media_player.volume_mute
+      target:
+        entity_id: media_player.tv_ga_2
+      data:
+        is_volume_muted: true
+      continue_on_error: true
+  speech:
+    text: "Silencio la tele."
+
+QuitaSilencioTele:
+  description: Quita el silencio del Google Streamer
+  action:
+    - action: media_player.volume_mute
+      target:
+        entity_id: media_player.tv_ga_2
+      data:
+        is_volume_muted: false
+      continue_on_error: true
+  speech:
+    text: "Quito el silencio."
+
+PausaLaTele:
+  description: Pausa el Google Streamer
+  action:
+    - action: media_player.media_pause
+      target:
+        entity_id: media_player.tv_ga_2
+      continue_on_error: true
+  speech:
+    text: "Pauso la tele."
+
+ReanudaLaTele:
+  description: Reanuda el Google Streamer
+  action:
+    - action: media_player.media_play
+      target:
+        entity_id: media_player.tv_ga_2
+      continue_on_error: true
+  speech:
+    text: "Sigo la tele."

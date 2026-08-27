@@ -1,29 +1,21 @@
-# Fragmento ESPHome — añadir tras Take Control del Satellite1
+# Fragmento ESPHome — ya aplicado en HAOS /config/esphome/satellite1-c7ffe4.yaml
 #
-# 1. HA → ESPHome Device Builder → Take Control → EDIT
-# 2. Buscar sección `micro_wake_word:` y añadir el modelo mariano
-# 3. Ajustar MODEL_URL con la IP de tu Mac (serve_model.sh) o GitHub raw
-# 4. Opcional: ajustar voice_assistant (noise_suppression, auto_gain)
+# Artefactos en HA (no hace falta serve_model.sh en el Mac):
+#   /config/esphome/models/mariano.{json,tflite}
+#   /config/www/wake-word/mariano.{json,tflite}
+#   URL: http://192.168.1.110:8123/local/wake-word/mariano.json
 #
-# Referencia firmware oficial:
-# https://github.com/FutureProofHomes/Satellite1-ESPHome/blob/develop/config/common/voice_assistant.yaml
-
-# --- Sustituir/añadir en micro_wake_word.models ---
-# probability_cutoff: subir (92%) si hay falsos positivos con TV; bajar (75%) si no te oye
+# En el YAML de Take Control basta con AÑADIR el modelo (okay_nabu /
+# hey_jarvis / stop vienen del package FPH).
+# probability_cutoff: 98% = calibración del train 2026-08-26.
+#   Falsos positivos TV → subir; no te oye → bajar a 85%.
 
 micro_wake_word:
   id: mww
   models:
-    - model: http://192.168.1.XXX:8765/mariano.json
+    - model: http://192.168.1.110:8123/local/wake-word/mariano.esphome.json
       id: mariano
-      probability_cutoff: 85%
-    - model: https://fph-firmware-assets.s3.us-east-1.amazonaws.com/wake-word/okay_nabu.json
-      id: okay_nabu
-    - model: https://fph-firmware-assets.s3.us-east-1.amazonaws.com/wake-word/hey_jarvis.json
-      id: hey_jarvis
-    - model: https://fph-firmware-assets.s3.us-east-1.amazonaws.com/wake-word/stop.json
-      id: stop
-      internal: true
+      probability_cutoff: 98%
 
 # --- En logger / packages del firmware (Take Control) ---
 # log_level: info   (no debug permanente; 4 GB RAM / SSD USB)
