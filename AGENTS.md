@@ -155,21 +155,10 @@ Satellite1 (MicroWakeWord "Okay Nabu")
 
 ## Automatizaciones HA
 
-YAML canónico: `home-assistant/includes/automations.yaml` → `/config/automations.yaml`.
-Entity IDs reales: `switch.satellite1_c7ffe4_mute_microphones`, `media_player.tv_ga_2`,
-`light.yeelink_mono6_6409_light`, `notify.iphone_de_miguel`. Antela (dormitorio) aún no está en HA.
+YAML canónico: `home-assistant/includes/automations.yaml` → `/config/automations.yaml`
+(ahora vacío a propósito: las de prueba Copilot se quitaron; recrear por UI).
 
-| Automatización | Trigger | Acciones |
-|----------------|---------|----------|
-| Modo noche | 23:00 | `script.buenas_noches` (luces+TVs off, mute mic). **No** arranca Whisper |
-| Modo día | 07:30 | `script.buenos_dias` (unmute si no hay cine). **No** arranca Whisper |
-| Relajado atardecer | `sun.sun` sunset + alguien en casa | Solo lámpara del salón |
-| Ausencia / llegada | `person.miguel` | Apaga todo / Relajado salón de noche |
-| Cine | `media_player.tv_ga_2` on/playing | Atenúa salón + mute Satellite1. No toca dormitorio |
-| Satellite1 Action | 1 / 2 / long press | Toggle lámpara / cine / mute mic |
-| Speaker ID | folder watcher WAV | `input_text.current_speaker` |
-
-Scripts Assist útiles: `script.poner_radio` / `parar_radio` / `pon_la_radio`, `script.apagar_tele` / `encender_tele` (siempre `media_player.tv_ga_2`), rutinas `buenas_noches` / `buenos_dias` / `cine` / `relajado`. Frases: `custom_sentences/es/{tv,radio}.yaml`. Automatización conversation radio: `voz_radio_favorita`.
+Scripts Assist útiles: `script.poner_radio` / `parar_radio` / `pon_la_radio`, `script.apagar_tele` / `encender_tele` (siempre `media_player.tv_ga_2`), rutinas `buenas_noches` / `buenos_dias` / `cine` / `relajado`. Frases: `custom_sentences/es/{tv,radio}.yaml`.
 
 Add-on Whisper (`core_whisper`): **parado**, boot `manual`. STT = Groq.
 
