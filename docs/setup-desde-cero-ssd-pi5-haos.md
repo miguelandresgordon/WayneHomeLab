@@ -293,3 +293,12 @@ Rellena `/config/secrets.yaml` con tus valores reales (API key, latitud/longitud
 - Home Assistant en `http://192.168.1.110:8123` responde.
 - Configuración base de `home-assistant/` copiada en `/config`.
 
+## 9) Siguiente (DNS + acceso remoto)
+
+Tras HAOS estable, despliega las otras VMs del lab:
+
+1. Pi-hole (VMID 101 / `.53`) — [pihole.md](pihole.md)
+2. WireGuard + Caddy (VMID 102 / `.55`) — [wireguard.md](wireguard.md)
+
+Path headless completo (edge RPi 3b incluido): [setup-from-scratch-headless.md](setup-from-scratch-headless.md).
+

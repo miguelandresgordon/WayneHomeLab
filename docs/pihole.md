@@ -14,7 +14,7 @@ DHCP sigue en el router; Pi-hole solo resuelve DNS.
 | Recursos | 1 vCPU, **768 MiB** RAM, balloon 256, disco **8G** (`local`) |
 | Upstream DNS | `1.1.1.1`, `1.0.0.1` (sin Unbound en v1) |
 | Admin UI | `http://192.168.1.53/admin` |
-| Estado (2026-08-26) | VM + Pi-hole **instalados**. `verify_pihole.sh` OK. **Cutover router pendiente** (probar Mac → móvil antes). |
+| Estado (2026-08-27) | **En producción.** `verify_pihole.sh` OK. Mac DNS → `.53` (Fase A). Local DNS `ha.waynehomelab.com` → `10.44.0.1`. **Cutover router (Fase C) pendiente** (probar móvil / Fase B antes). |
 
 Referencias oficiales:
 
@@ -135,7 +135,7 @@ flowchart LR
   haos["HAOS 192.168.1.110"] -->|"DNS"| pihole
 ```
 
-Hasta el cutover del router, **solo** los clientes que configures a mano usan Pi-hole.
+Hasta el cutover del router, **solo** los clientes configurados a mano (p. ej. el Mac) usan Pi-hole. La LAN completa llega en Fase C.
 
 ### Fase A — Solo el Mac (sin tocar el router)
 
@@ -237,9 +237,9 @@ Ver [wireguard.md](wireguard.md) §6. No publiques ese A en Cloudflare/WAN.
 - [x] SSH `pi@192.168.1.53` (pubkey Mac)
 - [x] `install_pihole.sh` + UI `/admin`
 - [x] `verify_pihole.sh` OK (resolve + block + UI)
-- [ ] Reserva DHCP `192.168.1.53` → `bc:24:11:69:81:fe`
-- [ ] Fase A: Mac DNS → Pi-hole (uso real)
+- [x] Reserva DHCP `192.168.1.53` → `bc:24:11:69:81:fe` (recomendada; IP también fija por cloud-init)
+- [x] Fase A: Mac DNS → Pi-hole (uso real)
 - [ ] Fase B: un móvil + IoT OK
 - [ ] Go/no-go (§4) → Fase C cutover router
 - [ ] Rollback mental / probado
-- [ ] Local DNS `ha.waynehomelab.com` → `10.44.0.1` (tras WireGuard VM)
+- [x] Local DNS `ha.waynehomelab.com` → `10.44.0.1` (WireGuard)
