@@ -142,4 +142,6 @@ In HA (`http://192.168.1.110:8123`):
 - Pi3 reachable by SSH and mounted SSD
 - WireGuard tunnel works from mobile network (`vpn.waynehomelab.com:51820`)
 - HA accessible at `https://ha.waynehomelab.com` over VPN without exposing HA to the internet
+- `bash infrastructure/nodes/pihole/verify_pihole.sh` passes
 - `bash infrastructure/nodes/wireguard/verify_wireguard.sh` passes
+- Pi-hole local DNS: `dig @192.168.1.53 ha.waynehomelab.com` → `10.44.0.1`

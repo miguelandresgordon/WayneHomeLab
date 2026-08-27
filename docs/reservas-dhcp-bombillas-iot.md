@@ -20,11 +20,12 @@ Adapta a tu red. Suponiendo LAN `192.168.1.0/24` y router en `192.168.1.1`:
 
 | Dispositivo | MAC (rellenar) | IP reservada | App |
 |-------------|----------------|--------------|-----|
-| Bombilla Xiaomi | `AA:BB:CC:DD:EE:01` | `192.168.1.121` | Xiaomi Home |
-| Bombilla Antela | `AA:BB:CC:DD:EE:02` | `192.168.1.122` | Smart Life |
+| Pi-hole VM (VMID 101) | `bc:24:11:69:81:fe` | `192.168.1.53` | DNS LAN; ver [pihole.md](pihole.md) |
+| WireGuard VM (VMID 102) | `bc:24:11:e9:6c:c9` | `192.168.1.55` | VPN + Caddy; ver [wireguard.md](wireguard.md) |
 | Host Proxmox (Pi 5) | *(ya fijada)* | `192.168.1.100` | — |
 | Home Assistant VM | *(reserva existente)* | `192.168.1.110` | — |
-| Pi-hole VM (VMID 101) | `bc:24:11:69:81:fe` | `192.168.1.53` | DNS LAN; ver [pihole.md](pihole.md) |
+| Bombilla Xiaomi | `AA:BB:CC:DD:EE:01` | `192.168.1.121` | Xiaomi Home |
+| Bombilla Antela | `AA:BB:CC:DD:EE:02` | `192.168.1.122` | Smart Life |
 
 **Consejo:** Usa IPs **fuera del rango dinámico** del router. Si el DHCP reparte `.50–`.199`, reserva en `.121–`.130` o por encima de `.200`.
 

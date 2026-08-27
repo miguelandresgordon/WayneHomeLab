@@ -6,7 +6,8 @@
 #   bash install_caddy.sh
 #
 # DNS for waynehomelab.com is on Cloudflare (Porkbun is registrar only).
-# ACME DNS-01 requires github.com/caddy-dns/cloudflare — not porkbun.
+# ACME DNS-01: github.com/caddy-dns/cloudflare (registrar Porkbun; DNS autoritativo Cloudflare).
+# Legacy porkbun drop-ins are removed if present.
 #
 # Strategy (no Go/xcaddy on the 512 MiB VM):
 #   1. Install official Caddy Debian package (systemd unit + paths)
