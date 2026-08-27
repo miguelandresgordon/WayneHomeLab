@@ -1,0 +1,74 @@
+# Frases Assist (ES) — TV del salón = Google Streamer (TV GA).
+# Entidad: media_player.tv_ga_2 (androidtv_remote). No usar la Sony Bravia ni Cast.
+# Destino HAOS: /config/custom_sentences/es/tv.yaml
+language: "es"
+
+intents:
+  ApagaLaTele:
+    data:
+      - sentences:
+          - "apaga [la] (tele|televisión|television|tv)"
+          - "apaga [el] (televisor|tv|chromecast)"
+          - "apaga [el] (google streamer|streamer)"
+          - "apaga [la] tv ga"
+          - "cierra [la] (tele|televisión|television|tv)"
+          - "para [la] (tele|televisión|television|tv)"
+          - "quita [la] (tele|televisión|television|tv)"
+
+  EnciendeLaTele:
+    data:
+      - sentences:
+          - "enciende [la] (tele|televisión|television|tv)"
+          - "enciende [el] (televisor|tv|chromecast)"
+          - "enciende [el] (google streamer|streamer)"
+          - "enciende [la] tv ga"
+          - "prende [la] (tele|televisión|television|tv)"
+          - "pon [la] (tele|televisión|television|tv)"
+          - "pon [el] televisor"
+
+  SubeVolumenTele:
+    data:
+      - sentences:
+          - "sube [el] volumen [de [la]] (tele|televisión|television|tv)"
+          - "sube [el] volumen [del] (televisor|tv|chromecast)"
+          - "más volumen [en|de] [la] (tele|televisión|television|tv)"
+          - "sube [la] (tele|televisión|television|tv)"
+
+  BajaVolumenTele:
+    data:
+      - sentences:
+          - "baja [el] volumen [de [la]] (tele|televisión|television|tv)"
+          - "baja [el] volumen [del] (televisor|tv|chromecast)"
+          - "menos volumen [en|de] [la] (tele|televisión|television|tv)"
+          - "baja [la] (tele|televisión|television|tv)"
+
+  SilenciaLaTele:
+    data:
+      - sentences:
+          - "silencia [la] (tele|televisión|television|tv)"
+          - "mutea [la] (tele|televisión|television|tv)"
+          - "quita [el] sonido [de [la]] (tele|televisión|television|tv)"
+          - "mute [de [la]] (tele|televisión|television|tv)"
+
+  QuitaSilencioTele:
+    data:
+      - sentences:
+          - "quita [el] silencio [de [la]] (tele|televisión|television|tv)"
+          - "restablece [el] sonido [de [la]] (tele|televisión|television|tv)"
+          - "desmutea [la] (tele|televisión|television|tv)"
+
+  PausaLaTele:
+    data:
+      - sentences:
+          - "pausa [la] (tele|televisión|television|tv)"
+          - "pon en pausa [la] (tele|televisión|television|tv)"
+          - "pausa [el] (televisor|tv)"
+
+  ReanudaLaTele:
+    data:
+      - sentences:
+          - "reanuda [la] (tele|televisión|television|tv)"
+          - "continúa [la] (tele|televisión|television|tv)"
+          - "continua [la] (tele|televisión|television|tv)"
+          - "quita [la] pausa [de [la]] (tele|televisión|television|tv)"
+          - "sigue [la] (tele|televisión|television|tv)"
