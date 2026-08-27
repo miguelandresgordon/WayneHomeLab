@@ -125,8 +125,10 @@ YAML canónico en el repo → Samba `/config`:
 | `home-assistant/includes/*.yaml` | `/config/*.yaml` |
 | `home-assistant/custom_sentences/es/*.yaml` | `/config/custom_sentences/es/*.yaml` |
 | `home-assistant/themes/` | `/config/themes/` |
+| `infrastructure/voice/wake-word/esphome/satellite1-c7ffe4.yaml` | `/config/esphome/satellite1-c7ffe4.yaml` |
 
 `.storage/` es runtime de HAOS: no se versiona. Alias Assist y prompt Whisper se documentan en `includes/voice_assist.yaml`.
+No versionar: `custom_components/` (HACS), `www/community/`, `.tflite`, `secrets.yaml`.
 
 Entity IDs reales documentados en `AGENTS.md` y `includes/scripts.yaml`.
 

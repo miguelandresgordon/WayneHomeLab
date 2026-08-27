@@ -1,7 +1,30 @@
 # Grupos de luces. No mezclar salón (Xiaomi) y dormitorio (Antela).
-# Cuando exista light.bombilla_dormitorio, añadirla solo a todas_las_luces.
+#
+# Diagnóstico Antela (bf834ca221fca20947wvem, product jqazslfabwutly0f):
+# - Integración oficial Tuya = solo nube. Si la bombilla marca offline en Tuya,
+#   HA pone light.dormitorio_luz_habitacion en unavailable.
+# - Con luz OFF (software) + Smart Life cerrada: nube online=false, comando
+#   cloud falla (2001), no hay puerto local 6668 ni discovery UDP en la LAN.
+#   Conclusión: el módulo WiFi se cae / deja de reportar al apagar → no es un
+#   bug de YAML ni hay toggle en la UI de Tuya oficial que lo arregle.
+#
+# Mitigación (cuando la bombilla esté ON y en WiFi 2.4 GHz):
+# 1. Cerrar Smart Life por completo (una sola conexión local).
+# 2. UI HA → Ajustes → Dispositivos → Añadir → "Tuya Local" (custom_components
+#    tuya_local ya instalado, make-all/tuya-local 2026.8.0).
+# 3. Flujo cloud-assisted con User Code Smart Life; elegir Habitación.
+# 4. Perfil tipico: rgbcw_lightbulbv2 (DPs switch_led / bright_value_v2 / …).
+# 5. IP DHCP fija en el router; deshabilitar light.dormitorio_luz_habitacion
+#    (oficial) para no duplicar.
+# 6. Descomentar la entidad local abajo y recargar grupos de luces.
+#
+# Si al apagar desaparece del router (este es el caso observado): Tuya Local
+# tampoco podrá encenderla hasta que el WiFi vuelva (ciclo de corriente o BLE
+# con Smart Life). Alternativas: OpenBeken/LibreTuya si el chip lo permite,
+# cambiar a Zigbee/ESPHome, o no apagar del todo (brillo mínimo).
 - platform: group
   name: Todas las luces
   unique_id: todas_las_luces
   entities:
     - light.yeelink_mono6_6409_light
+    # - light.<entidad_tuya_local_habitacion>  # añadir tras config flow Tuya Local
