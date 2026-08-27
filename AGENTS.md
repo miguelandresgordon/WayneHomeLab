@@ -169,7 +169,7 @@ Entity IDs reales: `switch.satellite1_c7ffe4_mute_microphones`, `media_player.tv
 | Satellite1 Action | 1 / 2 / long press | Toggle lámpara / cine / mute mic |
 | Speaker ID | folder watcher WAV | `input_text.current_speaker` |
 
-Scripts Assist útiles: `script.pon_la_radio` (Cadena SER en Satellite1), rutinas `buenas_noches` / `buenos_dias` / `cine` / `relajado`.
+Scripts Assist útiles: `script.pon_la_radio` (Cadena SER en Satellite1), `script.apagar_tele` / `encender_tele` (siempre `media_player.tv_ga_2`), rutinas `buenas_noches` / `buenos_dias` / `cine` / `relajado`. Frases TV: `home-assistant/custom_sentences/es/tv.yaml`.
 
 Add-on Whisper (`core_whisper`): **parado**, boot `manual`. STT = Groq.
 

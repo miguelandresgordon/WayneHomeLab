@@ -16,11 +16,15 @@
 # Entidades a exponer con alias en español:
 #   - light.yeelink_mono6_6409_light → alias: "lámpara", "luces del salón"
 #   - light.bombilla_dormitorio     → alias: "bombilla", "luz del dormitorio", "luz del cuarto"
-#   - media_player.tv_ga_2          → alias: "tele", "TV GA"
+#   - media_player.tv_ga_2          → alias: "tele", "televisión", "televisor", "tv", "TV GA"
+#     Frases: custom_sentences/es/tv.yaml → siempre Google Streamer, nunca Bravia/Cast
 #   - script.buenas_noches / buenos_dias / cine / me_voy / pon_la_radio
 #
 # No exponer: Cast duplicados (media_player.tv_ga, media_player.bravia_4k_gb_atv3),
-# media_player del satélite (salvo radio vía script), sensores temp/humedad, escenas.
+# Bravia androidtv_remote (deshabilitada), media_player del satélite (salvo radio
+# vía script), sensores temp/humedad, escenas.
+#
+# Prompt Groq Whisper: incluir tele, televisión, tv, radio (si no, STT sesga a lámpara).
 #
 # Evitar conflictos NLU:
 #   - Asignar lámpara al área "Salón" para frases con "del salón"

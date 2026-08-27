@@ -72,6 +72,7 @@ input_boolean: !include includes/input_boolean.yaml
 light: !include includes/lights.yaml
 rest_command: !include includes/rest_commands.yaml
 shell_command: !include includes/shell_commands.yaml
+intent_script: !include includes/intent_scripts.yaml
 
 # --- Folder watcher (speaker ID) ---
 # Configurar via UI: Ajustes → Dispositivos → Añadir integración → Folder Watcher

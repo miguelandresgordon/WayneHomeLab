@@ -246,3 +246,23 @@
       continue_on_error: true
   mode: queued
   max: 10
+
+- id: satellite1_wake_word_mariano
+  alias: "Satellite1 — wake word Mariano"
+  description: "Selecciona el modelo Mariano cuando HA arranca o el Satellite1 vuelve"
+  trigger:
+    - platform: homeassistant
+      event: start
+    - platform: state
+      entity_id: select.satellite1_c7ffe4_palabra_de_activacion
+      from: unavailable
+  action:
+    - wait_template: >-
+        {{ 'Mariano' in (state_attr('select.satellite1_c7ffe4_palabra_de_activacion', 'options') or []) }}
+      timeout: "00:02:00"
+    - service: select.select_option
+      target:
+        entity_id: select.satellite1_c7ffe4_palabra_de_activacion
+      data:
+        option: Mariano
+  mode: single
