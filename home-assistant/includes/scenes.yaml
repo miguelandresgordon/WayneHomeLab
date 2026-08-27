@@ -1,5 +1,6 @@
 # Escenas explícitas (no snapshots de UI). Nombres que no coinciden con áreas.
-# Solo salón / Xiaomi. Antela (dormitorio) se añade cuando esté en HA.
+# Solo salón / Xiaomi. Antela (dormitorio) se puede añadir a escenas cuando
+# exista entidad estable vía Tuya Local (ver lights.yaml).
 - id: relajado
   name: Relajado
   icon: mdi:weather-sunset

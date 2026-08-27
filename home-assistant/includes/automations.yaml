@@ -247,6 +247,103 @@
   mode: queued
   max: 10
 
+# Conversation triggers de radio (complementa custom_sentences/es/radio.yaml).
+- id: voz_radio_favorita
+  alias: "Voz — poner o parar radio"
+  description: "Assist: pon/para emisoras en Satellite1"
+  trigger:
+    - platform: conversation
+      id: ser
+      command:
+        - "pon [la] radio"
+        - "ponme [la] radio"
+        - "reproduce [la] radio"
+        - "pon [la] ser"
+        - "ponme [la] ser"
+        - "pon [la] cadena ser"
+        - "pon radio madrid"
+        - "pon la radio madrid"
+    - platform: conversation
+      id: radiovoz
+      command:
+        - "pon [la] radiovoz"
+        - "ponme [la] radiovoz"
+        - "pon radio voz"
+        - "pon radiovoz lugo"
+        - "pon radio voz lugo"
+        - "pon la radio voz"
+    - platform: conversation
+      id: filispim
+      command:
+        - "pon [la] filispim"
+        - "ponme [la] filispim"
+        - "pon [la] filispín"
+        - "pon radio filispim"
+        - "pon radio filispín"
+        - "pon la radio filispim"
+    - platform: conversation
+      id: almenara
+      command:
+        - "pon [la] almenara"
+        - "ponme [la] almenara"
+        - "pon radio almenara"
+        - "pon la radio almenara"
+    - platform: conversation
+      id: radio3
+      command:
+        - "pon radio 3"
+        - "pon radio tres"
+        - "pon radio3"
+        - "pon la radio 3"
+        - "pon la radio tres"
+        - "pon [la] erre ene tres"
+        - "pon rne"
+        - "pon rne radio 3"
+    - platform: conversation
+      id: roncudo
+      command:
+        - "pon [la] roncudo"
+        - "pon radio roncudo"
+        - "pon la radio roncudo"
+    - platform: conversation
+      id: parar
+      command:
+        - "para [la] radio"
+        - "apaga [la] radio"
+        - "quita [la] radio"
+        - "para de (escuchar|reproducir) [la radio]"
+        - "deja de (escuchar|reproducir) [la radio]"
+        - "stop [la] radio"
+        - "para de escuchar"
+  action:
+    - choose:
+        - conditions:
+            - condition: template
+              value_template: "{{ trigger.id == 'parar' }}"
+          sequence:
+            - service: script.parar_radio
+            - set_conversation_response: "Paro la radio."
+        - conditions:
+            - condition: template
+              value_template: "{{ trigger.id == 'roncudo' }}"
+          sequence:
+            - set_conversation_response: >-
+                Radio Roncudo solo emite en FM 106.1; no hay stream online.
+      default:
+        - service: script.poner_radio
+          data:
+            emisora: "{{ trigger.id }}"
+        - set_conversation_response: >-
+            {% set names = {
+              'ser': 'Cadena SER',
+              'radiovoz': 'RadioVoz Lugo',
+              'filispim': 'Radio Filispim',
+              'almenara': 'Radio Almenara',
+              'radio3': 'Radio 3'
+            } %}Pongo {{ names.get(trigger.id, 'la radio') }}.
+  mode: queued
+  max: 5
+
 - id: satellite1_wake_word_mariano
   alias: "Satellite1 — wake word Mariano"
   description: "Selecciona el modelo Mariano cuando HA arranca o el Satellite1 vuelve"

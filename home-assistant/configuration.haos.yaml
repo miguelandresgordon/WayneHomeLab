@@ -31,6 +31,11 @@ intent_script: !include intent_scripts.yaml
 
 logger:
   default: warning
+  # Diagnóstico Antela/Tuya (quitar tras depurar):
+  # logs:
+  #   homeassistant.components.tuya: debug
+  #   custom_components.tuya_local: debug
+  #   tinytuya: debug
 
 recorder:
   purge_keep_days: 10
