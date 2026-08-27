@@ -168,19 +168,80 @@ he_llegado:
           sequence:
             - action: script.relajado
 
+poner_radio:
+  alias: Poner radio
+  description: Reproduce una emisora favorita en el Satellite1
+  icon: mdi:radio
+  mode: restart
+  fields:
+    emisora:
+      name: Emisora
+      description: Clave (ser, radiovoz, filispim, almenara, radio3, roncudo)
+      example: ser
+      required: false
+      default: ser
+      selector:
+        select:
+          options:
+            - ser
+            - radiovoz
+            - filispim
+            - almenara
+            - radio3
+            - roncudo
+  sequence:
+    - variables:
+        key: "{{ (emisora | default('ser') | lower | trim) }}"
+        stream_url: >-
+          {% set stations = {
+            'ser': 'https://playerservices.streamtheworld.com/api/livestream-redirect/SER_MADRID.mp3',
+            'radiovoz': 'https://live.radiovoz.es/mp3/stream_lugo.mp3',
+            'filispim': 'https://streaming.cuacfm.org/filispim.mp3',
+            'almenara': 'https://cervera.eldialdigital.com:25211/stream',
+            'radio3': 'https://rtvelivestream.rtve.es/rtvesec/rne/rne_r3_main.m3u8',
+            'roncudo': ''
+          } %}{{ stations.get(key, stations['ser']) }}
+    - action: media_player.media_stop
+      target:
+        entity_id: media_player.satellite1
+      continue_on_error: true
+    - choose:
+        - conditions:
+            - condition: template
+              value_template: "{{ (stream_url | default('')) | length > 0 }}"
+          sequence:
+            - action: media_player.play_media
+              target:
+                entity_id: media_player.satellite1_c7ffe4_media_player
+              data:
+                media_content_type: music
+                media_content_id: "{{ stream_url }}"
+              continue_on_error: true
+
+parar_radio:
+  alias: Parar radio
+  description: Detiene la reproducción en el Satellite1
+  icon: mdi:stop
+  mode: single
+  sequence:
+    - action: media_player.media_stop
+      target:
+        entity_id: media_player.satellite1_c7ffe4_media_player
+      continue_on_error: true
+    - action: media_player.media_stop
+      target:
+        entity_id: media_player.satellite1
+      continue_on_error: true
+
 pon_la_radio:
   alias: Pon la radio
-  description: Reproduce Cadena SER en el Satellite1
+  description: Reproduce Cadena SER (Radio Madrid) en el Satellite1
   icon: mdi:radio
   mode: single
   sequence:
-    - action: media_player.play_media
-      target:
-        entity_id: media_player.satellite1_c7ffe4_media_player
+    - action: script.poner_radio
       data:
-        media_content_type: music
-        media_content_id: https://playerservices.streamtheworld.com/api/livestream-redirect/CADENASER.mp3
-      continue_on_error: true
+        emisora: ser
 
 apagar_tele:
   alias: Apagar tele
