@@ -1,5 +1,5 @@
 # Acciones Assist (intent_script). Destino HAOS: /config/intent_scripts.yaml
-# Frases: custom_sentences/es/radio.yaml y custom_sentences/es/tv.yaml
+# Frases: custom_sentences/es/radio.yaml, custom_sentences/es/tv.yaml y custom_sentences/es/tv_entradas.yaml
 
 PonRadioFavorita:
   description: Reproduce una emisora favorita en Satellite1
@@ -115,3 +115,15 @@ ReanudaLaTele:
       continue_on_error: true
   speech:
     text: "Sigo la tele."
+
+# Cambio de entrada (HDMI, PlayStation, Streamer...) — solo lo soporta la Sony
+# Bravia real (media_player.bravia_kd_43xf8596, integración braviatv).
+# Frases: custom_sentences/es/tv_entradas.yaml
+CambiaEntradaTele:
+  description: Cambia la entrada/fuente de la Sony Bravia real
+  action:
+    - action: script.poner_entrada_tele
+      data:
+        entrada: "{{ entrada_tv }}"
+  speech:
+    text: "Pongo {{ entrada_tv }} en la tele."
