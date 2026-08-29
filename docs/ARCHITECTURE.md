@@ -153,3 +153,4 @@ Entity IDs reales documentados en `AGENTS.md` y `includes/scripts.yaml`.
 - [speaker-id-mariano.md](speaker-id-mariano.md)
 - [api-costs.md](api-costs.md)
 - [reservas-dhcp-bombillas-iot.md](reservas-dhcp-bombillas-iot.md)
+- [job-finder.md](job-finder.md)

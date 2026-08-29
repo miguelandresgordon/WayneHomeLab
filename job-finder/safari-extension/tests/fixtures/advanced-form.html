@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Formulario avanzado de candidatura (Fase 5)</title>
+</head>
+<body>
+  <main>
+    <h1>Candidatura avanzada de prueba</h1>
+    <p>
+      Cubre los casos que la Fase 4 no ejercitaba: radios agrupados, select
+      múltiple, leyenda de fieldset, un campo deshabilitado, un iframe del
+      mismo origen y un input dentro de un shadow root abierto.
+    </p>
+    <form>
+      <label>Nombre completo <input name="full_name" autocomplete="name" required></label>
+      <label>Correo <input name="email" type="email" autocomplete="email" required></label>
+
+      <fieldset>
+        <legend>Modalidad preferida</legend>
+        <label><input type="radio" name="work_mode" value="remote"> Remoto</label>
+        <label><input type="radio" name="work_mode" value="hybrid"> Híbrido</label>
+        <label><input type="radio" name="work_mode" value="onsite"> Presencial</label>
+      </fieldset>
+
+      <label>
+        Tecnologías (selección múltiple)
+        <select name="skills" multiple size="4">
+          <option value="python">Python</option>
+          <option value="typescript">TypeScript</option>
+          <option value="swift">Swift</option>
+          <option value="sql">SQL</option>
+        </select>
+      </label>
+
+      <label>Código de referencia (no editable) <input name="referral_code" value="fixed" disabled></label>
+
+      <fieldset>
+        <legend>Widget de terceros (mismo origen)</legend>
+        <iframe src="embedded-frame.html" title="Widget embebido"></iframe>
+      </fieldset>
+
+      <fieldset>
+        <legend>Componente personalizado (shadow DOM abierto)</legend>
+        <job-finder-availability></job-finder-availability>
+      </fieldset>
+
+      <label>Currículum <input name="resume" type="file" accept="application/pdf,.pdf"></label>
+      <label><input name="accept_terms" type="checkbox"> Acepto las condiciones</label>
+      <input name="csrf_token" type="hidden" value="must-never-leave-the-page">
+      <label>Contraseña <input name="password" type="password" value="must-never-leave-the-page"></label>
+      <button type="submit">Enviar (no usar en el spike)</button>
+    </form>
+  </main>
+
+  <script>
+    class JobFinderAvailability extends HTMLElement {
+      connectedCallback() {
+        const root = this.attachShadow({mode: "open"});
+        const wrapper = document.createElement("label");
+        wrapper.textContent = "Disponibilidad (fecha) ";
+        const input = document.createElement("input");
+        input.type = "date";
+        input.name = "availability_date";
+        wrapper.appendChild(input);
+        root.appendChild(wrapper);
+      }
+    }
+    customElements.define("job-finder-availability", JobFinderAvailability);
+  </script>
+</body>
+</html>

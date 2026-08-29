@@ -1,0 +1,74 @@
+# ==============================================================================
+# Job Finder — Docker Compose (local ARM64 / future host)
+#
+# Usage:
+#   cp .env.example .env
+#   docker compose up --build
+#
+# Limits: 256 MiB RAM, 0.5 CPU. Single uvicorn worker. No browser. No extra DB.
+# Do not publish this port on WAN. Dev default bind is 127.0.0.1.
+# ==============================================================================
+
+services:
+  job-finder:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ${JOB_FINDER_IMAGE:-job-finder:local}
+    container_name: job-finder
+    restart: unless-stopped
+    user: "1000:1000"
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    tmpfs:
+      - /tmp:noexec,nosuid,size=32M
+    ports:
+      - "${JOB_FINDER_BIND:-127.0.0.1}:${JOB_FINDER_PORT:-8473}:8473"
+    volumes:
+      - job-finder-data:/data
+    environment:
+      TZ: ${TZ:-Europe/Madrid}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      JOB_FINDER_VERSION: ${JOB_FINDER_VERSION:-0.1.0}
+      JOB_FINDER_DATABASE_URL: ${JOB_FINDER_DATABASE_URL:-sqlite:////data/jobfinder.db}
+      JOB_FINDER_RESUMES_DIR: ${JOB_FINDER_RESUMES_DIR:-/data/resumes}
+      JOB_FINDER_RESUME_MAX_BYTES: ${JOB_FINDER_RESUME_MAX_BYTES:-5242880}
+      JOB_FINDER_SECRET_KEY: ${JOB_FINDER_SECRET_KEY:-dev-only-change-me}
+      JOB_FINDER_COOKIE_SECURE: ${JOB_FINDER_COOKIE_SECURE:-false}
+      JOB_FINDER_USER_A_EMAIL: ${JOB_FINDER_USER_A_EMAIL:-}
+      JOB_FINDER_USER_A_PASSWORD: ${JOB_FINDER_USER_A_PASSWORD:-}
+      JOB_FINDER_USER_B_EMAIL: ${JOB_FINDER_USER_B_EMAIL:-}
+      JOB_FINDER_USER_B_PASSWORD: ${JOB_FINDER_USER_B_PASSWORD:-}
+    mem_limit: 256m
+    cpus: 0.50
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: "0.50"
+        reservations:
+          memory: 64M
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8473/api/v1/health', timeout=3)",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  job-finder-data:
+    driver: local

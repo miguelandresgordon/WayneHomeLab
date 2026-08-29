@@ -66,6 +66,17 @@ voice-pipeline/data/
 voice-pipeline/models/
 
 # =========================
+# Job Finder
+# =========================
+job-finder/.env
+job-finder/data/
+job-finder/*.db
+job-finder/*.db-wal
+job-finder/*.db-shm
+job-finder/safari-extension/**/xcuserdata/
+job-finder/safari-extension/**/DerivedData/
+
+# =========================
 # Logs
 # =========================
 *.log

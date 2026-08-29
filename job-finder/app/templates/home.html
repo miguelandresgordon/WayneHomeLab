@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="dashboard-heading">
+  <div>
+    <h1>Tu espacio de búsqueda</h1>
+    <p class="hint">Sesión de {{ user.email }}. Todos los datos están aislados por usuario.</p>
+  </div>
+  <form method="post" action="/logout">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button class="button-secondary" type="submit">Cerrar sesión</button>
+  </form>
+</div>
+
+<p id="page-message" class="status-message" role="status" aria-live="polite"></p>
+
+<section class="panel" aria-labelledby="profile-title">
+  <h2 id="profile-title">Perfil personal</h2>
+  <p class="hint">Datos de contacto que se utilizarán más adelante para preparar formularios.</p>
+  <form id="profile-form" class="form-grid">
+    <input id="csrf-token" type="hidden" value="{{ csrf_token }}">
+
+    <label class="field field-wide" for="full-name">
+      Nombre completo
+      <input id="full-name" name="full_name" maxlength="200" required>
+    </label>
+
+    <label class="field" for="phone">
+      Teléfono
+      <input id="phone" name="phone" maxlength="40" autocomplete="tel">
+    </label>
+
+    <label class="field" for="location">
+      Ubicación
+      <input id="location" name="location" maxlength="200">
+    </label>
+
+    <label class="field" for="linkedin-url">
+      LinkedIn
+      <input id="linkedin-url" name="linkedin_url" type="url" maxlength="500">
+    </label>
+
+    <label class="field" for="portfolio-url">
+      Portfolio
+      <input id="portfolio-url" name="portfolio_url" type="url" maxlength="500">
+    </label>
+
+    <label class="field field-wide" for="summary">
+      Resumen profesional
+      <textarea id="summary" name="summary" maxlength="4000" rows="5"></textarea>
+    </label>
+
+    <div class="field-wide form-actions">
+      <button type="submit">Guardar perfil</button>
+    </div>
+  </form>
+</section>
+
+<section class="panel" aria-labelledby="search-profiles-title">
+  <div class="section-heading">
+    <div>
+      <h2 id="search-profiles-title">Perfiles de búsqueda</h2>
+      <p class="hint">Separa búsquedas por puesto, ubicación y condiciones laborales.</p>
+    </div>
+  </div>
+
+  <div id="search-profile-list" class="card-list"></div>
+  <p id="search-profile-empty" class="empty-state">Todavía no has creado ningún perfil de búsqueda.</p>
+
+  <form id="search-profile-form" class="form-grid">
+    <input id="search-profile-id" type="hidden">
+
+    <label class="field" for="search-profile-name">
+      Nombre del perfil
+      <input id="search-profile-name" name="name" maxlength="120" required placeholder="Ej. Data Engineer remoto">
+    </label>
+
+    <label class="field" for="work-mode">
+      Modalidad
+      <select id="work-mode" name="work_mode">
+        <option value="">Sin preferencia</option>
+        <option value="remote">Remoto</option>
+        <option value="hybrid">Híbrido</option>
+        <option value="onsite">Presencial</option>
+      </select>
+    </label>
+
+    <label class="field field-wide" for="desired-roles">
+      Puestos deseados
+      <input id="desired-roles" name="desired_roles" placeholder="Data Engineer, Analytics Engineer">
+      <span class="field-help">Separados por comas.</span>
+    </label>
+
+    <label class="field field-wide" for="search-locations">
+      Ubicaciones
+      <input id="search-locations" name="locations" placeholder="Madrid, España, Remoto UE">
+      <span class="field-help">Separadas por comas.</span>
+    </label>
+
+    <label class="field" for="employment-type">
+      Jornada
+      <select id="employment-type" name="employment_type">
+        <option value="">Sin preferencia</option>
+        <option value="full_time">Completa</option>
+        <option value="part_time">Parcial</option>
+        <option value="contract">Contrato</option>
+        <option value="internship">Prácticas</option>
+      </select>
+    </label>
+
+    <label class="field" for="seniority-level">
+      Nivel
+      <input id="seniority-level" name="seniority_level" maxlength="60" placeholder="Ej. Senior">
+    </label>
+
+    <label class="field" for="salary-min">
+      Salario mínimo
+      <input id="salary-min" name="salary_min" type="number" min="0" step="1000">
+    </label>
+
+    <label class="field" for="salary-currency">
+      Moneda
+      <input id="salary-currency" name="salary_currency" maxlength="10" value="EUR">
+    </label>
+
+    <label class="checkbox-field">
+      <input name="is_default" type="checkbox">
+      Usar como perfil predeterminado
+    </label>
+
+    <label class="checkbox-field">
+      <input name="is_active" type="checkbox" checked>
+      Perfil activo
+    </label>
+
+    <div class="field-wide form-actions">
+      <button id="cancel-search-profile" class="button-secondary" type="button" hidden>Cancelar edición</button>
+      <button type="submit">Guardar perfil de búsqueda</button>
+    </div>
+  </form>
+</section>
+
+<section class="panel" aria-labelledby="resumes-title">
+  <h2 id="resumes-title">Currículums</h2>
+  <p class="hint">Solo PDF, hasta 5 MiB. Cada archivo queda aislado en tu cuenta.</p>
+
+  <div id="resume-list" class="card-list"></div>
+  <p id="resume-empty" class="empty-state">Todavía no has subido ningún currículum.</p>
+
+  <form id="resume-form" class="form-grid" enctype="multipart/form-data">
+    <label class="field" for="resume-file">
+      Archivo PDF
+      <input id="resume-file" name="file" type="file" accept="application/pdf,.pdf" required>
+    </label>
+
+    <label class="field" for="resume-search-profile">
+      Perfil de búsqueda
+      <select id="resume-search-profile" name="search_profile_id">
+        <option value="">Sin asociar</option>
+      </select>
+    </label>
+
+    <div class="field-wide form-actions">
+      <button type="submit">Subir currículum</button>
+    </div>
+  </form>
+</section>
+
+<section class="panel" aria-labelledby="answers-title">
+  <h2 id="answers-title">Respuestas reutilizables</h2>
+  <p class="hint">Guarda respuestas frecuentes. Nunca se inventan ni se envían automáticamente.</p>
+
+  <div id="answer-list" class="card-list"></div>
+  <p id="answer-empty" class="empty-state">Todavía no has guardado ninguna respuesta.</p>
+
+  <form id="answer-form" class="form-grid">
+    <input id="answer-id" type="hidden">
+
+    <label class="field" for="answer-key">
+      Identificador
+      <input id="answer-key" name="key" maxlength="120" required placeholder="Ej. motivacion">
+    </label>
+
+    <label class="field" for="answer-locale">
+      Idioma
+      <select id="answer-locale" name="locale">
+        <option value="es">Español</option>
+        <option value="en">Inglés</option>
+      </select>
+    </label>
+
+    <label class="field field-wide" for="answer-text">
+      Respuesta
+      <textarea id="answer-text" name="text" maxlength="8000" rows="5" required></textarea>
+    </label>
+
+    <div class="field-wide form-actions">
+      <button id="cancel-answer" class="button-secondary" type="button" hidden>Cancelar edición</button>
+      <button type="submit">Guardar respuesta</button>
+    </div>
+  </form>
+</section>
+
+<script src="/static/dashboard.js?v=3" defer></script>
+{% endblock %}
