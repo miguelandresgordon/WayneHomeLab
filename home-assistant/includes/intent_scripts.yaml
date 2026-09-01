@@ -31,6 +31,55 @@ ParaRadioFavorita:
   speech:
     text: "Paro la radio."
 
+# Cualquier emisora del mundo, aleatoria o por categoría, vía Radio Browser.
+# Frases: custom_sentences/es/radio.yaml (PonRadioBrowser, PonRadioAleatoria, PonRadioLista)
+PonRadioBrowser:
+  description: Busca y reproduce cualquier emisora vía Radio Browser
+  action:
+    - action: script.poner_radio_browser
+      data:
+        modo: byname
+        consulta: "{{ consulta }}"
+      response_variable: rb_result
+  speech:
+    text: >-
+      {% if rb_result.encontrada %}
+        Pongo {{ rb_result.nombre }}.
+      {% else %}
+        No he encontrado ninguna emisora llamada {{ consulta }}.
+      {% endif %}
+
+PonRadioAleatoria:
+  description: Reproduce una emisora aleatoria de todo el mundo vía Radio Browser
+  action:
+    - action: script.poner_radio_browser
+      data:
+        modo: random
+      response_variable: rb_result
+  speech:
+    text: >-
+      {% if rb_result.encontrada %}
+        Pongo {{ rb_result.nombre }}. Una radio al azar de todo el mundo.
+      {% else %}
+        No he podido encontrar una radio aleatoria ahora mismo.
+      {% endif %}
+
+PonRadioLista:
+  description: Reproduce una emisora de Radio Browser por categoría (populares, locales, país, idioma o género)
+  action:
+    - action: script.poner_radio_browser
+      data:
+        modo: "{{ criterio.split(':')[0] }}"
+        consulta: "{{ criterio.split(':')[1] if ':' in criterio else '' }}"
+      response_variable: rb_result
+  speech:
+    text: >-
+      {% if rb_result.encontrada %}
+        Pongo {{ rb_result.nombre }}.
+      {% else %}
+        No he encontrado ninguna emisora para esa categoría.
+      {% endif %}
+
 # TV del salón: siempre Google Streamer (media_player.tv_ga_2).
 ApagaLaTele:
   description: Apaga el Google Streamer (TV GA)
