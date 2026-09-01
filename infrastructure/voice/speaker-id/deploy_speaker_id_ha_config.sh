@@ -5,6 +5,11 @@
 #   HA_HOST=192.168.1.110 HA_USER=root ./deploy_speaker_id_ha_config.sh
 #
 # Requiere SSH a HAOS. Crea backup en /config/backups/ antes de modificar.
+#
+# Layout desplegado (alineado con home-assistant/includes/ del repo):
+#   /config/configuration.yaml   ← home-assistant/configuration.haos.yaml
+#   /config/includes/*.yaml      ← home-assistant/includes/*.yaml (subcarpeta)
+#   /config/themes/*.yaml        ← home-assistant/themes/*.yaml
 
 set -euo pipefail
 
@@ -15,6 +20,21 @@ HA_CONFIG="${HA_CONFIG:-/config}"
 TS="$(date +%Y%m%d-%H%M%S)"
 FOLDER_WATCHER_ENTRY_ID="01JUN23WAYNESPKRASSISTPIPE"
 
+# Includes desplegados 1:1 desde home-assistant/includes/ a /config/includes/.
+# Mantener esta lista sincronizada con configuration.haos.yaml.
+INCLUDE_FILES=(
+  automations.yaml
+  scripts.yaml
+  scenes.yaml
+  sensors.yaml
+  input_text.yaml
+  input_boolean.yaml
+  lights.yaml
+  rest_commands.yaml
+  shell_commands.yaml
+  intent_scripts.yaml
+)
+
 log() { printf '[deploy-speaker-id-ha] %s\n' "$*"; }
 
 if ! ping -c 1 -W 2 "$HA_HOST" >/dev/null 2>&1; then
@@ -24,42 +44,26 @@ fi
 
 log "Backup y despliegue → ${HA_USER}@${HA_HOST}:${HA_CONFIG}"
 
-ssh "${HA_USER}@${HA_HOST}" "mkdir -p ${HA_CONFIG}/backups ${HA_CONFIG}/includes /share/assist_pipeline"
+ssh "${HA_USER}@${HA_HOST}" "mkdir -p ${HA_CONFIG}/backups ${HA_CONFIG}/includes ${HA_CONFIG}/themes /share/assist_pipeline"
 
 ssh "${HA_USER}@${HA_HOST}" "
   cp -a ${HA_CONFIG}/configuration.yaml ${HA_CONFIG}/backups/configuration.yaml.${TS} 2>/dev/null || true
-  cp -a ${HA_CONFIG}/automations.yaml ${HA_CONFIG}/backups/automations.yaml.${TS} 2>/dev/null || true
+  cp -a ${HA_CONFIG}/includes ${HA_CONFIG}/backups/includes.${TS} 2>/dev/null || true
   cp -a ${HA_CONFIG}/.storage/core.config_entries ${HA_CONFIG}/backups/core.config_entries.${TS} 2>/dev/null || true
 "
-
-ssh "${HA_USER}@${HA_HOST}" "mkdir -p ${HA_CONFIG}/themes"
 
 scp "${REPO_ROOT}/home-assistant/configuration.haos.yaml" \
   "${HA_USER}@${HA_HOST}:${HA_CONFIG}/configuration.yaml"
 
-scp "${REPO_ROOT}/home-assistant/includes/automations.yaml" \
-  "${HA_USER}@${HA_HOST}:${HA_CONFIG}/automations.yaml"
-
-scp "${REPO_ROOT}/home-assistant/includes/scripts.yaml" \
-  "${HA_USER}@${HA_HOST}:${HA_CONFIG}/scripts.yaml"
-
-scp "${REPO_ROOT}/home-assistant/includes/scenes.yaml" \
-  "${HA_USER}@${HA_HOST}:${HA_CONFIG}/scenes.yaml"
-
-scp "${REPO_ROOT}/home-assistant/includes/input_boolean.yaml" \
-  "${HA_USER}@${HA_HOST}:${HA_CONFIG}/input_boolean.yaml"
-
-scp "${REPO_ROOT}/home-assistant/includes/lights.yaml" \
-  "${HA_USER}@${HA_HOST}:${HA_CONFIG}/lights.yaml"
-
-scp "${REPO_ROOT}/home-assistant/includes/input_text.yaml" \
-  "${HA_USER}@${HA_HOST}:${HA_CONFIG}/input_text.yaml"
-
-scp "${REPO_ROOT}/home-assistant/includes/rest_commands.yaml" \
-  "${HA_USER}@${HA_HOST}:${HA_CONFIG}/rest_commands.yaml"
-
-scp "${REPO_ROOT}/home-assistant/includes/shell_commands.yaml" \
-  "${HA_USER}@${HA_HOST}:${HA_CONFIG}/shell_commands.yaml"
+for f in "${INCLUDE_FILES[@]}"; do
+  src="${REPO_ROOT}/home-assistant/includes/${f}"
+  if [[ ! -f "$src" ]]; then
+    log "❌ Falta ${src}"
+    exit 1
+  fi
+  log "Copiando includes/${f}..."
+  scp "$src" "${HA_USER}@${HA_HOST}:${HA_CONFIG}/includes/${f}"
+done
 
 scp "${REPO_ROOT}/home-assistant/themes/wayne_default.yaml" \
   "${HA_USER}@${HA_HOST}:${HA_CONFIG}/themes/wayne_default.yaml"

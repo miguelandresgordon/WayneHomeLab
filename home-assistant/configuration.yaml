@@ -30,20 +30,14 @@ frontend:
   themes: !include_dir_merge_named themes/
 
 # --- HTTP ---
-# HA 2026.8+: prefer Settings → System → Network (HTTP server section).
-# Reverse proxy (Caddy on WireGuard VM 192.168.1.55):
-#   Trust X-Forwarded-For: on
-#   Trusted proxies: 192.168.1.55  (NOT the whole LAN)
+# La configuración http: YAML ya está migrada a la UI (HA la ignora desde
+# 2026.x y se elimina en 2027.2.0). Gestionar en:
+#   Ajustes → Sistema → Red → Trust X-Forwarded-For + Trusted proxies
+# Reverse proxy: Caddy en la VM WireGuard 192.168.1.55.
+#   Trusted proxies: 192.168.1.55  (NO toda la LAN)
 #   Internal URL: http://192.168.1.110:8123
 #   External URL: https://ha.waynehomelab.com
-# After UI migration, remove this block if HA raises a repair issue.
-# See: https://www.home-assistant.io/integrations/http/
-http:
-  use_x_forwarded_for: true
-  trusted_proxies:
-    - 192.168.1.55
-  ip_ban_enabled: true
-  login_attempts_threshold: 5
+# Ver: https://www.home-assistant.io/integrations/http/
 
 # --- Logger ---
 logger:
@@ -66,7 +60,7 @@ recorder:
 automation: !include includes/automations.yaml
 script: !include includes/scripts.yaml
 scene: !include includes/scenes.yaml
-sensor: !include includes/sensors.yaml
+template: !include includes/sensors.yaml
 input_text: !include includes/input_text.yaml
 input_boolean: !include includes/input_boolean.yaml
 light: !include includes/lights.yaml

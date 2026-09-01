@@ -86,10 +86,10 @@ En HA:
 ## 6. Desplegar config de Home Assistant
 
 ```bash
-HA_HOST=192.168.1.110 ./infrastructure/voice/wake-word/deploy_ha_voice_config.sh
+HA_HOST=192.168.1.110 ./infrastructure/voice/speaker-id/deploy_speaker_id_ha_config.sh
 ```
 
-O copia manualmente `home-assistant/` a `/config/` en HAOS.
+Copia `configuration.haos.yaml` → `/config/configuration.yaml` y `includes/*.yaml` → `/config/includes/` (no plano). `secrets.yaml` no se toca.
 
 Componentes clave ya en el repo:
 - `assist_pipeline.debug_recording_dir: /share/assist_pipeline` (activo)

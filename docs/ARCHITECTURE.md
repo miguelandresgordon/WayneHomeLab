@@ -122,7 +122,7 @@ YAML canónico en el repo → Samba `/config`:
 | Repo | Destino HAOS (Samba `/Volumes/config`) |
 |------|----------------|
 | `home-assistant/configuration.haos.yaml` | `/config/configuration.yaml` |
-| `home-assistant/includes/*.yaml` | `/config/*.yaml` |
+| `home-assistant/includes/*.yaml` | `/config/includes/*.yaml` |
 | `home-assistant/custom_sentences/es/*.yaml` | `/config/custom_sentences/es/*.yaml` |
 | `home-assistant/themes/` | `/config/themes/` |
 | `infrastructure/voice/wake-word/esphome/satellite1-c7ffe4.yaml` | `/config/esphome/satellite1-c7ffe4.yaml` |

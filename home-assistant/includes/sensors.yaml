@@ -1,7 +1,10 @@
 # ==============================================================================
-# Home Assistant — Sensors
+# Home Assistant — Template sensors
 #
-# Custom sensor definitions including API cost tracking.
+# Este archivo se incluye bajo la clave `template:` en configuration.yaml
+# (NO bajo `sensor:` — la sintaxis legacy `sensor: - platform: template` se
+# retiró y HA la reporta como "Configuración YAML no compatible").
+#
 # Reference: https://www.home-assistant.io/integrations/template/
 # ==============================================================================
 
@@ -11,12 +14,17 @@
 #   Input:  $0.10 per 1M tokens
 #   Output: $0.40 per 1M tokens
 #   Avg conversation: ~500 input + ~200 output tokens
-- platform: template
-  sensors:
-    gemini_api_daily_cost:
-      friendly_name: "Gemini API Daily Cost (Est.)"
+#
+# `default_entity_id` fija el entity_id exacto (sensor.gemini_api_daily_cost)
+# aunque el `name` cambie o lleve paréntesis. Solo se aplica en la primera
+# creación de la entidad (junto con `unique_id`).
+- sensor:
+    - name: "Gemini API Daily Cost (Est.)"
+      unique_id: gemini_api_daily_cost
+      default_entity_id: sensor.gemini_api_daily_cost
       unit_of_measurement: "USD"
-      value_template: >-
+      icon: mdi:currency-usd
+      state: >-
         {% set conversations = states('counter.daily_voice_conversations') | int(0) %}
         {% set input_cost_per_token = 0.10 / 1000000 %}
         {% set output_cost_per_token = 0.40 / 1000000 %}
@@ -24,18 +32,20 @@
         {% set avg_output_tokens = 200 %}
         {% set cost = conversations * ((avg_input_tokens * input_cost_per_token) + (avg_output_tokens * output_cost_per_token)) %}
         {{ cost | round(4) }}
-      icon_template: mdi:currency-usd
 
-    gemini_api_monthly_projection:
-      friendly_name: "Gemini API Monthly Projection"
+    - name: "Gemini API Monthly Projection"
+      unique_id: gemini_api_monthly_projection
+      default_entity_id: sensor.gemini_api_monthly_projection
       unit_of_measurement: "USD"
-      value_template: >-
+      icon: mdi:chart-line
+      state: >-
         {% set daily_cost = states('sensor.gemini_api_daily_cost') | float(0) %}
         {{ (daily_cost * 30) | round(2) }}
-      icon_template: mdi:chart-line
 
 # --- System Monitoring (Edge Node) ---
-# Uncomment after configuring the System Monitor integration
+# systemmonitor NO es una entidad template: es su propia integración bajo la
+# clave `sensor:`. Si la activas, añade un bloque `sensor:` aparte en
+# configuration.yaml (o en su propio include) — no aquí.
 # - platform: systemmonitor
 #   resources:
 #     - type: processor_use

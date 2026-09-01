@@ -7,15 +7,16 @@
 #
 # En el YAML de Take Control basta con AÑADIR el modelo (okay_nabu /
 # hey_jarvis / stop vienen del package FPH).
-# probability_cutoff: 98% = calibración del train 2026-08-26.
-#   Falsos positivos TV → subir; no te oye → bajar a 85%.
+# probability_cutoff: el train 2026-08-26 sugirió 98%, pero en sala real suele ser
+# demasiado estricto. Empezar en 92% y bajar a 85% si no despierta; subir si hay
+# falsos positivos con TV (junto con automatizaciones satellite1_mute_tv_* en HA).
 
 micro_wake_word:
   id: mww
   models:
     - model: http://192.168.1.110:8123/local/wake-word/mariano.esphome.json
       id: mariano
-      probability_cutoff: 98%
+      probability_cutoff: 92%
 
 # --- En logger / packages del firmware (Take Control) ---
 # log_level: info   (no debug permanente; 4 GB RAM / SSD USB)

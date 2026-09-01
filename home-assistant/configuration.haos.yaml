@@ -1,6 +1,14 @@
 # Configuración HAOS VM (WayneLab) — fuente de verdad para /config/configuration.yaml
 # Desplegar con infrastructure/voice/speaker-id/deploy_speaker_id_ha_config.sh
 # o copiar por Samba a /Volumes/config
+#
+# Layout en HAOS (alineado con home-assistant/includes/ del repo):
+#   /config/configuration.yaml   ← este archivo
+#   /config/includes/*.yaml      ← home-assistant/includes/*.yaml (subcarpeta, no plano)
+#   /config/secrets.yaml         ← NO se despliega (gitignored; se gestiona en HAOS)
+#
+# No incluir bloque http:: HA 2026.x lo ignora (repair) y se elimina en 2027.2.
+# Proxy Caddy: Ajustes → Sistema → Red → Trust X-Forwarded-For + 192.168.1.55
 
 # Loads default set of integrations. Do not remove.
 default_config:
@@ -19,15 +27,16 @@ homeassistant:
 frontend:
   themes: !include_dir_merge_named themes
 
-automation: !include automations.yaml
-script: !include scripts.yaml
-scene: !include scenes.yaml
-input_text: !include input_text.yaml
-input_boolean: !include input_boolean.yaml
-light: !include lights.yaml
-rest_command: !include rest_commands.yaml
-shell_command: !include shell_commands.yaml
-intent_script: !include intent_scripts.yaml
+automation: !include includes/automations.yaml
+script: !include includes/scripts.yaml
+scene: !include includes/scenes.yaml
+template: !include includes/sensors.yaml
+input_text: !include includes/input_text.yaml
+input_boolean: !include includes/input_boolean.yaml
+light: !include includes/lights.yaml
+rest_command: !include includes/rest_commands.yaml
+shell_command: !include includes/shell_commands.yaml
+intent_script: !include includes/intent_scripts.yaml
 
 logger:
   default: warning

@@ -1,5 +1,428 @@
-# Automatizaciones YAML vacías a propósito.
-# Las de prueba (Copilot / voz / rutinas) se eliminaron.
-# Crear de nuevo desde la UI de HA; no volver a volcar aquí hasta que
-# quieras versionarlas de forma canónica.
-[]
+# ==============================================================================
+# Home Assistant — Automations (canónico WayneHomeLab)
+#
+# Rutinas de voz, Satellite1, Speaker ID y horarios. Groq es el STT; no arrancar
+# core_whisper. Desplegar: infrastructure/voice/wake-word/deploy_ha_voice_config.sh
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Speaker ID — identificar hablante tras cada comando de voz
+# Requiere: add-on speaker-id-mariano + assist_pipeline.debug_recording_dir
+# ------------------------------------------------------------------------------
+- id: speaker_id_on_command
+  alias: "Speaker ID — identificar hablante"
+  description: "Identifica quién habló tras grabar WAV en /share/assist_pipeline"
+  trigger:
+    - platform: event
+      event_type: folder_watcher
+  condition:
+    - condition: template
+      value_template: >-
+        {{ trigger.event.data.path is defined
+           and trigger.event.data.path.endswith('.wav')
+           and trigger.event.data.event_type in ['closed', 'moved', 'created'] }}
+  action:
+    - delay: "00:00:01"
+    - variables:
+        wav_path: "{{ trigger.event.data.path }}"
+    - service: rest_command.identify_speaker
+      data:
+        path: "{{ wav_path }}"
+      response_variable: speaker_result
+    - service: input_text.set_value
+      target:
+        entity_id: input_text.current_speaker
+      data:
+        value: "{{ speaker_result.content.person | default('desconocido') }}"
+    - event: speaker_identified
+      event_data:
+        person: "{{ speaker_result.content.person | default('desconocido') }}"
+        score: "{{ speaker_result.content.score | default(0) }}"
+        is_known: "{{ speaker_result.content.is_known | default(false) }}"
+        wav_path: "{{ wav_path }}"
+  mode: queued
+  max: 5
+
+- id: speaker_id_purge_wavs
+  alias: "Speaker ID — purgar WAV antiguos"
+  description: "Elimina grabaciones de debug con más de 15 minutos"
+  trigger:
+    - platform: time_pattern
+      minutes: "/15"
+  action:
+    - service: shell_command.speaker_id_purge_old_wavs
+  mode: single
+
+# ------------------------------------------------------------------------------
+# Horarios
+# ------------------------------------------------------------------------------
+- id: modo_noche_activar
+  alias: "Modo noche — activar"
+  description: "23:00 — apaga casa y silencia Satellite1. No arranca Whisper."
+  trigger:
+    - platform: time
+      at: "23:00:00"
+  action:
+    - service: script.buenas_noches
+  mode: single
+
+- id: modo_noche_desactivar
+  alias: "Modo noche — desactivar"
+  description: >-
+    07:30 — sale de modo noche. No desmutea si Sony BRAVIA o Google TV Streamer
+    siguen reproduciendo (evita falsos wake word con diálogos de TV).
+  trigger:
+    - platform: time
+      at: "07:30:00"
+  condition:
+    - condition: template
+      value_template: >-
+        {{ states('media_player.sony_bravia_4k') not in ['playing', 'on']
+           and states('media_player.google_tv_streamer') not in ['playing', 'on'] }}
+  action:
+    - service: script.buenos_dias
+  mode: single
+
+# ------------------------------------------------------------------------------
+# Satellite1 — silenciar micrófono mientras hay TV reproduciendo
+# Reduce falsos positivos de wake word con diálogos de televisión.
+# Ajusta entity_id si difieren en tu instancia (Configuración → Dispositivos).
+# ------------------------------------------------------------------------------
+- id: satellite1_mute_tv_playing
+  alias: "Satellite1 — mute con TV encendida"
+  description: "Silencia el Satellite1 cuando Sony BRAVIA o Google TV están reproduciendo"
+  trigger:
+    - platform: state
+      entity_id:
+        - media_player.sony_bravia_4k
+        - media_player.google_tv_streamer
+      to:
+        - playing
+        - "on"
+  condition:
+    - condition: time
+      after: "07:30:00"
+      before: "23:00:00"
+  action:
+    - service: switch.turn_on
+      target:
+        entity_id: switch.satellite1_c7ffe4_mute
+      continue_on_error: true
+  mode: single
+
+- id: satellite1_unmute_tv_stopped
+  alias: "Satellite1 — unmute TV parada"
+  description: "Reactiva el micrófono cuando la TV deja de reproducir (fuera de modo noche)"
+  trigger:
+    - platform: state
+      entity_id:
+        - media_player.sony_bravia_4k
+        - media_player.google_tv_streamer
+      to:
+        - idle
+        - paused
+        - "off"
+        - standby
+      for: "00:05:00"
+  condition:
+    - condition: time
+      after: "07:30:00"
+      before: "23:00:00"
+  action:
+    - service: switch.turn_off
+      target:
+        entity_id: switch.satellite1_c7ffe4_mute
+      continue_on_error: true
+  mode: single
+
+# ------------------------------------------------------------------------------
+# Salón — atardecer, presencia, cine (solo TV GA + lámpara Xiaomi)
+# ------------------------------------------------------------------------------
+- id: salon_atardecer_relajado
+  alias: "Salón — relajado al atardecer"
+  description: "Si hay alguien en casa y no hay cine/noche, atenúa la lámpara. No toca el dormitorio."
+  trigger:
+    - platform: sun
+      event: sunset
+  condition:
+    - condition: state
+      entity_id: person.miguel
+      state: home
+    - condition: state
+      entity_id: input_boolean.modo_cine
+      state: "off"
+    - condition: state
+      entity_id: input_boolean.modo_noche
+      state: "off"
+    - condition: state
+      entity_id: input_boolean.casa_ausente
+      state: "off"
+  action:
+    - service: script.relajado
+  mode: single
+
+- id: casa_ausencia
+  alias: "Casa — ausencia"
+  description: "Si Miguel no está 5 min, apaga luces y TVs"
+  trigger:
+    - platform: state
+      entity_id: person.miguel
+      to: not_home
+      for: "00:05:00"
+      not_from:
+        - unavailable
+        - unknown
+  action:
+    - service: script.me_voy
+  mode: single
+
+- id: casa_llegada
+  alias: "Casa — llegada"
+  description: "Al volver, de noche enciende Relajado en el salón"
+  trigger:
+    - platform: state
+      entity_id: person.miguel
+      to: home
+      not_from:
+        - unavailable
+        - unknown
+  action:
+    - service: script.he_llegado
+  mode: single
+
+- id: cine_tv_ga_on
+  alias: "Cine — TV GA encendida"
+  description: "Atenúa lámpara del salón y mutea Satellite1. No toca Antela/dormitorio."
+  trigger:
+    - platform: state
+      entity_id: media_player.tv_ga_2
+      to:
+        - playing
+        - "on"
+      not_from:
+        - unavailable
+        - unknown
+  condition:
+    - condition: state
+      entity_id: input_boolean.modo_noche
+      state: "off"
+  action:
+    - service: script.cine
+  mode: single
+
+- id: cine_tv_ga_off
+  alias: "Cine — TV GA apagada"
+  description: "Tras 5 min idle/off, sale de modo cine y unmute si no es de noche"
+  trigger:
+    - platform: state
+      entity_id: media_player.tv_ga_2
+      to:
+        - idle
+        - paused
+        - "off"
+        - standby
+      for: "00:05:00"
+      not_from:
+        - unavailable
+        - unknown
+  action:
+    - service: script.salir_cine
+  mode: single
+
+# ------------------------------------------------------------------------------
+# Satellite1 — botón Action y volumen
+# ------------------------------------------------------------------------------
+- id: satellite1_action_button
+  alias: "Satellite1 — botón Action"
+  description: "1 clic lámpara, doble cine/relajado, largo mute mic"
+  trigger:
+    - platform: state
+      entity_id: event.satellite1_c7ffe4_action_button_press
+      not_from:
+        - unavailable
+        - unknown
+  action:
+    - choose:
+        - conditions:
+            - condition: template
+              value_template: "{{ trigger.to_state.attributes.event_type == 'single_press' }}"
+          sequence:
+            - service: light.toggle
+              target:
+                entity_id: light.yeelink_mono6_6409_light
+              continue_on_error: true
+        - conditions:
+            - condition: template
+              value_template: "{{ trigger.to_state.attributes.event_type == 'double_press' }}"
+          sequence:
+            - choose:
+                - conditions:
+                    - condition: state
+                      entity_id: input_boolean.modo_cine
+                      state: "on"
+                  sequence:
+                    - service: script.salir_cine
+                    - service: script.relajado
+              default:
+                - service: script.cine
+        - conditions:
+            - condition: template
+              value_template: "{{ trigger.to_state.attributes.event_type == 'long_press' }}"
+          sequence:
+            - service: switch.toggle
+              target:
+                entity_id: switch.satellite1_c7ffe4_mute_microphones
+              continue_on_error: true
+  mode: queued
+  max: 5
+
+- id: satellite1_vol_up
+  alias: "Satellite1 — volumen +"
+  trigger:
+    - platform: state
+      entity_id: binary_sensor.satellite1_c7ffe4_button_up_vol
+      to: "on"
+      not_from:
+        - unavailable
+        - unknown
+  action:
+    - service: media_player.volume_up
+      target:
+        entity_id: media_player.satellite1_c7ffe4_media_player
+      continue_on_error: true
+  mode: queued
+  max: 10
+
+- id: satellite1_vol_down
+  alias: "Satellite1 — volumen −"
+  trigger:
+    - platform: state
+      entity_id: binary_sensor.satellite1_c7ffe4_button_down_vol
+      to: "on"
+      not_from:
+        - unavailable
+        - unknown
+  action:
+    - service: media_player.volume_down
+      target:
+        entity_id: media_player.satellite1_c7ffe4_media_player
+      continue_on_error: true
+  mode: queued
+  max: 10
+
+# Conversation triggers de radio (complementa custom_sentences/es/radio.yaml).
+- id: voz_radio_favorita
+  alias: "Voz — poner o parar radio"
+  description: "Assist: pon/para emisoras en Satellite1"
+  trigger:
+    - platform: conversation
+      id: ser
+      command:
+        - "pon [la] radio"
+        - "ponme [la] radio"
+        - "reproduce [la] radio"
+        - "pon [la] ser"
+        - "ponme [la] ser"
+        - "pon [la] cadena ser"
+        - "pon radio madrid"
+        - "pon la radio madrid"
+    - platform: conversation
+      id: radiovoz
+      command:
+        - "pon [la] radiovoz"
+        - "ponme [la] radiovoz"
+        - "pon radio voz"
+        - "pon radiovoz lugo"
+        - "pon radio voz lugo"
+        - "pon la radio voz"
+    - platform: conversation
+      id: filispim
+      command:
+        - "pon [la] filispim"
+        - "ponme [la] filispim"
+        - "pon [la] filispín"
+        - "pon radio filispim"
+        - "pon radio filispín"
+        - "pon la radio filispim"
+    - platform: conversation
+      id: almenara
+      command:
+        - "pon [la] almenara"
+        - "ponme [la] almenara"
+        - "pon radio almenara"
+        - "pon la radio almenara"
+    - platform: conversation
+      id: radio3
+      command:
+        - "pon radio 3"
+        - "pon radio tres"
+        - "pon radio3"
+        - "pon la radio 3"
+        - "pon la radio tres"
+        - "pon [la] erre ene tres"
+        - "pon rne"
+        - "pon rne radio 3"
+    - platform: conversation
+      id: roncudo
+      command:
+        - "pon [la] roncudo"
+        - "pon radio roncudo"
+        - "pon la radio roncudo"
+    - platform: conversation
+      id: parar
+      command:
+        - "para [la] radio"
+        - "apaga [la] radio"
+        - "quita [la] radio"
+        - "para de (escuchar|reproducir) [la radio]"
+        - "deja de (escuchar|reproducir) [la radio]"
+        - "stop [la] radio"
+        - "para de escuchar"
+  action:
+    - choose:
+        - conditions:
+            - condition: template
+              value_template: "{{ trigger.id == 'parar' }}"
+          sequence:
+            - service: script.parar_radio
+            - set_conversation_response: "Paro la radio."
+        - conditions:
+            - condition: template
+              value_template: "{{ trigger.id == 'roncudo' }}"
+          sequence:
+            - set_conversation_response: >-
+                Radio Roncudo solo emite en FM 106.1; no hay stream online.
+      default:
+        - service: script.poner_radio
+          data:
+            emisora: "{{ trigger.id }}"
+        - set_conversation_response: >-
+            {% set names = {
+              'ser': 'Cadena SER',
+              'radiovoz': 'RadioVoz Lugo',
+              'filispim': 'Radio Filispim',
+              'almenara': 'Radio Almenara',
+              'radio3': 'Radio 3'
+            } %}Pongo {{ names.get(trigger.id, 'la radio') }}.
+  mode: queued
+  max: 5
+
+- id: satellite1_wake_word_mariano
+  alias: "Satellite1 — wake word Mariano"
+  description: "Selecciona el modelo Mariano cuando HA arranca o el Satellite1 vuelve"
+  trigger:
+    - platform: homeassistant
+      event: start
+    - platform: state
+      entity_id: select.satellite1_c7ffe4_palabra_de_activacion
+      from: unavailable
+  action:
+    - wait_template: >-
+        {{ 'Mariano' in (state_attr('select.satellite1_c7ffe4_palabra_de_activacion', 'options') or []) }}
+      timeout: "00:02:00"
+    - service: select.select_option
+      target:
+        entity_id: select.satellite1_c7ffe4_palabra_de_activacion
+      data:
+        option: Mariano
+  mode: single
