@@ -53,10 +53,10 @@ logger:
 
 ## Custom wake word Mariano (WayneHomeLab, train 2026-08-26)
 ## Model files live in /config/esphome/models/ (addon path: /config/models/)
-## cutoff 98% = calibracion del trainer (frr~0.10, faph~0). Bajar a 85% si no te oye.
+## cutoff: trainer sugirió 98%; en sala real empezar en 92% y calibrar (runbook).
 micro_wake_word:
   id: mww
   models:
     - id: mariano
       model: http://192.168.1.110:8123/local/wake-word/mariano.esphome.json
-      probability_cutoff: 98%
+      probability_cutoff: 92%

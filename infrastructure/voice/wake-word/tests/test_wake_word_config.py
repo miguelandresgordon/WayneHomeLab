@@ -57,9 +57,8 @@ def automations() -> list[dict]:
     return data
 
 
-def _load_ha_configuration() -> dict:
-    """Parse configuration.yaml ignoring HA-specific tags (!include, !secret)."""
-    path = HA_DIR / "configuration.yaml"
+def _load_yaml_with_ha_tags(path: Path) -> dict:
+    """Parse HA YAML ignoring tags (!include, !secret)."""
     text = path.read_text(encoding="utf-8")
 
     class HAYamlLoader(yaml.SafeLoader):
@@ -78,6 +77,11 @@ def _load_ha_configuration() -> dict:
     data = yaml.load(text, Loader=HAYamlLoader)
     assert isinstance(data, dict)
     return data
+
+
+def _load_ha_configuration() -> dict:
+    """Parse configuration.yaml ignoring HA-specific tags (!include, !secret)."""
+    return _load_yaml_with_ha_tags(HA_DIR / "configuration.yaml")
 
 
 @pytest.fixture
@@ -167,6 +171,42 @@ class TestHomeAssistantConfiguration:
         ha = configuration.get("homeassistant", {})
         assert ha.get("country") == "ES"
 
+    def test_uses_includes_subdir_and_modern_template(self, configuration: dict) -> None:
+        assert configuration.get("template") == "includes/sensors.yaml"
+        assert configuration.get("intent_script") == "includes/intent_scripts.yaml"
+        assert configuration.get("script") == "includes/scripts.yaml"
+        assert "http" not in configuration
+
+
+class TestHaosConfiguration:
+    """configuration.haos.yaml is what deploy scripts copy to /config/configuration.yaml."""
+
+    def test_haos_includes_layout_matches_repo(self) -> None:
+        path = HA_DIR / "configuration.haos.yaml"
+        text = path.read_text(encoding="utf-8")
+        data = _load_yaml_with_ha_tags(path)
+        assert data.get("template") == "includes/sensors.yaml"
+        assert data.get("intent_script") == "includes/intent_scripts.yaml"
+        assert data.get("automation") == "includes/automations.yaml"
+        assert "http" not in data
+        assert "!include automations.yaml" not in text
+        assert "includes/sensors.yaml" in text
+        assert "includes/intent_scripts.yaml" in text
+
+    def test_deploy_script_copies_includes_subdir(self) -> None:
+        script = (
+            REPO_ROOT
+            / "infrastructure"
+            / "voice"
+            / "speaker-id"
+            / "deploy_speaker_id_ha_config.sh"
+        )
+        text = script.read_text(encoding="utf-8")
+        assert "sensors.yaml" in text
+        assert "intent_scripts.yaml" in text
+        assert "${HA_CONFIG}/includes/${f}" in text
+        assert "${HA_CONFIG}/automations.yaml" not in text
+
 
 class TestDocumentation:
     def test_runbook_exists_and_covers_workflow(self) -> None:
@@ -239,6 +279,6 @@ class TestTrainedModelWhenPresent:
             pytest.skip("mariano.json not yet copied from trainer")
 
         data = json.loads(json_path.read_text(encoding="utf-8"))
-        assert data["wake_word"] == "mariano"
+        assert data["wake_word"].casefold() == "mariano"
         assert tflite_path.is_file(), "mariano.tflite must accompany mariano.json"
         assert tflite_path.stat().st_size > 1000, "tflite file looks too small"

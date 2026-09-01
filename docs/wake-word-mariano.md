@@ -231,12 +231,37 @@ Actualizar IP en [`satellite1_mariano_overlay.yaml`](../infrastructure/voice/wak
 
 ### Calibrar `probability_cutoff`
 
+El entrenamiento puede sugerir **98%**, pero en la sala real suele ser demasiado estricto.
+Calibra por escalones, midiendo detecciones a 1 m y 3 m y falsos positivos con TV:
+
+| Paso | Cutoff | Cuándo probarlo |
+|------|--------|-----------------|
+| 1 | 92% | Punto de partida recomendado tras flash |
+| 2 | 85% | Si no despierta con voz normal |
+| 3 | 98% | Solo si hay falsos positivos frecuentes con TV |
+
 | Síntoma | Ajuste |
 |---------|--------|
-| Falsos positivos con TV | Subir cutoff (85% → 92%) |
-| No detecta tu voz | Bajar cutoff (85% → 75%) |
+| Falsos positivos con TV | Subir cutoff (85% → 92% → 98%) + automatizaciones TV en HA |
+| No detecta tu voz | Bajar cutoff (98% → 92% → 85%) |
 
-Cambiar en YAML → recompilar → flash OTA.
+Cambiar en YAML → recompilar → flash OTA. No cambiar varios parámetros a la vez.
+
+### Diagnóstico por etapa
+
+```mermaid
+flowchart TD
+  A[No responde] --> B{Wake detectado?}
+  B -->|No| W[Cutoff / mute / Mariano vs Okay Nabu]
+  B -->|Si| C{WAV en share/assist_pipeline OK?}
+  C -->|No| D[ESPHome: auto_gain / noise_suppression]
+  C -->|Si| E{Transcripcion Groq correcta?}
+  E -->|No| F[Prompt Groq / idioma es]
+  E -->|Si| G{Accion correcta?}
+  G -->|No| H[NLU: alias / areas / custom_sentences]
+  G -->|Si| I{Respuesta TTS audible?}
+  I -->|No| J[Piper / radio compitiendo]
+```
 
 ## 4. Automatizaciones TV (HA)
 
@@ -270,8 +295,11 @@ Verificar entity_ids de media_player en HA si difieren de:
 ## Quick wins (sin reentrenar)
 
 - `select.satellite1_c7ffe4_wake_word_sensitivity` → Slightly sensitive
-- Automatizaciones TV (ya en repo)
+- Bajar `probability_cutoff` a 92% (o 85% si sigue sin despertar) y flash OTA
+- Desplegar automatizaciones TV: `HA_HOST=192.168.1.110 ./infrastructure/voice/wake-word/deploy_ha_voice_config.sh`
+- Aplicar overlay `voice_assistant` (`noise_suppression_level: 2`, `auto_gain: 12 dBFS`)
 - Exponer entidades con alias español en HA UI
+- Prompt Groq con vocabulario doméstico: tele, televisión, tv, radio, lámpara, bombilla
 
 ## Referencias
 
