@@ -218,6 +218,78 @@ poner_radio:
                 media_content_id: "{{ stream_url }}"
               continue_on_error: true
 
+poner_radio_browser:
+  alias: Poner radio (Radio Browser)
+  description: Busca una emisora en Radio Browser (por nombre, aleatoria, tag, país, idioma o local) y la reproduce en el Satellite1
+  icon: mdi:radio
+  mode: restart
+  fields:
+    modo:
+      name: Modo
+      description: Tipo de búsqueda en Radio Browser
+      example: byname
+      required: true
+      selector:
+        select:
+          options:
+            - byname
+            - random
+            - tag
+            - country
+            - language
+            - popular
+            - local
+    consulta:
+      name: Consulta
+      description: Nombre de emisora, tag, código de país (ES) o idioma. No aplica a random/popular/local.
+      example: jazz
+      required: false
+      default: ""
+  sequence:
+    - variables:
+        modo_norm: "{{ (modo | default('byname') | lower | trim) }}"
+        consulta_norm: "{{ (consulta | default('') | trim) }}"
+    - variables:
+        query: >-
+          {{ 'name=' ~ (consulta_norm | urlencode) ~ '&hidebroken=true&limit=1&order=clickcount&reverse=true' if modo_norm == 'byname'
+          else 'tag=' ~ (consulta_norm | urlencode) ~ '&hidebroken=true&limit=1&order=clickcount&reverse=true' if modo_norm == 'tag'
+          else 'countrycode=' ~ (consulta_norm | urlencode) ~ '&hidebroken=true&limit=1&order=clickcount&reverse=true' if modo_norm == 'country'
+          else 'language=' ~ (consulta_norm | urlencode) ~ '&hidebroken=true&limit=1&order=clickcount&reverse=true' if modo_norm == 'language'
+          else 'countrycode=ES&state=Madrid&hidebroken=true&limit=1&order=clickcount&reverse=true' if modo_norm == 'local'
+          else 'hidebroken=true&limit=1&order=random' if modo_norm == 'random'
+          else 'hidebroken=true&limit=1&order=clickcount&reverse=true' }}
+    - action: rest_command.radio_browser_search
+      data:
+        query: "{{ query }}"
+      response_variable: rb_response
+      continue_on_error: true
+    - variables:
+        rb_ok: "{{ (rb_response is defined) and (rb_response.status == 200) and ((rb_response.content | default([])) | length > 0) }}"
+        rb_name: "{{ rb_response.content[0].name if rb_ok else '' }}"
+        rb_stream: "{{ (rb_response.content[0].url_resolved | default(rb_response.content[0].url, true)) if rb_ok else '' }}"
+    - action: media_player.media_stop
+      target:
+        entity_id: media_player.satellite1
+      continue_on_error: true
+    - choose:
+        - conditions:
+            - condition: template
+              value_template: "{{ rb_ok and (rb_stream | length > 0) }}"
+          sequence:
+            - action: media_player.play_media
+              target:
+                entity_id: media_player.satellite1_c7ffe4_media_player
+              data:
+                media_content_type: music
+                media_content_id: "{{ rb_stream }}"
+              continue_on_error: true
+    - variables:
+        resultado:
+          encontrada: "{{ rb_ok and (rb_stream | length > 0) }}"
+          nombre: "{{ rb_name }}"
+    - stop: ""
+      response_variable: resultado
+
 parar_radio:
   alias: Parar radio
   description: Detiene la reproducción en el Satellite1

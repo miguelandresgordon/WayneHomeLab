@@ -30,6 +30,40 @@ intents:
           - "deja de (escuchar|reproducir) [la radio]"
           - "stop [la] radio"
 
+  # Cualquier emisora que no esté en la lista cerrada "emisora" de arriba
+  # (p.ej. BBC, Cadena 100...) cae aquí y se busca por nombre en Radio Browser.
+  PonRadioBrowser:
+    data:
+      - sentences:
+          - "pon [la] radio {consulta}"
+          - "ponme [la] radio {consulta}"
+          - "reproduce [la] radio {consulta}"
+          - "quiero [escuchar] [la] radio {consulta}"
+          - "escucha [la] radio {consulta}"
+          - "busca [y pon] [la] radio {consulta}"
+
+  # Emisora al azar de todo el mundo, vía Radio Browser.
+  PonRadioAleatoria:
+    data:
+      - sentences:
+          - "pon [una] radio aleatoria"
+          - "ponme [una] radio aleatoria"
+          - "pon [una] radio al azar"
+          - "ponme [una] radio al azar"
+          - "pon [una] radio del mundo"
+          - "ponme [una] radio del mundo"
+          - "pon [una] radio random"
+          - "sorpréndeme [con una radio]"
+
+  # Listas de Radio Browser: populares, locales, por país, idioma o género.
+  PonRadioLista:
+    data:
+      - sentences:
+          - "pon [las] radios {criterio}"
+          - "pon [una] radio {criterio}"
+          - "ponme [una] radio {criterio}"
+          - "quiero [escuchar] [una] radio {criterio}"
+
 lists:
   emisora:
     values:
@@ -77,3 +111,55 @@ lists:
         out: "roncudo"
       - in: "radio roncudo"
         out: "roncudo"
+
+  # Codifica "modo:valor" para script.poner_radio_browser (ver intent_scripts.yaml).
+  criterio:
+    values:
+      - in: "populares"
+        out: "popular:"
+      - in: "las populares"
+        out: "popular:"
+      - in: "más populares"
+        out: "popular:"
+      - in: "local"
+        out: "local:"
+      - in: "locales"
+        out: "local:"
+      - in: "de aquí"
+        out: "local:"
+      - in: "de españa"
+        out: "country:ES"
+      - in: "española"
+        out: "country:ES"
+      - in: "españolas"
+        out: "country:ES"
+      - in: "de jazz"
+        out: "tag:jazz"
+      - in: "jazz"
+        out: "tag:jazz"
+      - in: "de noticias"
+        out: "tag:news"
+      - in: "de rock"
+        out: "tag:rock"
+      - in: "de pop"
+        out: "tag:pop"
+      - in: "de música clásica"
+        out: "tag:classical"
+      - in: "clásica"
+        out: "tag:classical"
+      - in: "de fútbol"
+        out: "tag:sport"
+      - in: "de deportes"
+        out: "tag:sport"
+      - in: "de conversación"
+        out: "tag:talk"
+      - in: "en español"
+        out: "language:spanish"
+      - in: "en inglés"
+        out: "language:english"
+      - in: "en gallego"
+        out: "language:galician"
+      - in: "en francés"
+        out: "language:french"
+      - in: "en alemán"
+        out: "language:german"
