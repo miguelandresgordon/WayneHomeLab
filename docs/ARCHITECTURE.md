@@ -41,7 +41,7 @@ graph LR
     CLIENT -->|"HTTPS ha via 10.44.0.1"| WG_VM
     WG_VM -->|"proxy :8123"| HAOS_VM
 
-    GROQ["Groq API<br/>whisper-large-v3-turbo"]
+    GROQ["Groq API<br/>whisper-large-v3"]
     HAOS_VM -- "HTTPS" --> GROQ
 ```
 
@@ -64,8 +64,8 @@ graph LR
 
 ```mermaid
 flowchart LR
-    A["Satellite1<br/>Okay Nabu"] -->|ESPHome| C["Home Assistant<br/>:8123"]
-    C -->|STT| D["Groq Whisper<br/>large-v3-turbo"]
+    A["Satellite1<br/>Mariano"] -->|ESPHome| C["Home Assistant<br/>:8123"]
+    C -->|STT| D["Groq Whisper<br/>large-v3"]
     D --> C
     C -->|Conversation ES| C
     C -->|Wyoming| E["Piper<br/>core-piper:10200"]
@@ -79,8 +79,8 @@ flowchart LR
 
 ### Flow detail
 
-1. **Wake word** — Satellite1 detecta «Okay Nabu» on-device (objetivo: MicroWakeWord «Mariano»).
-2. **STT** — Audio a HA → integración `openai_whisper_cloud` → Groq. Whisper local en HA está **parado** (alucina en español con audio Satellite1).
+1. **Wake word** — Satellite1 detecta «Mariano» on-device (MicroWakeWord; Okay Nabu sigue en firmware como fallback).
+2. **STT** — Audio a HA → integración `openai_whisper_cloud` → Groq **`whisper-large-v3`**. Whisper local en HA está **parado** (alucina en español con audio Satellite1). No usar turbo (peor WER; el free tier cubre el volumen del lab).
 3. **NLU** — Conversation agent built-in de HA (español). Gemini queda como mejora futura.
 4. **TTS** — Piper Wyoming (`es_ES-davefx-medium`) en el add-on.
 5. **Salida** — Audio de vuelta al speaker del Satellite1.

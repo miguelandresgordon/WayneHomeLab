@@ -3,3 +3,9 @@ current_speaker:
   initial: desconocido
   icon: mdi:account-voice
   max: 64
+
+last_stt_text:
+  name: Last STT text
+  initial: ""
+  icon: mdi:text-recognition
+  max: 255

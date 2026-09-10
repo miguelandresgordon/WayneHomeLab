@@ -169,9 +169,10 @@ PY
   rm -rf "$SRC" "$DEST"
 }
 
-@test "flash_capture_firmware prints trainer URL guidance" {
-  run "$WAKE_WORD_DIR/flash_capture_firmware.sh"
+@test "configure_ha_voice_nlu prints help" {
+  run "$WAKE_WORD_DIR/configure_ha_voice_nlu.sh" --help
   [ "$status" -eq 0 ]
-  [[ "$output" == *"Trainer App URL"* ]]
-  [[ "$output" == *"Capture Wake Audio"* ]]
+  [[ "$output" == *"--dry-run"* ]]
+  [[ "$output" == *"--apply"* ]]
+  [[ "$output" == *"Salón"* ]] || [[ "$output" == *"salon"* ]] || [[ "$output" == *"checklist"* ]]
 }

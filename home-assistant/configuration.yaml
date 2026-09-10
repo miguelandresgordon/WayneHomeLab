@@ -42,6 +42,9 @@ frontend:
 # --- Logger ---
 logger:
   default: warning
+  logs:
+    homeassistant.components.assist_pipeline: info
+    homeassistant.components.conversation: info
 
 # --- Recorder (DB) ---
 recorder:
