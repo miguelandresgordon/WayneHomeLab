@@ -12,6 +12,9 @@ WAKE_WORD_DIR="$REPO_ROOT/infrastructure/voice/wake-word"
 log() { printf '[wake-word-tests] %s\n' "$*"; }
 fail() { log "FAIL: $*"; exit 1; }
 
+log "Validating Satellite1 ESPHome YAML (ESPHome 2026 singleton rules)..."
+python3 "$WAKE_WORD_DIR/validate_satellite1_firmware.py"
+
 log "Running Python config tests..."
 if ! python3 -c "import pytest, yaml" 2>/dev/null; then
   log "Installing test deps (pytest, pyyaml)..."

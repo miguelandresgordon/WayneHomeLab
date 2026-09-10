@@ -272,7 +272,8 @@ WayneHomeLab/
   - Setup: `setup_trainer_windows.ps1 -Cpu` o `setup_trainer_nvidia.sh --cpu`
   - Train: `train_mariano_windows.ps1 -Cpu` o `train_mariano_nvidia.sh --cpu`
   - Si aparece GPU NVIDIA local: omitir `-Cpu` (el script usa `--gpus all`)
-- [ ] Flashear Satellite1 con modelo Mariano (Take Control ESPHome + OTA en LAN)
+- [x] Flashear Satellite1 con modelo Mariano (OTA 2026-09-10, ESPHome 2026.8.2). YAML: `api.encryption.key: !secret api_encryption_key` (PSK vivo; sin esto Device Builder se queda en `RequiresEncryptionAPIError`). `voice_assistant` usa `id: va` (no `!extend`).
+- [ ] Satellite1: **un** flash USB-C para actualizar el bootloader (`Bootloader too old for OTA rollback`). El OTA ya instaló Mariano; USB solo da rollback. Kit: `pack_satellite1_usb.sh` → pendrive + cable al Satellite1. Guía: `infrastructure/voice/wake-word/esphome/USB_BOOTLOADER.md`
 - [ ] Capturar muestras TV/voz y re-entrenar (`run_capture_workflow.sh retrain`)
   - Runbook: [docs/wake-word-mariano.md](docs/wake-word-mariano.md)
   - Scripts: `infrastructure/voice/wake-word/`

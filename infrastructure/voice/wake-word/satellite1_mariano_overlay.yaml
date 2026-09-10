@@ -5,14 +5,23 @@
 #   /config/www/wake-word/mariano.{json,tflite}
 #   URL: http://192.168.1.110:8123/local/wake-word/mariano.esphome.json
 #
-# En el YAML de Take Control basta con AÑADIR el modelo (okay_nabu /
-# hey_jarvis / stop vienen del package FPH) y los bloques !extend de abajo.
+# Pegar en el YAML de Take Control DESPUÉS de packages (okay_nabu /
+# hey_jarvis / stop vienen del package FPH).
 #
-# Cutoff uint8 = round(prob * 255). El select de HA solo calibra Mariano
+# ESPHome 2026.x (Device Builder 2026.8.2):
+#   - voice_assistant es singleton → no usar extend sobre ese id
+#     (error: "The character '!' cannot be used"). Usar id: va
+#   - select SÍ es lista → id: !extend mww_sensitivity_select es válido
+#
+# Cutoff uint8 = round(prob * 255). El select de HA calibra Mariano
 # tras flashear este lambda (FPH de stock solo toca okay_nabu / hey_jarvis).
 #   Slightly sensitive   → 98% / 250  (TV alta; menos falsos wakes)
 #   Moderately sensitive → 92% / 235  (uso diario)
 #   Very sensitive       → 85% / 217  (si no despierta a 3 m)
+#
+# API: el firmware de fábrica lleva Noise encryption. Take Control DEBE
+# incluir `api.encryption.key: !secret api_encryption_key` con el noise_psk
+# actual. Si no, Install Wi-Fi se queda en RequiresEncryptionAPIError.
 #
 # DSP post-wake: sin esto Groq recibe audio Satellite1 pobre.
 # on_stt_end → evento HA esphome.satellite1_stt_end → input_text.last_stt_text
@@ -29,9 +38,9 @@ micro_wake_word:
 # packages refresh: 1d  (no 1s)
 
 voice_assistant:
-  id: !extend va
+  id: va
   noise_suppression_level: 2
-  auto_gain: 12 dBFS
+  auto_gain: 12dBFS
   volume_multiplier: 2.0
   on_stt_end:
     - homeassistant.event:
@@ -39,8 +48,6 @@ voice_assistant:
         data:
           text: !lambda 'return x;'
 
-# Requiere ESPHome con !extend (2024+). Si el compile falla, pegar el lambda
-# dentro del on_value de select.mww_sensitivity_select en el YAML de Take Control.
 select:
   - id: !extend mww_sensitivity_select
     on_value:
