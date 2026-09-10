@@ -95,7 +95,7 @@ Componentes clave ya en el repo:
 - `allowlist_external_dirs` para `/share/assist_pipeline` y `/share/speaker-id`
 - Folder Watcher (configurar via UI, ver sección anterior)
 - `input_text.current_speaker`
-- **Sin automatizaciones HA** (`includes/automations.yaml` está vacío). Speaker ID no corre solo; invocar el add-on a mano o más adelante.
+- **Speaker ID no corre solo** (la única automatización en `includes/automations.yaml` es la guardia TV de Mariano). Invocar el add-on a mano o más adelante.
 
 ### Folder Watcher (si no arranca por YAML)
 
@@ -114,7 +114,7 @@ Configura via UI:
 
 ## 8. Usar identidad en automatizaciones
 
-**Hoy no hay automatizaciones en HA** (`includes/automations.yaml` = `[]`). Estos YAML son ejemplos para más adelante, no están desplegados.
+**Speaker ID no está en YAML desplegado.** La única automatización viva es la guardia TV de Mariano; estos YAML de identidad son ejemplos para más adelante.
 
 ```yaml
 trigger:

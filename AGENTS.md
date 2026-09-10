@@ -159,7 +159,7 @@ Satellite1 (MicroWakeWord "Mariano")
 
 ## Automatizaciones HA
 
-YAML canónico: `home-assistant/includes/automations.yaml` → `/config/includes/automations.yaml` (**vacío**: nada se ejecuta solo).
+YAML canónico: `home-assistant/includes/automations.yaml` → `/config/includes/automations.yaml`. Única automatización: sensibilidad Mariano según TV (`satellite1_tv_wake_word_sensitivity`; Slightly si `tv_ga_2` o Bravia on/playing, Moderately tras 5 min paradas). Sin mute, botones, Speaker ID ni hábitos.
 
 Scripts Assist (solo voz/UI): `script.poner_radio` / `parar_radio` / `pon_la_radio`, `script.apagar_tele` / `encender_tele` (siempre `media_player.tv_ga_2`). Frases: `custom_sentences/es/{luces,tv,radio}.yaml`.
 
@@ -222,7 +222,7 @@ WayneHomeLab/
 │   ├── addons/
 │   │   └── speaker-id-mariano/  # Add-on identificación de hablante (HAOS VM)
 │   ├── includes/
-│   │   ├── automations.yaml     # vacío: nada automático
+│   │   ├── automations.yaml     # sensibilidad Mariano según TV (única)
 │   │   ├── scripts.yaml
 │   │   └── sensors.yaml
 │   └── secrets.yaml.example

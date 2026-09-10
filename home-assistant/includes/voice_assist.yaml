@@ -37,7 +37,8 @@
 #   - Pipeline: Groq large-v3 + Piper
 #   - Wake word: Mariano (palabra_de_activacion_2 = no_wake_word)
 #   - Wake word sensitivity: Moderately (casa) / Slightly (TV on)
-#     El select solo calibra Mariano tras OTA del lambda (id(mariano) en overlay)
+#     Automatización satellite1_tv_wake_word_sensitivity (tv_ga_2 + Bravia).
+#     El select calibra Mariano tras OTA del lambda (id(mariano) en overlay)
 #     Cutoff (probability_cutoff): Slightly=98% (250), Moderately=92% (235), Very=85% (217)
 #   - Detección de fin de habla: relaxed (no aggressive)
 #   - Mute: switch.satellite1_c7ffe4_mute_microphones (solo a mano; sin automatización)
