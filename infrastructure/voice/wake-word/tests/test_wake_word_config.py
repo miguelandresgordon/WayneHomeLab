@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+import sys
 from pathlib import Path
 
 import pytest
@@ -12,6 +13,8 @@ import yaml
 REPO_ROOT = Path(__file__).resolve().parents[4]
 WAKE_WORD_DIR = REPO_ROOT / "infrastructure" / "voice" / "wake-word"
 HA_DIR = REPO_ROOT / "home-assistant"
+sys.path.insert(0, str(WAKE_WORD_DIR))
+sys.path.insert(0, str(WAKE_WORD_DIR))
 
 REQUIRED_SCRIPTS = [
     "setup_trainer_macos.sh",
@@ -26,6 +29,9 @@ REQUIRED_SCRIPTS = [
     "run_capture_workflow.sh",
     "train_mariano_local.sh",
     "pad_personal_samples.py",
+    "validate_satellite1_firmware.py",
+    "sync_satellite1_api_secret.sh",
+    "pack_satellite1_usb.sh",
 ]
 
 MARIANO_JSON_REQUIRED_KEYS = {
@@ -134,6 +140,9 @@ class TestSatellite1Overlay:
         assert "voice_assistant:" in overlay
         assert "esphome.satellite1_stt_end" in overlay
         assert "set_probability_cutoff(250)" in overlay
+        va_block = overlay.split("voice_assistant:", 1)[1].split("select:", 1)[0]
+        assert "id: !extend" not in va_block
+        assert "id: va" in va_block
 
 
 class TestHomeAssistantAutomations:
@@ -306,6 +315,35 @@ class TestVoiceNlu:
         assert "id(mariano)" in text
         assert "voice_assistant:" in text
         assert "esphome.satellite1_stt_end" in text
+        assert "id: !extend va" not in text
+        assert "id: va" in text
+        assert "key: !secret api_encryption_key" in text
+        assert "REPLACE_BY_32_BIT_RANDOM_KEY" not in text
+        example = (WAKE_WORD_DIR / "esphome" / "secrets.yaml.example").read_text(encoding="utf-8")
+        assert "api_encryption_key:" in example
+
+    def test_firmware_validator_accepts_repo_yaml(self) -> None:
+        from validate_satellite1_firmware import validate_firmware_yaml
+
+        for rel in (
+            WAKE_WORD_DIR / "esphome" / "satellite1-c7ffe4.yaml",
+            WAKE_WORD_DIR / "satellite1_mariano_overlay.yaml",
+        ):
+            errors = validate_firmware_yaml(rel)
+            assert not errors, errors
+
+    def test_firmware_validator_rejects_extend_on_voice_assistant(self, tmp_path) -> None:
+        from validate_satellite1_firmware import validate_firmware_yaml
+
+        bad = tmp_path / "bad.yaml"
+        bad.write_text(
+            (WAKE_WORD_DIR / "esphome" / "satellite1-c7ffe4.yaml")
+            .read_text(encoding="utf-8")
+            .replace("  id: va\n", "  id: !extend va\n", 1),
+            encoding="utf-8",
+        )
+        errors = validate_firmware_yaml(bad)
+        assert any("!extend" in e for e in errors)
 
 
 class TestDocumentation:
@@ -319,6 +357,8 @@ class TestDocumentation:
             "Automatizaciones TV",
             "mute_microphones",
             "whisper-large-v3",
+            "RequiresEncryptionAPIError",
+            "Bootloader too old",
         ):
             assert section in doc, f"Runbook missing section: {section}"
 
@@ -328,6 +368,7 @@ class TestGitignore:
         gitignore = (REPO_ROOT / ".gitignore").read_text(encoding="utf-8")
         assert "mariano.json" in gitignore or "*.tflite" in gitignore
         assert ".tflite" in gitignore
+        assert "infrastructure/voice/wake-word/esphome/secrets.yaml" in gitignore
 
 
 class TestVoiceAssistChecklist:

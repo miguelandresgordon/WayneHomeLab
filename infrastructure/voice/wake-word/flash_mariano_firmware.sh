@@ -2,9 +2,9 @@
 # flash_mariano_firmware.sh — Pasos para instalar wake word Mariano en Satellite1
 #
 # Prerrequisitos:
-#   - mariano.tflite + mariano.json en models/ (copy_model_from_trainer.sh)
-#   - serve_model.sh corriendo O modelo en URL pública
-#   - ESPHome Device Builder en HA
+#   - Overlay canónico: esphome/satellite1-c7ffe4.yaml (Take Control + OTA)
+#   - api_encryption_key en HAOS esphome/secrets.yaml
+#   - Bootloader USB (opcional, 1×): esphome/USB_BOOTLOADER.md
 
 set -euo pipefail
 

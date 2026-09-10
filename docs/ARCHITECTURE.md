@@ -107,7 +107,7 @@ flowchart TB
     SAMPLES --> WIN["Fallback: Windows Docker CPU"]
     RP --> MODEL["mariano.tflite + mariano.json"]
     WIN --> MODEL
-    MODEL --> FLASH["OTA Satellite1<br/>ESPHome overlay"]
+    MODEL --> FLASH["OTA Satellite1<br/>ESPHome overlay<br/>(bootloader USB 1×)"]
 ```
 
 - Guía PC: [runpod-train-mariano.md](runpod-train-mariano.md)

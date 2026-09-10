@@ -29,6 +29,7 @@ venv/
 # Secrets & Credentials
 # =========================
 home-assistant/secrets.yaml
+infrastructure/voice/wake-word/esphome/secrets.yaml
 voice-pipeline/.env
 infrastructure/nodes/pihole/pihole.toml
 infrastructure/nodes/pihole/.webpassword
@@ -78,6 +79,7 @@ infrastructure/voice/wake-word/models/*.tflite
 infrastructure/voice/wake-word/models/mariano.json
 infrastructure/voice/wake-word/personal_samples/*.wav
 infrastructure/voice/wake-word/personal_samples/*.zip
+infrastructure/voice/wake-word/esphome/.esphome/
 
 # Speaker ID artefacts (trained locally)
 infrastructure/voice/speaker-id/models/
