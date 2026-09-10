@@ -1,9 +1,70 @@
 # ==============================================================================
 # Home Assistant — Automations (canónico WayneHomeLab)
 #
-# Vacío a propósito: no debe ejecutarse nada automáticamente (mute TV,
-# restore VAD, botones, Speaker ID, radio por trigger, etc.).
-# Intents / scripts Assist se invocan solo por voz o desde la UI.
+# Única excepción: sensibilidad de Mariano según TV (no mute, no botones,
+# no Speaker ID, no hábitos). Intents / scripts Assist siguen solo por voz/UI.
 # Desplegar: infrastructure/voice/wake-word/deploy_ha_voice_config.sh
 # ==============================================================================
-[]
+- id: satellite1_tv_wake_word_sensitivity
+  alias: "Satellite1 — sensibilidad wake word según TV"
+  description: >-
+    Slightly sensitive si tv_ga_2 o Bravia están on/playing.
+    Moderately sensitive si ambas llevan 5 min paradas. No mutea.
+  mode: restart
+  triggers:
+    - trigger: state
+      id: tv_on
+      entity_id:
+        - media_player.tv_ga_2
+        - media_player.bravia_kd_43xf8596
+      to:
+        - playing
+        - "on"
+      not_from:
+        - unavailable
+        - unknown
+    - trigger: state
+      id: tv_off
+      entity_id:
+        - media_player.tv_ga_2
+        - media_player.bravia_kd_43xf8596
+      to:
+        - idle
+        - paused
+        - "off"
+        - standby
+      for: "00:05:00"
+    - trigger: homeassistant
+      id: ha_start
+      event: start
+  actions:
+    - if:
+        - condition: trigger
+          id: ha_start
+      then:
+        - delay: "00:00:30"
+    - choose:
+        - conditions:
+            - condition: template
+              value_template: >-
+                {{ states('media_player.tv_ga_2') in ['playing', 'on']
+                   or states('media_player.bravia_kd_43xf8596') in ['playing', 'on'] }}
+          sequence:
+            - action: select.select_option
+              target:
+                entity_id: select.satellite1_c7ffe4_wake_word_sensitivity
+              data:
+                option: Slightly sensitive
+              continue_on_error: true
+        - conditions:
+            - condition: template
+              value_template: >-
+                {{ states('media_player.tv_ga_2') not in ['playing', 'on', 'unavailable', 'unknown']
+                   and states('media_player.bravia_kd_43xf8596') not in ['playing', 'on', 'unavailable', 'unknown'] }}
+          sequence:
+            - action: select.select_option
+              target:
+                entity_id: select.satellite1_c7ffe4_wake_word_sensitivity
+              data:
+                option: Moderately sensitive
+              continue_on_error: true

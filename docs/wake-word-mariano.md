@@ -242,8 +242,8 @@ Tras el OTA del overlay, el select de HA **sí calibra Mariano** (Slightly/Moder
 
 | Select HA | Cutoff Mariano | Cuándo |
 |-----------|----------------|--------|
-| Slightly sensitive | 98% / 250 | TV on (cambiar a mano) |
-| Moderately sensitive | 92% / 235 | Casa, sin tele |
+| Slightly sensitive | 98% / 250 | TV on (automatización) |
+| Moderately sensitive | 92% / 235 | Casa, tele apagada 5 min |
 | Very sensitive | 85% / 217 | Si no despierta a 3 m |
 
 El YAML de Take Control deja Moderately (92%) como default. Falsos positivos con TV: Slightly + guardia TV (abajo), no subir el YAML a 98% a ciegas.
@@ -268,16 +268,26 @@ flowchart TD
 
 ## 4. Automatizaciones HA
 
-Ninguna. [`automations.yaml`](../home-assistant/includes/automations.yaml) está vacío (`[]`): no mute TV, no restore, no botones, no Speaker ID. El mute del Satellite1 (`switch.satellite1_c7ffe4_mute_microphones`) solo cambia a mano (HA o Action largo).
+Una sola: `satellite1_tv_wake_word_sensitivity` en [`automations.yaml`](../home-assistant/includes/automations.yaml). Baja Mariano a Slightly si `media_player.tv_ga_2` o `media_player.bravia_kd_43xf8596` están `on`/`playing`; restaura Moderately cuando ambas llevan 5 min paradas (`idle`/`paused`/`off`/`standby`). Tras un arranque de HA espera 30 s y sincroniza. No mutea.
+
+El mute del Satellite1 (`switch.satellite1_c7ffe4_mute_microphones`) solo cambia a mano (HA o Action largo). Sin botones, Speaker ID ni hábitos.
 
 NLU luces: [`custom_sentences/es/luces.yaml`](../home-assistant/custom_sentences/es/luces.yaml) pina `light.yeelink_mono6_6409_light`. Escena `scene.lampara_apagada` se llama **Salón off** y no se expone.
 
-Despliegue de YAML HA (sin crear automatizaciones):
+Despliegue de YAML HA (incluye la guardia TV). El script hace `ha core check` y **`ha core restart`** (`ha core reload` no existe en HAOS; sin restart la automatización no carga):
 
 ```bash
 HA_HOST=192.168.1.110 ./infrastructure/voice/wake-word/deploy_ha_voice_config.sh
 ./infrastructure/voice/wake-word/configure_ha_voice_nlu.sh --apply
 ```
+
+Copia sin reiniciar: `HA_SKIP_RESTART=1`. Entonces recargar a mano: Herramientas de desarrollo → YAML → Automatizaciones.
+
+Smoke (tras el deploy + restart, comprobar que la automatización aparece en HA):
+
+1. Encender Streamer o Bravia → `select.satellite1_c7ffe4_wake_word_sensitivity` = Slightly sensitive
+2. Apagar ambas y esperar 5 min → Moderately sensitive
+3. Confirmar que `switch.satellite1_c7ffe4_mute_microphones` no cambia
 
 ## 5. Diagnosticar STT ("no me entiende")
 
@@ -299,7 +309,7 @@ Logger temporal: `assist_pipeline` + `conversation` en `info` (`configuration.ha
 ## Quick wins (sin reentrenar)
 
 - `select.satellite1_c7ffe4_deteccion_de_fin_de_habla` → **relaxed**
-- `select.satellite1_c7ffe4_wake_word_sensitivity` → Slightly solo con TV (tras OTA del lambda Mariano)
+- `select.satellite1_c7ffe4_wake_word_sensitivity` → Slightly con TV on (automatización `satellite1_tv_wake_word_sensitivity`; OTA del lambda Mariano ya aplicado)
 - Desplegar YAML + frases: `HA_HOST=192.168.1.110 ./infrastructure/voice/wake-word/deploy_ha_voice_config.sh`
 - Área/aliases/exponer: `./infrastructure/voice/wake-word/configure_ha_voice_nlu.sh --apply`
 - Overlay OTA: DSP `noise_suppression_level 2`, `auto_gain 12 dBFS`, lambda `id(mariano)`

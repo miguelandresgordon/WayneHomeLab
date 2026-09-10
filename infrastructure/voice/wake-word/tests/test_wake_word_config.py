@@ -51,8 +51,25 @@ MARIANO_MICRO_REQUIRED_KEYS = {
 }
 
 class TestHomeAssistantAutomations:
-    def test_automations_yaml_is_empty(self, automations: list[dict]) -> None:
-        assert automations == []
+    def test_only_tv_wake_word_sensitivity_automation(
+        self, automations: list[dict]
+    ) -> None:
+        assert len(automations) == 1
+        auto = automations[0]
+        assert auto["id"] == "satellite1_tv_wake_word_sensitivity"
+        blob = yaml.dump(auto)
+        assert "media_player.tv_ga_2" in blob
+        assert "media_player.bravia_kd_43xf8596" in blob
+        assert "google_tv_streamer" not in blob
+        assert "select.satellite1_c7ffe4_wake_word_sensitivity" in blob
+        assert "Slightly sensitive" in blob
+        assert "Moderately sensitive" in blob
+        assert "00:05:00" in blob
+        assert "mute_microphones" not in blob
+        assert any(
+            t.get("trigger") == "homeassistant" and t.get("event") == "start"
+            for t in auto.get("triggers", [])
+        )
 
     def test_no_automatic_satellite1_or_lifestyle_ids(self) -> None:
         text = (HA_DIR / "includes" / "automations.yaml").read_text(encoding="utf-8")
@@ -214,6 +231,10 @@ class TestHaosConfiguration:
         assert "custom_sentences/es" in text
         assert "luces.yaml" in text or "*.yaml" in text
         assert "configure_ha_voice_nlu.sh" in text
+        assert '"ha core reload"' not in text
+        assert "'ha core reload'" not in text
+        assert "ha core restart" in text
+        assert "HA_SKIP_RESTART" in text
 
 
 class TestVoiceNlu:

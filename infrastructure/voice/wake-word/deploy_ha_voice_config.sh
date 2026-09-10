@@ -70,13 +70,21 @@ for src in "${sentence_files[@]}"; do
   scp "$src" "${HA_USER}@${HA_HOST}:${HA_CONFIG}/custom_sentences/es/$(basename "$src")"
 done
 
-log "Recargando automations y core config..."
-ssh "${HA_USER}@${HA_HOST}" "ha core check" && \
-  ssh "${HA_USER}@${HA_HOST}" "ha core reload" 2>/dev/null || \
-  log "⚠️  Recarga manual: Configuración → Sistema → Reiniciar (o Developer Tools → YAML reload)"
+log "Validando configuración (ha core check)..."
+ssh "${HA_USER}@${HA_HOST}" "ha core check"
+
+# El CLI de HAOS no tiene subcomando reload. Copiar YAML no carga
+# automatizaciones: hace falta restart de Core (o recarga YAML en la UI).
+if [[ "${HA_SKIP_RESTART:-0}" == "1" ]]; then
+  log "HA_SKIP_RESTART=1 — no se reinicia Core. Recarga YAML a mano:"
+  log "  Herramientas de desarrollo → YAML → Automatizaciones"
+else
+  log "Reiniciando Home Assistant Core para cargar automations..."
+  ssh "${HA_USER}@${HA_HOST}" "ha core restart"
+fi
 
 log "✅ Despliegue completado"
-log "Verifica: Configuración → Comprobar configuración"
+log "Verifica: Configuración → Automatizaciones → Satellite1 — sensibilidad wake word según TV"
 log "Frases Assist: Herramientas de desarrollo → YAML → Recargar frases de conversación"
 log "NLU registry (área/aliases/exponer): ./configure_ha_voice_nlu.sh --apply"
 log "secrets.yaml no se ha modificado"
