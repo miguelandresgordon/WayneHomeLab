@@ -7,8 +7,7 @@ Guía operativa para enrolar perfiles de voz (tipo Alexa) e identificar quién h
 ```
 Satellite1 → HA Assist Pipeline
   → debug WAV en /share/assist_pipeline/<run_id>/
-  → folder_watcher (created) → automatización speaker_id_on_command
-  → add-on speaker-id-mariano (POST /identify)
+  → (opcional) folder_watcher → add-on speaker-id-mariano (POST /identify)
   → input_text.current_speaker + evento speaker_identified
 ```
 
@@ -96,7 +95,7 @@ Componentes clave ya en el repo:
 - `allowlist_external_dirs` para `/share/assist_pipeline` y `/share/speaker-id`
 - Folder Watcher (configurar via UI, ver sección anterior)
 - `input_text.current_speaker`
-- Automatizaciones `speaker_id_on_command` y `speaker_id_purge_wavs`
+- **Sin automatizaciones HA** (`includes/automations.yaml` está vacío). Speaker ID no corre solo; invocar el add-on a mano o más adelante.
 
 ### Folder Watcher (si no arranca por YAML)
 
@@ -115,7 +114,7 @@ Configura via UI:
 
 ## 8. Usar identidad en automatizaciones
 
-Ejemplo — notificación solo al hablante identificado:
+**Hoy no hay automatizaciones en HA** (`includes/automations.yaml` = `[]`). Estos YAML son ejemplos para más adelante, no están desplegados.
 
 ```yaml
 trigger:
