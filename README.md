@@ -45,6 +45,7 @@ Satellite1 (Mariano)
 | [docs/speaker-id-mariano.md](docs/speaker-id-mariano.md) | Speaker ID (Colab + add-on) |
 | [docs/reservas-dhcp-bombillas-iot.md](docs/reservas-dhcp-bombillas-iot.md) | Reservas DHCP IoT |
 | [docs/api-costs.md](docs/api-costs.md) | Costes API |
+| [docs/wic.md](docs/wic.md) | Weather Intelligence Center (Docker local) |
 
 ## Estructura del repo
 
@@ -61,6 +62,7 @@ WayneHomeLab/
 ├── home-assistant/              # YAML modular → Samba /config
 │   ├── includes/                # automations, scripts, scenes…
 │   └── addons/speaker-id-mariano/
+├── weather-intelligence/        # WIC v1 slim (Docker local)
 ├── voice-pipeline/              # Docker Whisper+Piper (para RPi 3b)
 └── docs/
 ```

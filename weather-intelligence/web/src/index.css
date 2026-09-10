@@ -1,0 +1,105 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  --ink: #1e2a32;
+  --mist: #d5dde3;
+  --haze: #8a9aa6;
+  --gulf: #3f6f7a;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--ink);
+  color: var(--mist);
+  font-family: "Schibsted Grotesk", ui-sans-serif, system-ui, sans-serif;
+}
+
+.sky {
+  background-color: #1e2a32;
+  background-image:
+    radial-gradient(120% 80% at 20% 0%, var(--sky-glow, #3a5360) 0%, transparent 55%),
+    linear-gradient(180deg, var(--sky-top, #2a3c46) 0%, var(--ink) 72%);
+}
+
+.sky[data-sky="clear"] {
+  --sky-top: #3d5d6c;
+  --sky-glow: #5d8a96;
+}
+
+.sky[data-sky="overcast"] {
+  --sky-top: #3a4650;
+  --sky-glow: #4d5c66;
+}
+
+.sky[data-sky="rain"] {
+  --sky-top: #2b4852;
+  --sky-glow: #3f6f7a;
+}
+
+.sky[data-sky="storm"] {
+  --sky-top: #243038;
+  --sky-glow: #3a3338;
+}
+
+.sky[data-sky="night"] {
+  --sky-top: #152028;
+  --sky-glow: #1e3340;
+}
+
+.sky[data-sky="fog"] {
+  --sky-top: #4a555c;
+  --sky-glow: #6b787f;
+}
+
+.sky-grain {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  opacity: 0.07;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.settle {
+  animation: settle 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes settle {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settle {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+.hours {
+  scrollbar-width: none;
+}
+
+.hours::-webkit-scrollbar {
+  display: none;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible {
+  outline: 2px solid #d5dde3;
+  outline-offset: 3px;
+}

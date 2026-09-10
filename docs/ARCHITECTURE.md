@@ -144,6 +144,10 @@ Entity IDs reales documentados en `AGENTS.md` y `includes/scripts.yaml`.
 | Network volume 200 GB | Primer train con AudioSet+FMA+CHiME supera 100 GB si no se borran tars |
 | No Spot / Instant Cluster | Preemption o multi-nodo innecesario para MicroWakeWord |
 
+## Weather Intelligence Center (desarrollo local)
+
+App propia (Vite + Hono) en `weather-intelligence/`. Se ejecuta **solo en Docker Desktop** en el Mac (`feature/wic-v1-slim`). No corre en la RPi 3b ni en Proxmox. Runbook: [wic.md](wic.md).
+
 ## Related docs
 
 - [setup-desde-cero-ssd-pi5-haos.md](setup-desde-cero-ssd-pi5-haos.md)
@@ -153,3 +157,4 @@ Entity IDs reales documentados en `AGENTS.md` y `includes/scripts.yaml`.
 - [speaker-id-mariano.md](speaker-id-mariano.md)
 - [api-costs.md](api-costs.md)
 - [reservas-dhcp-bombillas-iot.md](reservas-dhcp-bombillas-iot.md)
+- [wic.md](wic.md)

@@ -24,7 +24,7 @@ This project is a private voice assistant ecosystem ("Private Alexa") running on
 - **TTS**: Piper add-on (Wyoming, `core-piper:10200`, voice `es_ES-davefx-medium`)
 - **Conversation**: Home Assistant built-in (Spanish)
 - **Wake word**: Mariano on-device (MicroWakeWord; Okay Nabu en firmware como fallback). Objetivo: reentrenar con negativos de TV en **RunPod GPU Pod**, volume **200 GB**; fallback Windows 11 + Docker CPU, RX 6750 XT — CUDA no aplica
-- **Dev Machine**: MacBook Air M3 (ARM64) — no tiene disco para train completo
+- **Dev Machine**: MacBook Air M3 (ARM64) — no tiene disco para train completo. WIC v1 se desarrolla aquí en Docker (`weather-intelligence/`).
 - **Training PC (Windows 11)**: DHCP | Ryzen 5 3600 + RX 6750 XT, 16 GB RAM (fallback Docker CPU). RunPod: [docs/runpod-train-mariano.md](docs/runpod-train-mariano.md) · móvil: [docs/runpod-train-mariano-movil.md](docs/runpod-train-mariano-movil.md)
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed diagrams and data flow.
@@ -226,6 +226,7 @@ WayneHomeLab/
 │   │   ├── scripts.yaml
 │   │   └── sensors.yaml
 │   └── secrets.yaml.example
+├── weather-intelligence/        # WIC v1 slim (Docker local; docs/wic.md)
 ├── voice-pipeline/              # Docker Compose STT/TTS (para RPi 3b cuando esté listo)
 │   ├── docker-compose.yaml      # Whisper + Piper Wyoming
 │   └── .env.example
@@ -251,6 +252,7 @@ WayneHomeLab/
 - [x] WireGuard VM 102 (`.55`) + Caddy + peers + DNAT UDP 51820 — en producción — [docs/wireguard.md](docs/wireguard.md)
 - [x] Pi-hole local DNS `ha.waynehomelab.com` → `10.44.0.1` + HA Trust XFF (`192.168.1.55`)
 - [x] HA HTTPS remoto vía WireGuard (`https://ha.waynehomelab.com` con túnel; `verify_wireguard.sh` OK)
+- [ ] Weather Intelligence Center v1 slim: Docker local en el Mac (`weather-intelligence/`, rama `feature/wic-v1-slim`) — [docs/wic.md](docs/wic.md). Sin despliegue RPi/Caddy.
 - [ ] RPi 3b: instalar DietPi + Docker + `voice-pipeline/` (Whisper+Piper) para descargar HA VM
 - [ ] Bombilla Antela (Dormitorio): Tuya nube → entidad `light.bombilla_dormitorio`, luego Local Tuya IP `.122`. No agrupar con la lámpara del salón.
 - [ ] Wake word personalizada «Mariano» — ver [docs/wake-word-mariano.md](docs/wake-word-mariano.md) y `infrastructure/voice/wake-word/`

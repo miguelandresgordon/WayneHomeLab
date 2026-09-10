@@ -95,5 +95,13 @@ infrastructure/voice/speaker-id/samples/
 .env
 .env.local
 
+# Weather Intelligence Center (local)
+weather-intelligence/node_modules/
+weather-intelligence/web/dist/
+weather-intelligence/data/*.db
+weather-intelligence/data/*.db-*
+weather-intelligence/data/*.db-shm
+weather-intelligence/data/*.db-wal
+
 # Third-party token extractor (local only)
 Xiaomi-cloud-tokens-extractor/
