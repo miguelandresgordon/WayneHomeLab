@@ -22,6 +22,7 @@ REQUIRED_SCRIPTS = [
     "flash_mariano_firmware.sh",
     "download_piper_voices_es.sh",
     "configure_ha_mariano.sh",
+    "configure_ha_voice_nlu.sh",
     "run_capture_workflow.sh",
     "train_mariano_local.sh",
     "pad_personal_samples.py",
@@ -125,10 +126,14 @@ class TestSatellite1Overlay:
             encoding="utf-8"
         )
         assert "id: mariano" in overlay
+        assert "id(mariano)" in overlay
         assert "probability_cutoff:" in overlay
-        assert "mariano.json" in overlay
+        assert "mariano.esphome.json" in overlay
         assert "noise_suppression_level:" in overlay
         assert "auto_gain:" in overlay
+        assert "voice_assistant:" in overlay
+        assert "esphome.satellite1_stt_end" in overlay
+        assert "set_probability_cutoff(250)" in overlay
 
 
 class TestHomeAssistantAutomations:
@@ -140,26 +145,49 @@ class TestHomeAssistantAutomations:
     def test_tv_mute_targets_satellite1(self, automations: list[dict]) -> None:
         by_id = {a["id"]: a for a in automations}
         mute = by_id["satellite1_mute_tv_playing"]
-        action = mute["action"][0]
-        assert action["service"] == "switch.turn_on"
-        assert "switch.satellite1_c7ffe4_mute" in action["target"]["entity_id"]
+        action_block = mute["action"]
+        action_str = yaml.dump(action_block)
+        assert "switch.turn_on" in action_str
+        assert "switch.satellite1_c7ffe4_mute_microphones" in action_str
+        assert "switch.satellite1_c7ffe4_mute\n" not in action_str + "\n"
+        assert mute["mode"] == "restart"
 
     def test_tv_automations_reference_media_players(self, automations: list[dict]) -> None:
         by_id = {a["id"]: a for a in automations}
         for auto_id in TV_AUTOMATION_IDS:
-            trigger = by_id[auto_id]["trigger"][0]
-            entities = trigger["entity_id"]
-            assert "media_player.sony_bravia_4k" in entities
-            assert "media_player.google_tv_streamer" in entities
+            blob = yaml.dump(by_id[auto_id])
+            assert "media_player.tv_ga_2" in blob
+            assert "media_player.bravia_kd_43xf8596" in blob
+            assert "media_player.sony_bravia_4k" not in blob
+            assert "media_player.google_tv_streamer" not in blob
 
-    def test_modo_noche_desactivar_respects_tv_state(self, automations: list[dict]) -> None:
+    def test_no_lifestyle_automations(self, automations: list[dict]) -> None:
+        ids = {a.get("id") for a in automations}
+        forbidden = {
+            "modo_noche_activar",
+            "modo_noche_desactivar",
+            "salon_atardecer_relajado",
+            "casa_ausencia",
+            "casa_llegada",
+            "cine_tv_ga_on",
+            "cine_tv_ga_off",
+        }
+        assert not (ids & forbidden), f"Unexpected lifestyle automations: {ids & forbidden}"
+
+    def test_vad_relaxed_on_restore(self, automations: list[dict]) -> None:
         by_id = {a["id"]: a for a in automations}
-        desactivar = by_id["modo_noche_desactivar"]
-        conditions = desactivar.get("condition", [])
-        assert conditions, "modo_noche_desactivar must check TV state before unmute"
-        template = conditions[0].get("value_template", "")
-        assert "sony_bravia_4k" in template
-        assert "google_tv_streamer" in template
+        restore = by_id["satellite1_wake_word_mariano"]
+        blob = yaml.dump(restore)
+        assert "select.satellite1_c7ffe4_deteccion_de_fin_de_habla" in blob
+        assert "relaxed" in blob
+        assert "switch.satellite1_c7ffe4_mute_microphones" in blob
+
+    def test_last_stt_text_automation(self, automations: list[dict]) -> None:
+        by_id = {a["id"]: a for a in automations}
+        stt = by_id["satellite1_last_stt_text"]
+        assert stt["trigger"][0]["event_type"] == "esphome.satellite1_stt_end"
+        blob = yaml.dump(stt)
+        assert "input_text.last_stt_text" in blob
 
 
 class TestHomeAssistantConfiguration:
@@ -193,6 +221,11 @@ class TestHaosConfiguration:
         assert "includes/sensors.yaml" in text
         assert "includes/intent_scripts.yaml" in text
 
+    def test_haos_assist_logger_info(self) -> None:
+        text = (HA_DIR / "configuration.haos.yaml").read_text(encoding="utf-8")
+        assert "homeassistant.components.assist_pipeline: info" in text
+        assert "homeassistant.components.conversation: info" in text
+
     def test_deploy_script_copies_includes_subdir(self) -> None:
         script = (
             REPO_ROOT
@@ -207,6 +240,73 @@ class TestHaosConfiguration:
         assert "${HA_CONFIG}/includes/${f}" in text
         assert "${HA_CONFIG}/automations.yaml" not in text
 
+    def test_deploy_ha_voice_copies_custom_sentences(self) -> None:
+        script = WAKE_WORD_DIR / "deploy_ha_voice_config.sh"
+        text = script.read_text(encoding="utf-8")
+        assert "custom_sentences/es" in text
+        assert "luces.yaml" in text or "*.yaml" in text
+        assert "configure_ha_voice_nlu.sh" in text
+
+
+class TestVoiceNlu:
+    def test_luces_sentences_pin_intents(self) -> None:
+        path = HA_DIR / "custom_sentences" / "es" / "luces.yaml"
+        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+        intents = data["intents"]
+        for name in ("EnciendeLaLampara", "ApagaLaLampara", "ToggleLaLampara"):
+            assert name in intents
+            sentences = intents[name]["data"][0]["sentences"]
+            blob = " ".join(sentences)
+            assert "lámpara" in blob or "lampara" in blob
+            assert "dormitorio" not in blob
+
+    def test_intent_scripts_pin_xiaomi_lamp(self) -> None:
+        data = yaml.safe_load(
+            (HA_DIR / "includes" / "intent_scripts.yaml").read_text(encoding="utf-8")
+        )
+        for name in ("EnciendeLaLampara", "ApagaLaLampara", "ToggleLaLampara"):
+            blob = yaml.dump(data[name])
+            assert "light.yeelink_mono6_6409_light" in blob
+            assert "scene.lampara_apagada" not in blob
+
+    def test_scene_renamed_salon_off(self) -> None:
+        scenes = yaml.safe_load((HA_DIR / "includes" / "scenes.yaml").read_text(encoding="utf-8"))
+        by_id = {s["id"]: s for s in scenes}
+        assert by_id["lampara_apagada"]["name"] == "Salón off"
+        assert by_id["lampara_apagada"]["name"] != "Lámpara apagada"
+
+    def test_last_stt_text_helper(self) -> None:
+        data = yaml.safe_load((HA_DIR / "includes" / "input_text.yaml").read_text(encoding="utf-8"))
+        assert "last_stt_text" in data
+        assert data["last_stt_text"]["max"] == 255
+
+    def test_purge_keeps_24h_or_30_files(self) -> None:
+        text = (HA_DIR / "includes" / "shell_commands.yaml").read_text(encoding="utf-8")
+        assert "1440" in text
+        assert "30" in text
+        assert "-mmin +15" not in text
+
+    def test_no_lifestyle_scripts(self) -> None:
+        scripts = yaml.safe_load((HA_DIR / "includes" / "scripts.yaml").read_text(encoding="utf-8"))
+        forbidden = {
+            "buenas_noches",
+            "buenos_dias",
+            "relajado",
+            "cine",
+            "salir_cine",
+            "me_voy",
+            "he_llegado",
+        }
+        assert not (set(scripts) & forbidden), f"Unexpected lifestyle scripts: {set(scripts) & forbidden}"
+        for keep in ("poner_radio", "parar_radio", "apagar_tele", "encender_tele"):
+            assert keep in scripts
+
+    def test_esphome_yaml_extends_mariano_lambda(self) -> None:
+        text = (WAKE_WORD_DIR / "esphome" / "satellite1-c7ffe4.yaml").read_text(encoding="utf-8")
+        assert "id(mariano)" in text
+        assert "voice_assistant:" in text
+        assert "esphome.satellite1_stt_end" in text
+
 
 class TestDocumentation:
     def test_runbook_exists_and_covers_workflow(self) -> None:
@@ -217,6 +317,8 @@ class TestDocumentation:
             "probability_cutoff",
             "debug_recording_dir",
             "Automatizaciones TV",
+            "mute_microphones",
+            "whisper-large-v3",
         ):
             assert section in doc, f"Runbook missing section: {section}"
 
@@ -233,9 +335,13 @@ class TestVoiceAssistChecklist:
         path = HA_DIR / "includes" / "voice_assist.yaml"
         text = path.read_text(encoding="utf-8")
         assert "openai_whisper_cloud" in text
-        assert "whisper-large-v3-turbo" in text
+        assert "whisper-large-v3" in text
+        assert "whisper-large-v3-turbo" not in text
         assert "Mariano" in text
         assert "probability_cutoff" in text
+        assert "relaxed" in text
+        assert "mute_microphones" in text
+        assert "luces.yaml" in text
 
 
 class TestCaptureWorkflow:

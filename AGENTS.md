@@ -20,10 +20,10 @@ This project is a private voice assistant ecosystem ("Private Alexa") running on
 - **Edge Node (RPi 3b)**: Not yet set up. Voice pipeline runs inside HAOS VM for now.
 - **DNS**: Pi-hole v6 en `192.168.1.53` (VMID 101) operativo (`verify_pihole.sh` OK). DHCP sigue en el router. Mac ya usa `.53`; cutover DNS del router (LAN completa) pendiente — [docs/pihole.md](docs/pihole.md).
 - **VPN / HTTPS remoto**: WireGuard VM `192.168.1.55` (VMID 102) + Caddy en `10.44.0.1` operativo → `https://ha.waynehomelab.com` solo con VPN (`verify_wireguard.sh` OK). Guía: [docs/wireguard.md](docs/wireguard.md).
-- **STT**: Groq API (Whisper large-v3-turbo) via HACS integration `openai_whisper_cloud` — NOT local Whisper
+- **STT**: Groq API (Whisper large-v3) via HACS integration `openai_whisper_cloud` — NOT local Whisper
 - **TTS**: Piper add-on (Wyoming, `core-piper:10200`, voice `es_ES-davefx-medium`)
 - **Conversation**: Home Assistant built-in (Spanish)
-- **Wake word**: Okay Nabu on-device (objetivo: MicroWakeWord «Mariano» en **RunPod GPU Pod**, volume **200 GB**; fallback Windows 11 + Docker CPU, RX 6750 XT — CUDA no aplica)
+- **Wake word**: Mariano on-device (MicroWakeWord; Okay Nabu en firmware como fallback). Objetivo: reentrenar con negativos de TV en **RunPod GPU Pod**, volume **200 GB**; fallback Windows 11 + Docker CPU, RX 6750 XT — CUDA no aplica
 - **Dev Machine**: MacBook Air M3 (ARM64) — no tiene disco para train completo
 - **Training PC (Windows 11)**: DHCP | Ryzen 5 3600 + RX 6750 XT, 16 GB RAM (fallback Docker CPU). RunPod: [docs/runpod-train-mariano.md](docs/runpod-train-mariano.md) · móvil: [docs/runpod-train-mariano-movil.md](docs/runpod-train-mariano-movil.md)
 
@@ -101,16 +101,18 @@ ssh -t pi@192.168.1.100 "sudo qm start 102"   # onboot=1; startup order=2
 ## Voice Pipeline — Current Setup
 
 ```
-Satellite1 (MicroWakeWord "Okay Nabu")
-  → ESPHome → HA (192.168.1.110:8123)
-  → STT: Groq API (whisper-large-v3-turbo) via openai_whisper_cloud
-  → Conversation: Home Assistant built-in (Spanish)
-  → TTS: Piper Wyoming (core-piper:10200, es_ES-davefx-medium)
-  → Satellite1 speaker
+Satellite1 (MicroWakeWord "Mariano")
+ → ESPHome → HA (192.168.1.110:8123)
+ → STT: Groq API (whisper-large-v3) via openai_whisper_cloud
+ → Conversation: Home Assistant built-in (Spanish)
+ → TTS: Piper Wyoming (core-piper:10200, es_ES-davefx-medium)
+ → Satellite1 speaker
 ```
 
 **Key lessons learned:**
-- Local Whisper (`tiny-int8`, `base-int8`, `small-int8`) hallucinates badly in Spanish with Satellite1 audio quality — use Groq API instead
+- Local Whisper (`tiny-int8`, `base-int8`, `small-int8`) hallucinates badly in Spanish with Satellite1 audio quality — use Groq `whisper-large-v3` (not turbo)
+- VAD `aggressive` corta el utterance → `relaxed`. Mute TV: `switch.satellite1_c7ffe4_mute_microphones` + `media_player.tv_ga_2` / `bravia_kd_43xf8596` (nunca `google_tv_streamer`)
+- Escena «Lámpara apagada» colisiona con HassTurnOn → name **Salón off**, no exponer; frases en `custom_sentences/es/luces.yaml`
 - `[object Object]` error in Assist = Safari blocking microphone over HTTP (not a Whisper issue)
 - HA confuses entity names with scene names when both share words — avoid scene names like «Salón» if you have an area named the same
 - Frases que funcionan: «Enciende la lámpara» (sin área hasta asignar entidad al área en HA)
@@ -122,7 +124,7 @@ Satellite1 (MicroWakeWord "Okay Nabu")
 |-------------|-------------|-------|-------|
 | Lámpara Xiaomi (yeelink.light.mono6) | Xiaomi Miot Auto (HACS) | IP reservada `.121` | Token en gestor contraseñas |
 | Bombilla Antela | Smart Life / Tuya | IP reservada `.122` | Pendiente Local Tuya |
-| Satellite1 c7ffe4 | ESPHome | `192.168.1.85` | Wake word: Okay Nabu |
+| Satellite1 c7ffe4 | ESPHome | `192.168.1.85` | Wake word: Mariano |
 | Sony BRAVIA 4K | Android TV Remote | — | Descubierto automáticamente |
 | Google TV Streamer (TV GA) | Android TV Remote | — | Descubierto automáticamente |
 | Google Cast / Chromecast | Google Cast | — | 2 dispositivos |
@@ -157,10 +159,10 @@ Satellite1 (MicroWakeWord "Okay Nabu")
 
 ## Automatizaciones HA
 
-YAML canónico: `home-assistant/includes/automations.yaml` → `/config/automations.yaml`
-(ahora vacío a propósito: las de prueba Copilot se quitaron; recrear por UI).
+YAML canónico: `home-assistant/includes/automations.yaml` → `/config/includes/automations.yaml`.
+Solo voz/Satellite1/Speaker ID (mute TV, VAD, botón, radio). Sin rutinas de hábitos (noche/cine/presencia).
 
-Scripts Assist útiles: `script.poner_radio` / `parar_radio` / `pon_la_radio`, `script.apagar_tele` / `encender_tele` (siempre `media_player.tv_ga_2`), rutinas `buenas_noches` / `buenos_dias` / `cine` / `relajado`. Frases: `custom_sentences/es/{tv,radio}.yaml`.
+Scripts Assist útiles: `script.poner_radio` / `parar_radio` / `pon_la_radio`, `script.apagar_tele` / `encender_tele` (siempre `media_player.tv_ga_2`). Frases: `custom_sentences/es/{luces,tv,radio}.yaml`.
 
 Add-on Whisper (`core_whisper`): **parado**, boot `manual`. STT = Groq.
 

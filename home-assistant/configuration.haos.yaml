@@ -40,8 +40,11 @@ intent_script: !include includes/intent_scripts.yaml
 
 logger:
   default: warning
+  # Telemetría STT/NLU (apagar tras diagnosticar: comentar el bloque logs)
+  logs:
+    homeassistant.components.assist_pipeline: info
+    homeassistant.components.conversation: info
   # Diagnóstico Antela/Tuya (quitar tras depurar):
-  # logs:
   #   homeassistant.components.tuya: debug
   #   custom_components.tuya_local: debug
   #   tinytuya: debug
@@ -59,6 +62,7 @@ recorder:
       - call_service
 
 # Necesario para Speaker ID (folder watcher en /share/assist_pipeline).
-# Purge de WAV en automations.yaml (15 min). No dejar logger de Assist en debug.
+# Purge de WAV: 24 h / últimos 30 (automations.yaml). Logger Assist en info
+# temporal (apagar tras diagnosticar STT/NLU).
 assist_pipeline:
   debug_recording_dir: /share/assist_pipeline

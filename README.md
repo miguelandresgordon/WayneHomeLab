@@ -10,8 +10,8 @@ Asistente de voz privado («Private Alexa») sobre Raspberry Pi + Home Assistant
 | DNS | Pi-hole v6 en VM 101; DHCP en router. Mac → `.53`. Cutover DNS del router: ver [docs/pihole.md](docs/pihole.md) |
 | VPN / HTTPS | WireGuard VM 102 + Caddy → `https://ha.waynehomelab.com` **solo con túnel** |
 | Edge RPi 3b | Pendiente; STT/TTS viven en la VM HAOS |
-| Satellite1 | `192.168.1.85`, wake word **Okay Nabu** (objetivo: «Mariano») |
-| STT | Groq `whisper-large-v3-turbo` vía HACS `openai_whisper_cloud` |
+| Satellite1 | `192.168.1.85`, wake word **Mariano** |
+| STT | Groq `whisper-large-v3` vía HACS `openai_whisper_cloud` |
 | TTS | Piper add-on (`core-piper:10200`, `es_ES-davefx-medium`) |
 | Conversación | Home Assistant built-in (español) |
 | Train wake word | **RunPod GPU Pod** (recomendado) · fallback Windows Docker CPU |
@@ -21,7 +21,7 @@ Memoria operativa del agente: [`AGENTS.md`](AGENTS.md). Arquitectura: [`docs/ARC
 ## Pipeline de voz
 
 ```
-Satellite1 (Okay Nabu)
+Satellite1 (Mariano)
   → ESPHome → HA (192.168.1.110:8123)
   → STT: Groq (openai_whisper_cloud)
   → Conversation: HA built-in (ES)

@@ -2,44 +2,52 @@
 # Home Assistant — Voice Assist helpers
 #
 # Entidades expuestas a Assist y alias recomendados.
-# Configurar en UI: Configuración → Asistentes de voz → Exponer
+# Configurar en UI o: infrastructure/voice/wake-word/configure_ha_voice_nlu.sh --apply
 # ==============================================================================
 
 # Checklist STT/NLU (ver docs/wake-word-mariano.md):
 #
 # Pipeline de voz (Configuración → Asistentes de voz):
 #   - Idioma: Español (es)
-#   - STT: openai_whisper_cloud (Groq) — whisper-large-v3-turbo
+#   - STT: openai_whisper_cloud (Groq) — whisper-large-v3 (NO turbo, NO add-on Whisper)
 #   - TTS: Wyoming Piper (core-piper:10200)
-#   - Conversation: Home Assistant (español)
+#   - Conversation: Home Assistant (español), prefer_local_intents: true
+#   - No usar Gemini como agente primario
 #
 # Entidades a exponer con alias en español:
-#   - light.yeelink_mono6_6409_light → alias: "lámpara", "luces del salón"
-#   - light.bombilla_dormitorio     → alias: "bombilla", "luz del dormitorio", "luz del cuarto"
+#   - light.yeelink_mono6_6409_light → área Salón; alias: "lámpara", "lampara",
+#     "luz del salón", "luz". Frases pinadas: custom_sentences/es/luces.yaml
 #   - media_player.tv_ga_2          → alias: "tele", "televisión", "televisor", "tv", "TV GA"
 #     Frases: custom_sentences/es/tv.yaml → siempre Google Streamer, nunca Bravia/Cast
-#   - script.buenas_noches / buenos_dias / cine / me_voy / pon_la_radio
+#   - script.pon_la_radio / apagar_tele / encender_tele
+#   - Sin rutinas de hábitos (noche/cine/presencia) hasta diseñarlas a mano
 #
-# No exponer: Cast duplicados (media_player.tv_ga, media_player.bravia_4k_gb_atv3),
-# Bravia androidtv_remote (deshabilitada), media_player del satélite (salvo radio
-# vía script), sensores temp/humedad, escenas.
+# No exponer: escena Salón off (scene.lampara_apagada), cine/lectura/relajado,
+# light.luz_habitacion, light.salon_lampara_tuya, light.todas_las_luces,
+# Cast duplicados (media_player.tv_ga, media_player.bravia_4k_gb_atv3*),
+# Macs, media_player del satélite (radio vía intent_script).
 #
-# Prompt Groq Whisper: incluir tele, televisión, tv, radio (si no, STT sesga a lámpara).
+# Prompt Groq Whisper: incluir tele, televisión, tv, radio, lámpara (si no, STT sesga).
 #
 # Evitar conflictos NLU:
-#   - Asignar lámpara al área "Salón" para frases con "del salón"
-#   - Renombrar escenas genéricas que coincidan con nombres de área
+#   - Lámpara en área "Salón" + custom_sentences luces (no HassTurnOn genérico)
+#   - Escena apagado = "Salón off", no expuesta
 #
 # Satellite1 (Configuración → Dispositivos → ESPHome):
-#   - Pipeline: el que usa Groq + Piper
-#   - Wake word: Mariano (tras flashear firmware custom)
-#   - Wake word sensitivity: Slightly sensitive
-#   - probability_cutoff: calibrar por escalones 98% → 92% → 85% (ver runbook)
+#   - Pipeline: Groq large-v3 + Piper
+#   - Wake word: Mariano (palabra_de_activacion_2 = no_wake_word)
+#   - Wake word sensitivity: Moderately (casa) / Slightly (TV on)
+#     El select solo calibra Mariano tras OTA del lambda (id(mariano) en overlay)
+#     Cutoff (probability_cutoff): Slightly=98% (250), Moderately=92% (235), Very=85% (217)
+#   - Detección de fin de habla: relaxed (no aggressive)
+#   - Mute real: switch.satellite1_c7ffe4_mute_microphones
+#   - Unmute con TV: botón Action largo
 #   - voice_assistant overlay: noise_suppression_level 2, auto_gain 12 dBFS
+#   - Telemetría: input_text.last_stt_text (evento esphome.satellite1_stt_end)
 #
-# Diagnóstico por etapa (WAV en /share/assist_pipeline):
+# Diagnóstico por etapa (WAV en /share/assist_pipeline, 24 h / 30 archivos):
 #   1. No despierta → cutoff / mute / modelo Mariano no activo
 #   2. WAV malo → auto_gain / noise_suppression en ESPHome
 #   3. WAV bueno, texto mal → prompt Groq / idioma es
-#   4. Texto OK, acción mal → alias / áreas / custom_sentences
+#   4. Texto OK, acción mal → luces.yaml / aliases / escena expuesta
 #   5. Acción OK, voz mala → Piper / competencia con radio en Satellite1
