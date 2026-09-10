@@ -53,10 +53,40 @@ logger:
 
 ## Custom wake word Mariano (WayneHomeLab, train 2026-08-26)
 ## Model files live in /config/esphome/models/ (addon path: /config/models/)
-## cutoff: trainer sugirió 98%; en sala real empezar en 92% y calibrar (runbook).
+## Cutoff YAML = Moderately (92%). El select de HA calibra Mariano tras OTA
+## del lambda en satellite1_mariano_overlay.yaml (Slightly=98%, Very=85%).
 micro_wake_word:
   id: mww
   models:
     - id: mariano
       model: http://192.168.1.110:8123/local/wake-word/mariano.esphome.json
       probability_cutoff: 92%
+
+voice_assistant:
+  id: !extend va
+  noise_suppression_level: 2
+  auto_gain: 12 dBFS
+  volume_multiplier: 2.0
+  on_stt_end:
+    - homeassistant.event:
+        event: esphome.satellite1_stt_end
+        data:
+          text: !lambda 'return x;'
+
+select:
+  - id: !extend mww_sensitivity_select
+    on_value:
+      - lambda: |-
+          if (x == "Slightly sensitive") {
+            id(okay_nabu).set_probability_cutoff(217);
+            id(hey_jarvis).set_probability_cutoff(247);
+            id(mariano).set_probability_cutoff(250);
+          } else if (x == "Moderately sensitive") {
+            id(okay_nabu).set_probability_cutoff(176);
+            id(hey_jarvis).set_probability_cutoff(235);
+            id(mariano).set_probability_cutoff(235);
+          } else if (x == "Very sensitive") {
+            id(okay_nabu).set_probability_cutoff(143);
+            id(hey_jarvis).set_probability_cutoff(212);
+            id(mariano).set_probability_cutoff(217);
+          }
