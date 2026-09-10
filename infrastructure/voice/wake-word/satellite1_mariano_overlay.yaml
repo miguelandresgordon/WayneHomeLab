@@ -19,9 +19,9 @@
 #   Moderately sensitive → 92% / 235  (uso diario)
 #   Very sensitive       → 85% / 217  (si no despierta a 3 m)
 #
-# API: el firmware de fábrica lleva Noise encryption. Take Control DEBE
-# incluir `api.encryption.key: !secret api_encryption_key` con el noise_psk
-# actual. Si no, Install Wi-Fi se queda en RequiresEncryptionAPIError.
+# API + Wi-Fi: Take Control DEBE incluir api.encryption y wifi con
+# !secret (HAOS /config/esphome/secrets.yaml). Sin wifi en YAML, un
+# flash USB deja el aro en blanco fijo (init sin red).
 #
 # DSP post-wake: sin esto Groq recibe audio Satellite1 pobre.
 # on_stt_end → evento HA esphome.satellite1_stt_end → input_text.last_stt_text

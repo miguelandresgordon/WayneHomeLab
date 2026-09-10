@@ -40,7 +40,11 @@ api:
   encryption:
     key: !secret api_encryption_key
 
-## Wi-Fi: leave commented to keep the credentials provisioned on the device.
+## Wi-Fi hardcoded: el NVS se pierde en flash USB / wipe. Secrets en
+## HAOS /config/esphome/secrets.yaml (NO /config/secrets.yaml de HA).
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
 
 ## Custom wake word Mariano (WayneHomeLab)
 ## Model: http://192.168.1.110:8123/local/wake-word/mariano.esphome.json
