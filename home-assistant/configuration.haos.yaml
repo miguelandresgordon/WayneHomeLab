@@ -62,7 +62,7 @@ recorder:
       - call_service
 
 # Necesario para Speaker ID (folder watcher en /share/assist_pipeline).
-# Purge de WAV: 24 h / últimos 30 (automations.yaml). Logger Assist en info
+# Purge de WAV: shell_command.speaker_id_purge_old_wavs (manual; sin automatización).
 # temporal (apagar tras diagnosticar STT/NLU).
 assist_pipeline:
   debug_recording_dir: /share/assist_pipeline

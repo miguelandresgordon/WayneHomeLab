@@ -40,8 +40,8 @@
 #     El select solo calibra Mariano tras OTA del lambda (id(mariano) en overlay)
 #     Cutoff (probability_cutoff): Slightly=98% (250), Moderately=92% (235), Very=85% (217)
 #   - Detección de fin de habla: relaxed (no aggressive)
-#   - Mute real: switch.satellite1_c7ffe4_mute_microphones
-#   - Unmute con TV: botón Action largo
+#   - Mute: switch.satellite1_c7ffe4_mute_microphones (solo a mano; sin automatización)
+#   - Unmute: HA o botón Action largo (el Action ya no está cableado en YAML)
 #   - voice_assistant overlay: noise_suppression_level 2, auto_gain 12 dBFS
 #   - Telemetría: input_text.last_stt_text (evento esphome.satellite1_stt_end)
 #
