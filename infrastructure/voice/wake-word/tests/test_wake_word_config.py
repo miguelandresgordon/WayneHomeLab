@@ -50,10 +50,23 @@ MARIANO_MICRO_REQUIRED_KEYS = {
     "minimum_esphome_version",
 }
 
-TV_AUTOMATION_IDS = {
-    "satellite1_mute_tv_playing",
-    "satellite1_unmute_tv_stopped",
-}
+class TestHomeAssistantAutomations:
+    def test_automations_yaml_is_empty(self, automations: list[dict]) -> None:
+        assert automations == []
+
+    def test_no_automatic_satellite1_or_lifestyle_ids(self) -> None:
+        text = (HA_DIR / "includes" / "automations.yaml").read_text(encoding="utf-8")
+        for needle in (
+            "satellite1_mute_tv_playing",
+            "satellite1_unmute_tv_stopped",
+            "satellite1_tv_strict_sensitivity",
+            "satellite1_wake_word_mariano",
+            "satellite1_action_button",
+            "speaker_id_on_command",
+            "modo_noche_activar",
+            "cine_tv_ga_on",
+        ):
+            assert needle not in text, f"Automation {needle} must not remain in YAML"
 
 
 @pytest.fixture
@@ -143,60 +156,6 @@ class TestSatellite1Overlay:
         va_block = overlay.split("voice_assistant:", 1)[1].split("select:", 1)[0]
         assert "id: !extend" not in va_block
         assert "id: va" in va_block
-
-
-class TestHomeAssistantAutomations:
-    def test_tv_mute_automations_present(self, automations: list[dict]) -> None:
-        ids = {a.get("id") for a in automations}
-        missing = TV_AUTOMATION_IDS - ids
-        assert not missing, f"Missing automation ids: {missing}"
-
-    def test_tv_mute_targets_satellite1(self, automations: list[dict]) -> None:
-        by_id = {a["id"]: a for a in automations}
-        mute = by_id["satellite1_mute_tv_playing"]
-        action_block = mute["action"]
-        action_str = yaml.dump(action_block)
-        assert "switch.turn_on" in action_str
-        assert "switch.satellite1_c7ffe4_mute_microphones" in action_str
-        assert "switch.satellite1_c7ffe4_mute\n" not in action_str + "\n"
-        assert mute["mode"] == "restart"
-
-    def test_tv_automations_reference_media_players(self, automations: list[dict]) -> None:
-        by_id = {a["id"]: a for a in automations}
-        for auto_id in TV_AUTOMATION_IDS:
-            blob = yaml.dump(by_id[auto_id])
-            assert "media_player.tv_ga_2" in blob
-            assert "media_player.bravia_kd_43xf8596" in blob
-            assert "media_player.sony_bravia_4k" not in blob
-            assert "media_player.google_tv_streamer" not in blob
-
-    def test_no_lifestyle_automations(self, automations: list[dict]) -> None:
-        ids = {a.get("id") for a in automations}
-        forbidden = {
-            "modo_noche_activar",
-            "modo_noche_desactivar",
-            "salon_atardecer_relajado",
-            "casa_ausencia",
-            "casa_llegada",
-            "cine_tv_ga_on",
-            "cine_tv_ga_off",
-        }
-        assert not (ids & forbidden), f"Unexpected lifestyle automations: {ids & forbidden}"
-
-    def test_vad_relaxed_on_restore(self, automations: list[dict]) -> None:
-        by_id = {a["id"]: a for a in automations}
-        restore = by_id["satellite1_wake_word_mariano"]
-        blob = yaml.dump(restore)
-        assert "select.satellite1_c7ffe4_deteccion_de_fin_de_habla" in blob
-        assert "relaxed" in blob
-        assert "switch.satellite1_c7ffe4_mute_microphones" in blob
-
-    def test_last_stt_text_automation(self, automations: list[dict]) -> None:
-        by_id = {a["id"]: a for a in automations}
-        stt = by_id["satellite1_last_stt_text"]
-        assert stt["trigger"][0]["event_type"] == "esphome.satellite1_stt_end"
-        blob = yaml.dump(stt)
-        assert "input_text.last_stt_text" in blob
 
 
 class TestHomeAssistantConfiguration:
@@ -354,7 +313,7 @@ class TestDocumentation:
             "Captura de muestras",
             "probability_cutoff",
             "debug_recording_dir",
-            "Automatizaciones TV",
+            "Automatizaciones HA",
             "mute_microphones",
             "whisper-large-v3",
             "RequiresEncryptionAPIError",

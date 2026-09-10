@@ -242,7 +242,7 @@ Tras el OTA del overlay, el select de HA **sí calibra Mariano** (Slightly/Moder
 
 | Select HA | Cutoff Mariano | Cuándo |
 |-----------|----------------|--------|
-| Slightly sensitive | 98% / 250 | TV on (automatización) |
+| Slightly sensitive | 98% / 250 | TV on (cambiar a mano) |
 | Moderately sensitive | 92% / 235 | Casa, sin tele |
 | Very sensitive | 85% / 217 | Si no despierta a 3 m |
 
@@ -266,29 +266,18 @@ flowchart TD
   I -->|No| J[Piper / radio compitiendo]
 ```
 
-## 4. Automatizaciones TV (HA)
+## 4. Automatizaciones HA
+
+Ninguna. [`automations.yaml`](../home-assistant/includes/automations.yaml) está vacío (`[]`): no mute TV, no restore, no botones, no Speaker ID. El mute del Satellite1 (`switch.satellite1_c7ffe4_mute_microphones`) solo cambia a mano (HA o Action largo).
+
+NLU luces: [`custom_sentences/es/luces.yaml`](../home-assistant/custom_sentences/es/luces.yaml) pina `light.yeelink_mono6_6409_light`. Escena `scene.lampara_apagada` se llama **Salón off** y no se expone.
+
+Despliegue de YAML HA (sin crear automatizaciones):
 
 ```bash
 HA_HOST=192.168.1.110 ./infrastructure/voice/wake-word/deploy_ha_voice_config.sh
 ./infrastructure/voice/wake-word/configure_ha_voice_nlu.sh --apply
 ```
-
-Automatizaciones en [`automations.yaml`](../home-assistant/includes/automations.yaml):
-
-- `satellite1_tv_strict_sensitivity` — TV on → Slightly sensitive (no mute)
-- `satellite1_mute_tv_playing` — mute **solo** tras 8 min en `playing` sin comando
-- `satellite1_unmute_tv_stopped` — unmute + Moderately tras 5 min parada
-- `satellite1_wake_word_mariano` — restaura Mariano, VAD `relaxed` y mute según noche/TV
-
-Entidades reales:
-
-- `media_player.tv_ga_2` (Google Streamer)
-- `media_player.bravia_kd_43xf8596` (Sony Bravia IP)
-- `switch.satellite1_c7ffe4_mute_microphones`
-
-Con la tele puesta **no** se mutea al encender: un «Mariano, apaga la lámpara» debe funcionar. Si el mute diferido saltó, unmute con **botón Action largo**. No hay automatizaciones de modo noche/cine/presencia (se diseñarán aparte).
-
-NLU luces: [`custom_sentences/es/luces.yaml`](../home-assistant/custom_sentences/es/luces.yaml) pina `light.yeelink_mono6_6409_light`. Escena `scene.lampara_apagada` se llama **Salón off** y no se expone.
 
 ## 5. Diagnosticar STT ("no me entiende")
 

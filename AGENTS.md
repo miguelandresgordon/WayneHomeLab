@@ -111,7 +111,7 @@ Satellite1 (MicroWakeWord "Mariano")
 
 **Key lessons learned:**
 - Local Whisper (`tiny-int8`, `base-int8`, `small-int8`) hallucinates badly in Spanish with Satellite1 audio quality — use Groq `whisper-large-v3` (not turbo)
-- VAD `aggressive` corta el utterance → `relaxed`. Mute TV: `switch.satellite1_c7ffe4_mute_microphones` + `media_player.tv_ga_2` / `bravia_kd_43xf8596` (nunca `google_tv_streamer`)
+- VAD `aggressive` corta el utterance → `relaxed` (select en el dispositivo, a mano). Mute: `switch.satellite1_c7ffe4_mute_microphones` solo a mano. TV: `media_player.tv_ga_2` / `bravia_kd_43xf8596` (nunca `google_tv_streamer`)
 - Escena «Lámpara apagada» colisiona con HassTurnOn → name **Salón off**, no exponer; frases en `custom_sentences/es/luces.yaml`
 - `[object Object]` error in Assist = Safari blocking microphone over HTTP (not a Whisper issue)
 - HA confuses entity names with scene names when both share words — avoid scene names like «Salón» if you have an area named the same
@@ -159,10 +159,9 @@ Satellite1 (MicroWakeWord "Mariano")
 
 ## Automatizaciones HA
 
-YAML canónico: `home-assistant/includes/automations.yaml` → `/config/includes/automations.yaml`.
-Solo voz/Satellite1/Speaker ID (mute TV, VAD, botón, radio). Sin rutinas de hábitos (noche/cine/presencia).
+YAML canónico: `home-assistant/includes/automations.yaml` → `/config/includes/automations.yaml` (**vacío**: nada se ejecuta solo).
 
-Scripts Assist útiles: `script.poner_radio` / `parar_radio` / `pon_la_radio`, `script.apagar_tele` / `encender_tele` (siempre `media_player.tv_ga_2`). Frases: `custom_sentences/es/{luces,tv,radio}.yaml`.
+Scripts Assist (solo voz/UI): `script.poner_radio` / `parar_radio` / `pon_la_radio`, `script.apagar_tele` / `encender_tele` (siempre `media_player.tv_ga_2`). Frases: `custom_sentences/es/{luces,tv,radio}.yaml`.
 
 Add-on Whisper (`core_whisper`): **parado**, boot `manual`. STT = Groq.
 
@@ -223,7 +222,7 @@ WayneHomeLab/
 │   ├── addons/
 │   │   └── speaker-id-mariano/  # Add-on identificación de hablante (HAOS VM)
 │   ├── includes/
-│   │   ├── automations.yaml     # Modo noche/día
+│   │   ├── automations.yaml     # vacío: nada automático
 │   │   ├── scripts.yaml
 │   │   └── sensors.yaml
 │   └── secrets.yaml.example
