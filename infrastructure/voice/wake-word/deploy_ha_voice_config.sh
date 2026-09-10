@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# deploy_ha_voice_config.sh — Despliega config HA de voz a /config/includes/
+# deploy_ha_voice_config.sh — Despliega config HA de voz a /config/
 #
 # Uso:
 #   HA_HOST=192.168.1.110 HA_USER=root ./deploy_ha_voice_config.sh
@@ -7,9 +7,10 @@
 # Requiere acceso SSH al HAOS. Ajusta rutas si usas Samba/Studio Code Server.
 #
 # Layout (igual que deploy_speaker_id_ha_config.sh):
-#   /config/configuration.yaml   ← home-assistant/configuration.haos.yaml
-#   /config/includes/*.yaml      ← home-assistant/includes/*.yaml
-#   /config/secrets.yaml         ← no se toca
+#   /config/configuration.yaml            ← home-assistant/configuration.haos.yaml
+#   /config/includes/*.yaml               ← home-assistant/includes/*.yaml
+#   /config/custom_sentences/es/*.yaml    ← home-assistant/custom_sentences/es/*.yaml
+#   /config/secrets.yaml                  ← no se toca
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
@@ -31,6 +32,8 @@ INCLUDE_FILES=(
   intent_scripts.yaml
 )
 
+SENTENCES_SRC="$REPO_ROOT/home-assistant/custom_sentences/es"
+
 log() { printf '[deploy-ha-voice] %s\n' "$*"; }
 
 if ! ping -c 1 -W 2 "$HA_HOST" >/dev/null 2>&1; then
@@ -40,7 +43,8 @@ fi
 
 log "Desplegando a ${HA_USER}@${HA_HOST}:${HA_CONFIG}"
 
-ssh "${HA_USER}@${HA_HOST}" "mkdir -p ${HA_CONFIG}/includes ${HA_CONFIG}/themes"
+ssh "${HA_USER}@${HA_HOST}" \
+  "mkdir -p ${HA_CONFIG}/includes ${HA_CONFIG}/themes ${HA_CONFIG}/custom_sentences/es"
 
 scp "$REPO_ROOT/home-assistant/configuration.haos.yaml" \
   "${HA_USER}@${HA_HOST}:${HA_CONFIG}/configuration.yaml"
@@ -55,6 +59,17 @@ for f in "${INCLUDE_FILES[@]}"; do
   scp "$src" "${HA_USER}@${HA_HOST}:${HA_CONFIG}/includes/${f}"
 done
 
+shopt -s nullglob
+sentence_files=("$SENTENCES_SRC"/*.yaml)
+if [[ ${#sentence_files[@]} -eq 0 ]]; then
+  log "❌ No hay custom_sentences en ${SENTENCES_SRC}"
+  exit 1
+fi
+for src in "${sentence_files[@]}"; do
+  log "Copiando custom_sentences/es/$(basename "$src")..."
+  scp "$src" "${HA_USER}@${HA_HOST}:${HA_CONFIG}/custom_sentences/es/$(basename "$src")"
+done
+
 log "Recargando automations y core config..."
 ssh "${HA_USER}@${HA_HOST}" "ha core check" && \
   ssh "${HA_USER}@${HA_HOST}" "ha core reload" 2>/dev/null || \
@@ -62,4 +77,6 @@ ssh "${HA_USER}@${HA_HOST}" "ha core check" && \
 
 log "✅ Despliegue completado"
 log "Verifica: Configuración → Comprobar configuración"
+log "Frases Assist: Herramientas de desarrollo → YAML → Recargar frases de conversación"
+log "NLU registry (área/aliases/exponer): ./configure_ha_voice_nlu.sh --apply"
 log "secrets.yaml no se ha modificado"

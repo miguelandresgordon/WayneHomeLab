@@ -1,8 +1,10 @@
 # ==============================================================================
 # Home Assistant — Automations (canónico WayneHomeLab)
 #
-# Rutinas de voz, Satellite1, Speaker ID y horarios. Groq es el STT; no arrancar
-# core_whisper. Desplegar: infrastructure/voice/wake-word/deploy_ha_voice_config.sh
+# Solo voz / Satellite1 / Speaker ID. Sin rutinas de hábitos (noche, cine,
+# presencia): se diseñarán cuando el pipeline esté estable.
+# Groq es el STT; no arrancar core_whisper.
+# Desplegar: infrastructure/voice/wake-word/deploy_ha_voice_config.sh
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
@@ -45,79 +47,85 @@
 
 - id: speaker_id_purge_wavs
   alias: "Speaker ID — purgar WAV antiguos"
-  description: "Elimina grabaciones de debug con más de 15 minutos"
+  description: "Elimina grabaciones de debug de más de 24 h y deja como máximo 30 WAV"
   trigger:
     - platform: time_pattern
-      minutes: "/15"
+      minutes: 0
   action:
     - service: shell_command.speaker_id_purge_old_wavs
   mode: single
 
 # ------------------------------------------------------------------------------
-# Horarios
+# Satellite1 — guardia TV (falsos wakes) sin mute permanente
+# Entidades reales: tv_ga_2 + Bravia IP, switch mute_microphones.
+# Con TV on: cutoff estricto (Slightly). Mute solo tras 8 min de playing
+# sin comando. Unmute: botón Action largo, o TV parada 5 min.
 # ------------------------------------------------------------------------------
-- id: modo_noche_activar
-  alias: "Modo noche — activar"
-  description: "23:00 — apaga casa y silencia Satellite1. No arranca Whisper."
+- id: satellite1_tv_strict_sensitivity
+  alias: "Satellite1 — sensibilidad estricta con TV"
+  description: "Sube el cutoff de Mariano (Slightly sensitive) al poner la tele. No mutea."
   trigger:
-    - platform: time
-      at: "23:00:00"
+    - platform: state
+      entity_id:
+        - media_player.tv_ga_2
+        - media_player.bravia_kd_43xf8596
+      to:
+        - playing
+        - "on"
+      not_from:
+        - unavailable
+        - unknown
   action:
-    - service: script.buenas_noches
+    - service: select.select_option
+      target:
+        entity_id: select.satellite1_c7ffe4_wake_word_sensitivity
+      data:
+        option: Slightly sensitive
+      continue_on_error: true
   mode: single
 
-- id: modo_noche_desactivar
-  alias: "Modo noche — desactivar"
+- id: satellite1_mute_tv_playing
+  alias: "Satellite1 — mute TV tras inactividad de voz"
   description: >-
-    07:30 — sale de modo noche. No desmutea si Sony BRAVIA o Google TV Streamer
-    siguen reproduciendo (evita falsos wake word con diálogos de TV).
+    Mutea mute_microphones solo si tv_ga_2 o la Bravia llevan 8 min en playing
+    sin un comando (listening). Unmute: botón Action largo.
   trigger:
-    - platform: time
-      at: "07:30:00"
+    - platform: state
+      entity_id:
+        - media_player.tv_ga_2
+        - media_player.bravia_kd_43xf8596
+      to: playing
+    - platform: state
+      entity_id: assist_satellite.satellite1_c7ffe4_satelite_assist
+      to: listening
+    - platform: state
+      entity_id: switch.satellite1_c7ffe4_mute_microphones
+      to: "off"
   condition:
     - condition: template
       value_template: >-
-        {{ states('media_player.sony_bravia_4k') not in ['playing', 'on']
-           and states('media_player.google_tv_streamer') not in ['playing', 'on'] }}
+        {{ states('media_player.tv_ga_2') == 'playing'
+           or states('media_player.bravia_kd_43xf8596') == 'playing' }}
   action:
-    - service: script.buenos_dias
-  mode: single
-
-# ------------------------------------------------------------------------------
-# Satellite1 — silenciar micrófono mientras hay TV reproduciendo
-# Reduce falsos positivos de wake word con diálogos de televisión.
-# Ajusta entity_id si difieren en tu instancia (Configuración → Dispositivos).
-# ------------------------------------------------------------------------------
-- id: satellite1_mute_tv_playing
-  alias: "Satellite1 — mute con TV encendida"
-  description: "Silencia el Satellite1 cuando Sony BRAVIA o Google TV están reproduciendo"
-  trigger:
-    - platform: state
-      entity_id:
-        - media_player.sony_bravia_4k
-        - media_player.google_tv_streamer
-      to:
-        - playing
-        - "on"
-  condition:
-    - condition: time
-      after: "07:30:00"
-      before: "23:00:00"
-  action:
+    - delay: "00:08:00"
+    - condition: template
+      value_template: >-
+        {{ states('media_player.tv_ga_2') == 'playing'
+           or states('media_player.bravia_kd_43xf8596') == 'playing' }}
     - service: switch.turn_on
       target:
-        entity_id: switch.satellite1_c7ffe4_mute
+        entity_id: switch.satellite1_c7ffe4_mute_microphones
       continue_on_error: true
-  mode: single
+  mode: restart
 
 - id: satellite1_unmute_tv_stopped
   alias: "Satellite1 — unmute TV parada"
-  description: "Reactiva el micrófono cuando la TV deja de reproducir (fuera de modo noche)"
+  description: "Reactiva el mic y restaura Moderately sensitive cuando la TV lleva 5 min parada"
   trigger:
     - platform: state
       entity_id:
-        - media_player.sony_bravia_4k
-        - media_player.google_tv_streamer
+        - media_player.tv_ga_2
+        - media_player.bravia_kd_43xf8596
       to:
         - idle
         - paused
@@ -125,108 +133,21 @@
         - standby
       for: "00:05:00"
   condition:
-    - condition: time
-      after: "07:30:00"
-      before: "23:00:00"
+    - condition: template
+      value_template: >-
+        {{ states('media_player.tv_ga_2') not in ['playing', 'on']
+           and states('media_player.bravia_kd_43xf8596') not in ['playing', 'on'] }}
   action:
     - service: switch.turn_off
       target:
-        entity_id: switch.satellite1_c7ffe4_mute
+        entity_id: switch.satellite1_c7ffe4_mute_microphones
       continue_on_error: true
-  mode: single
-
-# ------------------------------------------------------------------------------
-# Salón — atardecer, presencia, cine (solo TV GA + lámpara Xiaomi)
-# ------------------------------------------------------------------------------
-- id: salon_atardecer_relajado
-  alias: "Salón — relajado al atardecer"
-  description: "Si hay alguien en casa y no hay cine/noche, atenúa la lámpara. No toca el dormitorio."
-  trigger:
-    - platform: sun
-      event: sunset
-  condition:
-    - condition: state
-      entity_id: person.miguel
-      state: home
-    - condition: state
-      entity_id: input_boolean.modo_cine
-      state: "off"
-    - condition: state
-      entity_id: input_boolean.modo_noche
-      state: "off"
-    - condition: state
-      entity_id: input_boolean.casa_ausente
-      state: "off"
-  action:
-    - service: script.relajado
-  mode: single
-
-- id: casa_ausencia
-  alias: "Casa — ausencia"
-  description: "Si Miguel no está 5 min, apaga luces y TVs"
-  trigger:
-    - platform: state
-      entity_id: person.miguel
-      to: not_home
-      for: "00:05:00"
-      not_from:
-        - unavailable
-        - unknown
-  action:
-    - service: script.me_voy
-  mode: single
-
-- id: casa_llegada
-  alias: "Casa — llegada"
-  description: "Al volver, de noche enciende Relajado en el salón"
-  trigger:
-    - platform: state
-      entity_id: person.miguel
-      to: home
-      not_from:
-        - unavailable
-        - unknown
-  action:
-    - service: script.he_llegado
-  mode: single
-
-- id: cine_tv_ga_on
-  alias: "Cine — TV GA encendida"
-  description: "Atenúa lámpara del salón y mutea Satellite1. No toca Antela/dormitorio."
-  trigger:
-    - platform: state
-      entity_id: media_player.tv_ga_2
-      to:
-        - playing
-        - "on"
-      not_from:
-        - unavailable
-        - unknown
-  condition:
-    - condition: state
-      entity_id: input_boolean.modo_noche
-      state: "off"
-  action:
-    - service: script.cine
-  mode: single
-
-- id: cine_tv_ga_off
-  alias: "Cine — TV GA apagada"
-  description: "Tras 5 min idle/off, sale de modo cine y unmute si no es de noche"
-  trigger:
-    - platform: state
-      entity_id: media_player.tv_ga_2
-      to:
-        - idle
-        - paused
-        - "off"
-        - standby
-      for: "00:05:00"
-      not_from:
-        - unavailable
-        - unknown
-  action:
-    - service: script.salir_cine
+    - service: select.select_option
+      target:
+        entity_id: select.satellite1_c7ffe4_wake_word_sensitivity
+      data:
+        option: Moderately sensitive
+      continue_on_error: true
   mode: single
 
 # ------------------------------------------------------------------------------
@@ -234,7 +155,7 @@
 # ------------------------------------------------------------------------------
 - id: satellite1_action_button
   alias: "Satellite1 — botón Action"
-  description: "1 clic lámpara, doble cine/relajado, largo mute mic"
+  description: "1 clic lámpara, largo mute mic"
   trigger:
     - platform: state
       entity_id: event.satellite1_c7ffe4_action_button_press
@@ -251,20 +172,6 @@
               target:
                 entity_id: light.yeelink_mono6_6409_light
               continue_on_error: true
-        - conditions:
-            - condition: template
-              value_template: "{{ trigger.to_state.attributes.event_type == 'double_press' }}"
-          sequence:
-            - choose:
-                - conditions:
-                    - condition: state
-                      entity_id: input_boolean.modo_cine
-                      state: "on"
-                  sequence:
-                    - service: script.salir_cine
-                    - service: script.relajado
-              default:
-                - service: script.cine
         - conditions:
             - condition: template
               value_template: "{{ trigger.to_state.attributes.event_type == 'long_press' }}"
@@ -408,13 +315,21 @@
   max: 5
 
 - id: satellite1_wake_word_mariano
-  alias: "Satellite1 — wake word Mariano"
-  description: "Selecciona el modelo Mariano cuando HA arranca o el Satellite1 vuelve"
+  alias: "Satellite1 — restaurar estado de voz"
+  description: >-
+    Al arrancar HA o volver el satélite de unavailable: Mariano, VAD relaxed,
+    unmute y sensibilidad según TV.
   trigger:
     - platform: homeassistant
       event: start
     - platform: state
       entity_id: select.satellite1_c7ffe4_palabra_de_activacion
+      from: unavailable
+    - platform: state
+      entity_id: assist_satellite.satellite1_c7ffe4_satelite_assist
+      from: unavailable
+    - platform: state
+      entity_id: switch.satellite1_c7ffe4_mute_microphones
       from: unavailable
   action:
     - wait_template: >-
@@ -425,4 +340,56 @@
         entity_id: select.satellite1_c7ffe4_palabra_de_activacion
       data:
         option: Mariano
-  mode: single
+      continue_on_error: true
+    - wait_template: >-
+        {{ states('select.satellite1_c7ffe4_deteccion_de_fin_de_habla') not in ['unavailable', 'unknown', ''] }}
+      timeout: "00:01:00"
+    - service: select.select_option
+      target:
+        entity_id: select.satellite1_c7ffe4_deteccion_de_fin_de_habla
+      data:
+        option: relaxed
+      continue_on_error: true
+    - service: switch.turn_off
+      target:
+        entity_id: switch.satellite1_c7ffe4_mute_microphones
+      continue_on_error: true
+    - choose:
+        - conditions:
+            - condition: template
+              value_template: >-
+                {{ states('media_player.tv_ga_2') in ['playing', 'on']
+                   or states('media_player.bravia_kd_43xf8596') in ['playing', 'on'] }}
+          sequence:
+            - service: select.select_option
+              target:
+                entity_id: select.satellite1_c7ffe4_wake_word_sensitivity
+              data:
+                option: Slightly sensitive
+              continue_on_error: true
+      default:
+        - service: select.select_option
+          target:
+            entity_id: select.satellite1_c7ffe4_wake_word_sensitivity
+          data:
+            option: Moderately sensitive
+          continue_on_error: true
+  mode: restart
+
+- id: satellite1_last_stt_text
+  alias: "Satellite1 — guardar última transcripción"
+  description: "Copia el texto STT (evento ESPHome on_stt_end) a input_text.last_stt_text"
+  trigger:
+    - platform: event
+      event_type: esphome.satellite1_stt_end
+  condition:
+    - condition: template
+      value_template: "{{ (trigger.event.data['text'] | default('')) | length > 0 }}"
+  action:
+    - service: input_text.set_value
+      target:
+        entity_id: input_text.last_stt_text
+      data:
+        value: "{{ trigger.event.data.text[:255] }}"
+  mode: queued
+  max: 5

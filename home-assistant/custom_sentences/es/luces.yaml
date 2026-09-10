@@ -1,0 +1,41 @@
+# Frases Assist (ES) — lámpara Xiaomi del salón.
+# Pinadas a light.yeelink_mono6_6409_light para no colisionar con
+# scene.lampara_apagada ni con luces del dormitorio / grupos.
+# Destino HAOS: /config/custom_sentences/es/luces.yaml
+language: "es"
+
+intents:
+  EnciendeLaLampara:
+    data:
+      - sentences:
+          - "enciende [la] (lámpara|lampara)"
+          - "enciende [la] (lámpara|lampara|luz) [del] (salón|salon)"
+          - "enciende [la] luz"
+          - "prende [la] (lámpara|lampara|luz)"
+          - "prende [la] (lámpara|lampara|luz) [del] (salón|salon)"
+          - "pon [la] (lámpara|lampara)"
+          - "pon [la] (lámpara|lampara|luz) [del] (salón|salon)"
+          - "activa [la] (lámpara|lampara)"
+          - "enciende [las] luces"
+          - "enciende [las] luces [del] (salón|salon)"
+
+  ApagaLaLampara:
+    data:
+      - sentences:
+          - "apaga [la] (lámpara|lampara)"
+          - "apaga [la] (lámpara|lampara|luz) [del] (salón|salon)"
+          - "apaga [la] luz"
+          - "quita [la] (lámpara|lampara|luz)"
+          - "quita [la] (lámpara|lampara|luz) [del] (salón|salon)"
+          - "apaga [las] luces"
+          - "apaga [las] luces [del] (salón|salon)"
+          - "cierra [la] (lámpara|lampara)"
+
+  ToggleLaLampara:
+    data:
+      - sentences:
+          - "cambia [la] (lámpara|lampara)"
+          - "cambia [la] (lámpara|lampara|luz) [del] (salón|salon)"
+          - "alterna [la] (lámpara|lampara)"
+          - "conmuta [la] (lámpara|lampara)"
+          - "toggle [la] (lámpara|lampara)"
