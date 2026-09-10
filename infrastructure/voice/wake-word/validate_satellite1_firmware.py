@@ -65,6 +65,15 @@ def validate_firmware_yaml(path: Path) -> list[str]:
                 errors.append(f"{label}: api.encryption missing")
             if "!secret api_encryption_key" not in api_blob:
                 errors.append(f"{label}: api.encryption.key must be !secret api_encryption_key")
+        wifi = _top_level_block(text, "wifi")
+        if not wifi:
+            errors.append(f"{label}: missing wifi block (USB flash needs !secret ssid/password)")
+        else:
+            wifi_blob = "\n".join(wifi)
+            if "!secret wifi_ssid" not in wifi_blob:
+                errors.append(f"{label}: wifi.ssid must be !secret wifi_ssid")
+            if "!secret wifi_password" not in wifi_blob:
+                errors.append(f"{label}: wifi.password must be !secret wifi_password")
     if "id: mariano" not in text:
         errors.append(f"{label}: missing micro_wake_word id mariano")
     if "mariano.esphome.json" not in text:
