@@ -226,7 +226,7 @@ Actualizar IP en [`satellite1_mariano_overlay.yaml`](../infrastructure/voice/wak
    - `voice_assistant` usa `id: va` (**no** `!extend`: en ESPHome 2026.8 el compile falla).
    - El `select` de sensibilidad sí usa `!extend` (es una lista).
    - Validar antes: `python3 infrastructure/voice/wake-word/validate_satellite1_firmware.py`
-   - El dispositivo vivo exige API Noise. En HAOS `/config/esphome/secrets.yaml` debe existir `api_encryption_key` = `noise_psk` de la entrada ESPHome (MAC `3c:0f:02:c7:ff:e4`). Plantilla: [`esphome/secrets.yaml.example`](../infrastructure/voice/wake-word/esphome/secrets.yaml.example). **No** generar una clave nueva: OTA no autentica.
+   - El dispositivo vivo exige API Noise. En HAOS **`/config/esphome/secrets.yaml`** (Device Builder, **no** `/config/secrets.yaml` de HA) deben existir `api_encryption_key`, `wifi_ssid` y `wifi_password` (2,4 GHz). Plantilla: [`esphome/secrets.yaml.example`](../infrastructure/voice/wake-word/esphome/secrets.yaml.example). **No** generar una clave API nueva.
 3. **INSTALL** → Wirelessly.
    - Si los logs solo dicen `RequiresEncryptionAPIError` y luego `Successfully connected` en bucle **sin** compile: cancela, mete la clave, **Clean Build Files**, vuelve a Install. Sin la clave el Dashboard no sube el firmware (puede quedarse así ~1 h).
 4. HA → Dispositivos → Satellite1 → Configuración:

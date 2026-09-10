@@ -277,9 +277,13 @@ class TestVoiceNlu:
         assert "id: !extend va" not in text
         assert "id: va" in text
         assert "key: !secret api_encryption_key" in text
+        assert "ssid: !secret wifi_ssid" in text
+        assert "password: !secret wifi_password" in text
         assert "REPLACE_BY_32_BIT_RANDOM_KEY" not in text
         example = (WAKE_WORD_DIR / "esphome" / "secrets.yaml.example").read_text(encoding="utf-8")
         assert "api_encryption_key:" in example
+        assert "wifi_ssid:" in example
+        assert "wifi_password:" in example
 
     def test_firmware_validator_accepts_repo_yaml(self) -> None:
         from validate_satellite1_firmware import validate_firmware_yaml
