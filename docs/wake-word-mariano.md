@@ -222,16 +222,23 @@ Actualizar IP en [`satellite1_mariano_overlay.yaml`](../infrastructure/voice/wak
 ## 3. Flashear Satellite1 con modelo Mariano
 
 1. HA → ESPHome Device Builder → **Take Control** del Satellite1
-2. EDIT → añadir bloque de [`satellite1_mariano_overlay.yaml`](../infrastructure/voice/wake-word/satellite1_mariano_overlay.yaml)
-3. **INSTALL** (OTA)
+2. EDIT → sustituir/añadir el YAML de [`esphome/satellite1-c7ffe4.yaml`](../infrastructure/voice/wake-word/esphome/satellite1-c7ffe4.yaml) (overlay en [`satellite1_mariano_overlay.yaml`](../infrastructure/voice/wake-word/satellite1_mariano_overlay.yaml)).
+   - `voice_assistant` usa `id: va` (**no** `!extend`: en ESPHome 2026.8 el compile falla).
+   - El `select` de sensibilidad sí usa `!extend` (es una lista).
+   - Validar antes: `python3 infrastructure/voice/wake-word/validate_satellite1_firmware.py`
+   - El dispositivo vivo exige API Noise. En HAOS `/config/esphome/secrets.yaml` debe existir `api_encryption_key` = `noise_psk` de la entrada ESPHome (MAC `3c:0f:02:c7:ff:e4`). Plantilla: [`esphome/secrets.yaml.example`](../infrastructure/voice/wake-word/esphome/secrets.yaml.example). **No** generar una clave nueva: OTA no autentica.
+3. **INSTALL** → Wirelessly.
+   - Si los logs solo dicen `RequiresEncryptionAPIError` y luego `Successfully connected` en bucle **sin** compile: cancela, mete la clave, **Clean Build Files**, vuelve a Install. Sin la clave el Dashboard no sube el firmware (puede quedarse así ~1 h).
 4. HA → Dispositivos → Satellite1 → Configuración:
    - Pipeline de voz (Groq + Piper)
    - Wake word: **Mariano**
    - Sensitivity: **Slightly sensitive**
 
+**Estado (2026-09-10):** OTA con overlay Mariano **aplicado** (ESPHome Device Builder 2026.8.2). El aviso `Bootloader too old for OTA rollback` **no invalida** ese flash: el firmware nuevo está en el dispositivo; el bootloader de fábrica no sabe volver atrás si un OTA futuro se corrompe. Actualizar el bootloader es un flash **por cable USB-C del Satellite1** (no basta un pendrive con archivos). Kit + pasos: [`esphome/USB_BOOTLOADER.md`](../infrastructure/voice/wake-word/esphome/USB_BOOTLOADER.md). Empaquetar: `USB_VOLUME=/Volumes/MIGUEL ./infrastructure/voice/wake-word/pack_satellite1_usb.sh`.
+
 ### Calibrar `probability_cutoff`
 
-Firmware vivo (sep 2026): cutoff **98%** hasta el OTA del lambda. Tras flashear [`satellite1_mariano_overlay.yaml`](../infrastructure/voice/wake-word/satellite1_mariano_overlay.yaml), el select de HA **sí calibra Mariano**:
+Tras el OTA del overlay, el select de HA **sí calibra Mariano** (Slightly/Moderately/Very). Default YAML: Moderately (92%):
 
 | Select HA | Cutoff Mariano | Cuándo |
 |-----------|----------------|--------|
