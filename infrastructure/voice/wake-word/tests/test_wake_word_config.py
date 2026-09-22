@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+import sys
 from pathlib import Path
 
 import pytest
@@ -12,6 +13,8 @@ import yaml
 REPO_ROOT = Path(__file__).resolve().parents[4]
 WAKE_WORD_DIR = REPO_ROOT / "infrastructure" / "voice" / "wake-word"
 HA_DIR = REPO_ROOT / "home-assistant"
+sys.path.insert(0, str(WAKE_WORD_DIR))
+sys.path.insert(0, str(WAKE_WORD_DIR))
 
 REQUIRED_SCRIPTS = [
     "setup_trainer_macos.sh",
@@ -22,9 +25,13 @@ REQUIRED_SCRIPTS = [
     "flash_mariano_firmware.sh",
     "download_piper_voices_es.sh",
     "configure_ha_mariano.sh",
+    "configure_ha_voice_nlu.sh",
     "run_capture_workflow.sh",
     "train_mariano_local.sh",
     "pad_personal_samples.py",
+    "validate_satellite1_firmware.py",
+    "sync_satellite1_api_secret.sh",
+    "pack_satellite1_usb.sh",
 ]
 
 MARIANO_JSON_REQUIRED_KEYS = {
@@ -43,10 +50,40 @@ MARIANO_MICRO_REQUIRED_KEYS = {
     "minimum_esphome_version",
 }
 
-TV_AUTOMATION_IDS = {
-    "satellite1_mute_tv_playing",
-    "satellite1_unmute_tv_stopped",
-}
+class TestHomeAssistantAutomations:
+    def test_only_tv_wake_word_sensitivity_automation(
+        self, automations: list[dict]
+    ) -> None:
+        assert len(automations) == 1
+        auto = automations[0]
+        assert auto["id"] == "satellite1_tv_wake_word_sensitivity"
+        blob = yaml.dump(auto)
+        assert "media_player.tv_ga_2" in blob
+        assert "media_player.bravia_kd_43xf8596" in blob
+        assert "google_tv_streamer" not in blob
+        assert "select.satellite1_c7ffe4_wake_word_sensitivity" in blob
+        assert "Slightly sensitive" in blob
+        assert "Moderately sensitive" in blob
+        assert "00:05:00" in blob
+        assert "mute_microphones" not in blob
+        assert any(
+            t.get("trigger") == "homeassistant" and t.get("event") == "start"
+            for t in auto.get("triggers", [])
+        )
+
+    def test_no_automatic_satellite1_or_lifestyle_ids(self) -> None:
+        text = (HA_DIR / "includes" / "automations.yaml").read_text(encoding="utf-8")
+        for needle in (
+            "satellite1_mute_tv_playing",
+            "satellite1_unmute_tv_stopped",
+            "satellite1_tv_strict_sensitivity",
+            "satellite1_wake_word_mariano",
+            "satellite1_action_button",
+            "speaker_id_on_command",
+            "modo_noche_activar",
+            "cine_tv_ga_on",
+        ):
+            assert needle not in text, f"Automation {needle} must not remain in YAML"
 
 
 @pytest.fixture
@@ -57,9 +94,8 @@ def automations() -> list[dict]:
     return data
 
 
-def _load_ha_configuration() -> dict:
-    """Parse configuration.yaml ignoring HA-specific tags (!include, !secret)."""
-    path = HA_DIR / "configuration.yaml"
+def _load_yaml_with_ha_tags(path: Path) -> dict:
+    """Parse HA YAML ignoring tags (!include, !secret)."""
     text = path.read_text(encoding="utf-8")
 
     class HAYamlLoader(yaml.SafeLoader):
@@ -78,6 +114,11 @@ def _load_ha_configuration() -> dict:
     data = yaml.load(text, Loader=HAYamlLoader)
     assert isinstance(data, dict)
     return data
+
+
+def _load_ha_configuration() -> dict:
+    """Parse configuration.yaml ignoring HA-specific tags (!include, !secret)."""
+    return _load_yaml_with_ha_tags(HA_DIR / "configuration.yaml")
 
 
 @pytest.fixture
@@ -121,41 +162,17 @@ class TestSatellite1Overlay:
             encoding="utf-8"
         )
         assert "id: mariano" in overlay
+        assert "id(mariano)" in overlay
         assert "probability_cutoff:" in overlay
-        assert "mariano.json" in overlay
+        assert "mariano.esphome.json" in overlay
         assert "noise_suppression_level:" in overlay
         assert "auto_gain:" in overlay
-
-
-class TestHomeAssistantAutomations:
-    def test_tv_mute_automations_present(self, automations: list[dict]) -> None:
-        ids = {a.get("id") for a in automations}
-        missing = TV_AUTOMATION_IDS - ids
-        assert not missing, f"Missing automation ids: {missing}"
-
-    def test_tv_mute_targets_satellite1(self, automations: list[dict]) -> None:
-        by_id = {a["id"]: a for a in automations}
-        mute = by_id["satellite1_mute_tv_playing"]
-        action = mute["action"][0]
-        assert action["service"] == "switch.turn_on"
-        assert "switch.satellite1_c7ffe4_mute" in action["target"]["entity_id"]
-
-    def test_tv_automations_reference_media_players(self, automations: list[dict]) -> None:
-        by_id = {a["id"]: a for a in automations}
-        for auto_id in TV_AUTOMATION_IDS:
-            trigger = by_id[auto_id]["trigger"][0]
-            entities = trigger["entity_id"]
-            assert "media_player.sony_bravia_4k" in entities
-            assert "media_player.google_tv_streamer" in entities
-
-    def test_modo_noche_desactivar_respects_tv_state(self, automations: list[dict]) -> None:
-        by_id = {a["id"]: a for a in automations}
-        desactivar = by_id["modo_noche_desactivar"]
-        conditions = desactivar.get("condition", [])
-        assert conditions, "modo_noche_desactivar must check TV state before unmute"
-        template = conditions[0].get("value_template", "")
-        assert "sony_bravia_4k" in template
-        assert "google_tv_streamer" in template
+        assert "voice_assistant:" in overlay
+        assert "esphome.satellite1_stt_end" in overlay
+        assert "set_probability_cutoff(250)" in overlay
+        va_block = overlay.split("voice_assistant:", 1)[1].split("select:", 1)[0]
+        assert "id: !extend" not in va_block
+        assert "id: va" in va_block
 
 
 class TestHomeAssistantConfiguration:
@@ -167,6 +184,151 @@ class TestHomeAssistantConfiguration:
         ha = configuration.get("homeassistant", {})
         assert ha.get("country") == "ES"
 
+    def test_uses_includes_subdir_and_modern_template(self, configuration: dict) -> None:
+        assert configuration.get("template") == "includes/sensors.yaml"
+        assert configuration.get("intent_script") == "includes/intent_scripts.yaml"
+        assert configuration.get("script") == "includes/scripts.yaml"
+        assert "http" not in configuration
+
+
+class TestHaosConfiguration:
+    """configuration.haos.yaml is what deploy scripts copy to /config/configuration.yaml."""
+
+    def test_haos_includes_layout_matches_repo(self) -> None:
+        path = HA_DIR / "configuration.haos.yaml"
+        text = path.read_text(encoding="utf-8")
+        data = _load_yaml_with_ha_tags(path)
+        assert data.get("template") == "includes/sensors.yaml"
+        assert data.get("intent_script") == "includes/intent_scripts.yaml"
+        assert data.get("automation") == "includes/automations.yaml"
+        assert "http" not in data
+        assert "!include automations.yaml" not in text
+        assert "includes/sensors.yaml" in text
+        assert "includes/intent_scripts.yaml" in text
+
+    def test_haos_assist_logger_info(self) -> None:
+        text = (HA_DIR / "configuration.haos.yaml").read_text(encoding="utf-8")
+        assert "homeassistant.components.assist_pipeline: info" in text
+        assert "homeassistant.components.conversation: info" in text
+
+    def test_deploy_script_copies_includes_subdir(self) -> None:
+        script = (
+            REPO_ROOT
+            / "infrastructure"
+            / "voice"
+            / "speaker-id"
+            / "deploy_speaker_id_ha_config.sh"
+        )
+        text = script.read_text(encoding="utf-8")
+        assert "sensors.yaml" in text
+        assert "intent_scripts.yaml" in text
+        assert "${HA_CONFIG}/includes/${f}" in text
+        assert "${HA_CONFIG}/automations.yaml" not in text
+
+    def test_deploy_ha_voice_copies_custom_sentences(self) -> None:
+        script = WAKE_WORD_DIR / "deploy_ha_voice_config.sh"
+        text = script.read_text(encoding="utf-8")
+        assert "custom_sentences/es" in text
+        assert "luces.yaml" in text or "*.yaml" in text
+        assert "configure_ha_voice_nlu.sh" in text
+        assert '"ha core reload"' not in text
+        assert "'ha core reload'" not in text
+        assert "ha core restart" in text
+        assert "HA_SKIP_RESTART" in text
+
+
+class TestVoiceNlu:
+    def test_luces_sentences_pin_intents(self) -> None:
+        path = HA_DIR / "custom_sentences" / "es" / "luces.yaml"
+        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+        intents = data["intents"]
+        for name in ("EnciendeLaLampara", "ApagaLaLampara", "ToggleLaLampara"):
+            assert name in intents
+            sentences = intents[name]["data"][0]["sentences"]
+            blob = " ".join(sentences)
+            assert "lámpara" in blob or "lampara" in blob
+            assert "dormitorio" not in blob
+
+    def test_intent_scripts_pin_xiaomi_lamp(self) -> None:
+        data = yaml.safe_load(
+            (HA_DIR / "includes" / "intent_scripts.yaml").read_text(encoding="utf-8")
+        )
+        for name in ("EnciendeLaLampara", "ApagaLaLampara", "ToggleLaLampara"):
+            blob = yaml.dump(data[name])
+            assert "light.yeelink_mono6_6409_light" in blob
+            assert "scene.lampara_apagada" not in blob
+
+    def test_scene_renamed_salon_off(self) -> None:
+        scenes = yaml.safe_load((HA_DIR / "includes" / "scenes.yaml").read_text(encoding="utf-8"))
+        by_id = {s["id"]: s for s in scenes}
+        assert by_id["lampara_apagada"]["name"] == "Salón off"
+        assert by_id["lampara_apagada"]["name"] != "Lámpara apagada"
+
+    def test_last_stt_text_helper(self) -> None:
+        data = yaml.safe_load((HA_DIR / "includes" / "input_text.yaml").read_text(encoding="utf-8"))
+        assert "last_stt_text" in data
+        assert data["last_stt_text"]["max"] == 255
+
+    def test_purge_keeps_24h_or_30_files(self) -> None:
+        text = (HA_DIR / "includes" / "shell_commands.yaml").read_text(encoding="utf-8")
+        assert "1440" in text
+        assert "30" in text
+        assert "-mmin +15" not in text
+
+    def test_no_lifestyle_scripts(self) -> None:
+        scripts = yaml.safe_load((HA_DIR / "includes" / "scripts.yaml").read_text(encoding="utf-8"))
+        forbidden = {
+            "buenas_noches",
+            "buenos_dias",
+            "relajado",
+            "cine",
+            "salir_cine",
+            "me_voy",
+            "he_llegado",
+        }
+        assert not (set(scripts) & forbidden), f"Unexpected lifestyle scripts: {set(scripts) & forbidden}"
+        for keep in ("poner_radio", "parar_radio", "apagar_tele", "encender_tele"):
+            assert keep in scripts
+
+    def test_esphome_yaml_extends_mariano_lambda(self) -> None:
+        text = (WAKE_WORD_DIR / "esphome" / "satellite1-c7ffe4.yaml").read_text(encoding="utf-8")
+        assert "id(mariano)" in text
+        assert "voice_assistant:" in text
+        assert "esphome.satellite1_stt_end" in text
+        assert "id: !extend va" not in text
+        assert "id: va" in text
+        assert "key: !secret api_encryption_key" in text
+        assert "ssid: !secret wifi_ssid" in text
+        assert "password: !secret wifi_password" in text
+        assert "REPLACE_BY_32_BIT_RANDOM_KEY" not in text
+        example = (WAKE_WORD_DIR / "esphome" / "secrets.yaml.example").read_text(encoding="utf-8")
+        assert "api_encryption_key:" in example
+        assert "wifi_ssid:" in example
+        assert "wifi_password:" in example
+
+    def test_firmware_validator_accepts_repo_yaml(self) -> None:
+        from validate_satellite1_firmware import validate_firmware_yaml
+
+        for rel in (
+            WAKE_WORD_DIR / "esphome" / "satellite1-c7ffe4.yaml",
+            WAKE_WORD_DIR / "satellite1_mariano_overlay.yaml",
+        ):
+            errors = validate_firmware_yaml(rel)
+            assert not errors, errors
+
+    def test_firmware_validator_rejects_extend_on_voice_assistant(self, tmp_path) -> None:
+        from validate_satellite1_firmware import validate_firmware_yaml
+
+        bad = tmp_path / "bad.yaml"
+        bad.write_text(
+            (WAKE_WORD_DIR / "esphome" / "satellite1-c7ffe4.yaml")
+            .read_text(encoding="utf-8")
+            .replace("  id: va\n", "  id: !extend va\n", 1),
+            encoding="utf-8",
+        )
+        errors = validate_firmware_yaml(bad)
+        assert any("!extend" in e for e in errors)
+
 
 class TestDocumentation:
     def test_runbook_exists_and_covers_workflow(self) -> None:
@@ -176,7 +338,11 @@ class TestDocumentation:
             "Captura de muestras",
             "probability_cutoff",
             "debug_recording_dir",
-            "Automatizaciones TV",
+            "Automatizaciones HA",
+            "mute_microphones",
+            "whisper-large-v3",
+            "RequiresEncryptionAPIError",
+            "Bootloader too old",
         ):
             assert section in doc, f"Runbook missing section: {section}"
 
@@ -186,6 +352,7 @@ class TestGitignore:
         gitignore = (REPO_ROOT / ".gitignore").read_text(encoding="utf-8")
         assert "mariano.json" in gitignore or "*.tflite" in gitignore
         assert ".tflite" in gitignore
+        assert "infrastructure/voice/wake-word/esphome/secrets.yaml" in gitignore
 
 
 class TestVoiceAssistChecklist:
@@ -193,9 +360,13 @@ class TestVoiceAssistChecklist:
         path = HA_DIR / "includes" / "voice_assist.yaml"
         text = path.read_text(encoding="utf-8")
         assert "openai_whisper_cloud" in text
-        assert "whisper-large-v3-turbo" in text
+        assert "whisper-large-v3" in text
+        assert "whisper-large-v3-turbo" not in text
         assert "Mariano" in text
         assert "probability_cutoff" in text
+        assert "relaxed" in text
+        assert "mute_microphones" in text
+        assert "luces.yaml" in text
 
 
 class TestCaptureWorkflow:
@@ -239,6 +410,6 @@ class TestTrainedModelWhenPresent:
             pytest.skip("mariano.json not yet copied from trainer")
 
         data = json.loads(json_path.read_text(encoding="utf-8"))
-        assert data["wake_word"] == "mariano"
+        assert data["wake_word"].casefold() == "mariano"
         assert tflite_path.is_file(), "mariano.tflite must accompany mariano.json"
         assert tflite_path.stat().st_size > 1000, "tflite file looks too small"

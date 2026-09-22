@@ -32,31 +32,60 @@ packages:
 logger:
   level: ${log_level}
 
-## OPTIONALLY, enable transport encryption for the API layer by uncommenting the following lines
-## and replacing "REPLACE_BY_32_BIT_RANDOM_KEY" with a 32-character random key.
-## For more information, refer to the ESPHome documentation:
-## https://esphome.io/components/api.html
-## Note: The documentation also provides a tool to generate a random key
+## API encryption is REQUIRED on this device (factory/Take Control).
+## Without this key, Device Builder loops: RequiresEncryptionAPIError
+## and never starts the OTA upload. Key lives in HAOS esphome/secrets.yaml
+## (copied from HA config entry noise_psk). Never commit the key.
+api:
+  encryption:
+    key: !secret api_encryption_key
 
-# api:
-#   encryption:
-#     key: REPLACE_BY_32_BIT_RANDOM_KEY
+## Wi-Fi hardcoded: el NVS se pierde en flash USB / wipe. Secrets en
+## HAOS /config/esphome/secrets.yaml (NO /config/secrets.yaml de HA).
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
 
-## OPTIONALLY, override the default Wi-Fi credentials provisioned on the Satellite1 device
-## during setup by using your Wi-Fi credentials stored in the `secrets.yaml` file of the
-## ESPHome dashboard. Uncomment the below lines to enable this feature, allowing you
-## to manage Wi-Fi credentials centrally for all your devices.
-
-# wifi:
-#   ssid: !secret wifi_ssid
-#   password: !secret wifi_password
-
-## Custom wake word Mariano (WayneHomeLab, train 2026-08-26)
-## Model files live in /config/esphome/models/ (addon path: /config/models/)
-## cutoff 98% = calibracion del trainer (frr~0.10, faph~0). Bajar a 85% si no te oye.
+## Custom wake word Mariano (WayneHomeLab)
+## Model: http://192.168.1.110:8123/local/wake-word/mariano.esphome.json
+## Cutoff YAML = Moderately (92%). El select de HA calibra Mariano con el
+## extend del select (lista). voice_assistant usa id: va (singleton ESPHome 2026).
 micro_wake_word:
   id: mww
   models:
     - id: mariano
       model: http://192.168.1.110:8123/local/wake-word/mariano.esphome.json
-      probability_cutoff: 98%
+      probability_cutoff: 92%
+
+## DSP post-wake + telemetría STT → input_text.last_stt_text en HA
+## id: va (mismo que FPH). SIN !extend — rompe el compile en ESPHome 2026.8.
+voice_assistant:
+  id: va
+  noise_suppression_level: 2
+  auto_gain: 12dBFS
+  volume_multiplier: 2.0
+  on_stt_end:
+    - homeassistant.event:
+        event: esphome.satellite1_stt_end
+        data:
+          text: !lambda 'return x;'
+
+## Sensibilidad HA también calibra Mariano (FPH de stock solo toca okay_nabu/hey_jarvis).
+## !extend SÍ aplica aquí: select es una lista de componentes.
+select:
+  - id: !extend mww_sensitivity_select
+    on_value:
+      - lambda: |-
+          if (x == "Slightly sensitive") {
+            id(okay_nabu).set_probability_cutoff(217);    // 0.85
+            id(hey_jarvis).set_probability_cutoff(247);   // 0.97
+            id(mariano).set_probability_cutoff(250);      // 0.98
+          } else if (x == "Moderately sensitive") {
+            id(okay_nabu).set_probability_cutoff(176);    // 0.69
+            id(hey_jarvis).set_probability_cutoff(235);    // 0.92
+            id(mariano).set_probability_cutoff(235);      // 0.92
+          } else if (x == "Very sensitive") {
+            id(okay_nabu).set_probability_cutoff(143);    // 0.56
+            id(hey_jarvis).set_probability_cutoff(212);   // 0.83
+            id(mariano).set_probability_cutoff(217);      // 0.85
+          }

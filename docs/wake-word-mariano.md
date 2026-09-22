@@ -222,56 +222,99 @@ Actualizar IP en [`satellite1_mariano_overlay.yaml`](../infrastructure/voice/wak
 ## 3. Flashear Satellite1 con modelo Mariano
 
 1. HA → ESPHome Device Builder → **Take Control** del Satellite1
-2. EDIT → añadir bloque de [`satellite1_mariano_overlay.yaml`](../infrastructure/voice/wake-word/satellite1_mariano_overlay.yaml)
-3. **INSTALL** (OTA)
+2. EDIT → sustituir/añadir el YAML de [`esphome/satellite1-c7ffe4.yaml`](../infrastructure/voice/wake-word/esphome/satellite1-c7ffe4.yaml) (overlay en [`satellite1_mariano_overlay.yaml`](../infrastructure/voice/wake-word/satellite1_mariano_overlay.yaml)).
+   - `voice_assistant` usa `id: va` (**no** `!extend`: en ESPHome 2026.8 el compile falla).
+   - El `select` de sensibilidad sí usa `!extend` (es una lista).
+   - Validar antes: `python3 infrastructure/voice/wake-word/validate_satellite1_firmware.py`
+   - El dispositivo vivo exige API Noise. En HAOS **`/config/esphome/secrets.yaml`** (Device Builder, **no** `/config/secrets.yaml` de HA) deben existir `api_encryption_key`, `wifi_ssid` y `wifi_password` (2,4 GHz). Plantilla: [`esphome/secrets.yaml.example`](../infrastructure/voice/wake-word/esphome/secrets.yaml.example). **No** generar una clave API nueva.
+3. **INSTALL** → Wirelessly.
+   - Si los logs solo dicen `RequiresEncryptionAPIError` y luego `Successfully connected` en bucle **sin** compile: cancela, mete la clave, **Clean Build Files**, vuelve a Install. Sin la clave el Dashboard no sube el firmware (puede quedarse así ~1 h).
 4. HA → Dispositivos → Satellite1 → Configuración:
    - Pipeline de voz (Groq + Piper)
    - Wake word: **Mariano**
    - Sensitivity: **Slightly sensitive**
 
+**Estado (2026-09-10):** OTA con overlay Mariano **aplicado** (ESPHome Device Builder 2026.8.2). El aviso `Bootloader too old for OTA rollback` **no invalida** ese flash: el firmware nuevo está en el dispositivo; el bootloader de fábrica no sabe volver atrás si un OTA futuro se corrompe. Actualizar el bootloader es un flash **por cable USB-C del Satellite1** (no basta un pendrive con archivos). Kit + pasos: [`esphome/USB_BOOTLOADER.md`](../infrastructure/voice/wake-word/esphome/USB_BOOTLOADER.md). Empaquetar: `USB_VOLUME=/Volumes/MIGUEL ./infrastructure/voice/wake-word/pack_satellite1_usb.sh`.
+
 ### Calibrar `probability_cutoff`
 
-| Síntoma | Ajuste |
-|---------|--------|
-| Falsos positivos con TV | Subir cutoff (85% → 92%) |
-| No detecta tu voz | Bajar cutoff (85% → 75%) |
+Tras el OTA del overlay, el select de HA **sí calibra Mariano** (Slightly/Moderately/Very). Default YAML: Moderately (92%):
 
-Cambiar en YAML → recompilar → flash OTA.
+| Select HA | Cutoff Mariano | Cuándo |
+|-----------|----------------|--------|
+| Slightly sensitive | 98% / 250 | TV on (automatización) |
+| Moderately sensitive | 92% / 235 | Casa, tele apagada 5 min |
+| Very sensitive | 85% / 217 | Si no despierta a 3 m |
 
-## 4. Automatizaciones TV (HA)
+El YAML de Take Control deja Moderately (92%) como default. Falsos positivos con TV: Slightly + guardia TV (abajo), no subir el YAML a 98% a ciegas.
+
+Cambiar el lambda → recompilar → flash OTA. No cambiar varios parámetros a la vez.
+
+### Diagnóstico por etapa
+
+```mermaid
+flowchart TD
+  A[No responde] --> B{Wake detectado?}
+  B -->|No| W[Cutoff / mute / Mariano vs Okay Nabu]
+  B -->|Si| C{WAV en share/assist_pipeline OK?}
+  C -->|No| D[ESPHome: auto_gain / noise_suppression]
+  C -->|Si| E{Transcripcion Groq correcta?}
+  E -->|No| F[Prompt Groq / idioma es]
+  E -->|Si| G{Accion correcta?}
+  G -->|No| H[NLU: alias / areas / custom_sentences]
+  G -->|Si| I{Respuesta TTS audible?}
+  I -->|No| J[Piper / radio compitiendo]
+```
+
+## 4. Automatizaciones HA
+
+Una sola: `satellite1_tv_wake_word_sensitivity` en [`automations.yaml`](../home-assistant/includes/automations.yaml). Baja Mariano a Slightly si `media_player.tv_ga_2` o `media_player.bravia_kd_43xf8596` están `on`/`playing`; restaura Moderately cuando ambas llevan 5 min paradas (`idle`/`paused`/`off`/`standby`). Tras un arranque de HA espera 30 s y sincroniza. No mutea.
+
+El mute del Satellite1 (`switch.satellite1_c7ffe4_mute_microphones`) solo cambia a mano (HA o Action largo). Sin botones, Speaker ID ni hábitos.
+
+NLU luces: [`custom_sentences/es/luces.yaml`](../home-assistant/custom_sentences/es/luces.yaml) pina `light.yeelink_mono6_6409_light`. Escena `scene.lampara_apagada` se llama **Salón off** y no se expone.
+
+Despliegue de YAML HA (incluye la guardia TV). El script hace `ha core check` y **`ha core restart`** (`ha core reload` no existe en HAOS; sin restart la automatización no carga):
 
 ```bash
 HA_HOST=192.168.1.110 ./infrastructure/voice/wake-word/deploy_ha_voice_config.sh
+./infrastructure/voice/wake-word/configure_ha_voice_nlu.sh --apply
 ```
 
-Automatizaciones en [`automations.yaml`](../home-assistant/includes/automations.yaml):
+Copia sin reiniciar: `HA_SKIP_RESTART=1`. Entonces recargar a mano: Herramientas de desarrollo → YAML → Automatizaciones.
 
-- `satellite1_mute_tv_playing` — mute al reproducir TV
-- `satellite1_unmute_tv_stopped` — unmute tras 5 min parada
+Smoke (tras el deploy + restart, comprobar que la automatización aparece en HA):
 
-Verificar entity_ids de media_player en HA si difieren de:
-
-- `media_player.sony_bravia_4k`
-- `media_player.google_tv_streamer`
+1. Encender Streamer o Bravia → `select.satellite1_c7ffe4_wake_word_sensitivity` = Slightly sensitive
+2. Apagar ambas y esperar 5 min → Moderately sensitive
+3. Confirmar que `switch.satellite1_c7ffe4_mute_microphones` no cambia
 
 ## 5. Diagnosticar STT ("no me entiende")
 
-`assist_pipeline.debug_recording_dir` activo en [`configuration.yaml`](../home-assistant/configuration.yaml).
+STT en producción: Groq **`whisper-large-v3`** (no turbo, no add-on Whisper).
+`assist_pipeline.debug_recording_dir` activo. WAV: 24 h / últimos 30 archivos.
+Última transcripción: `input_text.last_stt_text` (tras OTA del overlay `on_stt_end`).
+Logger temporal: `assist_pipeline` + `conversation` en `info` (`configuration.haos.yaml`).
 
 1. Reproducir un fallo
-2. Escuchar WAV en `/share/assist_pipeline`
+2. Leer `input_text.last_stt_text` y el WAV en `/share/assist_pipeline`
 3. Clasificar:
-   - Audio malo → subir `auto_gain` / `noise_suppression_level` en ESPHome
-   - Transcripción mala → revisar idioma es en pipeline Groq
-   - Transcripción OK, acción mala → alias/entidades ([`voice_assist.yaml`](../home-assistant/includes/voice_assist.yaml))
+   - Audio malo → `auto_gain` / `noise_suppression_level` en ESPHome (overlay; requiere OTA)
+   - Transcripción mala → prompt Groq / idioma es. No cambiar a turbo ni reactivar Whisper local
+   - Transcripción OK, acción mala → `luces.yaml` / aliases / escena expuesta ([`voice_assist.yaml`](../home-assistant/includes/voice_assist.yaml))
+   - Frase cortada → VAD debe ser `relaxed` (no `aggressive`)
 
-**Desactivar debug** tras 2–3 días (comentar bloque `assist_pipeline`).
+**Bajar logger a warning** cuando STT/NLU esté estable. El debug WAV puede quedarse: el purge recorta a 24 h / 30 files.
 
 ## Quick wins (sin reentrenar)
 
-- `select.satellite1_c7ffe4_wake_word_sensitivity` → Slightly sensitive
-- Automatizaciones TV (ya en repo)
-- Exponer entidades con alias español en HA UI
+- `select.satellite1_c7ffe4_deteccion_de_fin_de_habla` → **relaxed**
+- `select.satellite1_c7ffe4_wake_word_sensitivity` → Slightly con TV on (automatización `satellite1_tv_wake_word_sensitivity`; OTA del lambda Mariano ya aplicado)
+- Desplegar YAML + frases: `HA_HOST=192.168.1.110 ./infrastructure/voice/wake-word/deploy_ha_voice_config.sh`
+- Área/aliases/exponer: `./infrastructure/voice/wake-word/configure_ha_voice_nlu.sh --apply`
+- Overlay OTA: DSP `noise_suppression_level 2`, `auto_gain 12 dBFS`, lambda `id(mariano)`
+- Prompt Groq con vocabulario doméstico: tele, televisión, tv, radio, lámpara
+- **No** reactivar add-on Whisper; **no** Gemini como agente primario
 
 ## Referencias
 

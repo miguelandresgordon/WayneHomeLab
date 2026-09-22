@@ -1,11 +1,3 @@
-modo_noche:
-  name: Modo noche
-  icon: mdi:weather-night
-
-modo_cine:
-  name: Modo cine
-  icon: mdi:movie-open
-
-casa_ausente:
-  name: Casa ausente
-  icon: mdi:home-export-outline
+# Helpers de rutina (modo noche / cine / ausencia): vacíos a propósito.
+# Se añadirán cuando el pipeline de voz esté estable y se diseñen hábitos reales.
+{}

@@ -7,8 +7,7 @@ Guía operativa para enrolar perfiles de voz (tipo Alexa) e identificar quién h
 ```
 Satellite1 → HA Assist Pipeline
   → debug WAV en /share/assist_pipeline/<run_id>/
-  → folder_watcher (created) → automatización speaker_id_on_command
-  → add-on speaker-id-mariano (POST /identify)
+  → (opcional) folder_watcher → add-on speaker-id-mariano (POST /identify)
   → input_text.current_speaker + evento speaker_identified
 ```
 
@@ -86,17 +85,17 @@ En HA:
 ## 6. Desplegar config de Home Assistant
 
 ```bash
-HA_HOST=192.168.1.110 ./infrastructure/voice/wake-word/deploy_ha_voice_config.sh
+HA_HOST=192.168.1.110 ./infrastructure/voice/speaker-id/deploy_speaker_id_ha_config.sh
 ```
 
-O copia manualmente `home-assistant/` a `/config/` en HAOS.
+Copia `configuration.haos.yaml` → `/config/configuration.yaml` y `includes/*.yaml` → `/config/includes/` (no plano). `secrets.yaml` no se toca.
 
 Componentes clave ya en el repo:
 - `assist_pipeline.debug_recording_dir: /share/assist_pipeline` (activo)
 - `allowlist_external_dirs` para `/share/assist_pipeline` y `/share/speaker-id`
 - Folder Watcher (configurar via UI, ver sección anterior)
 - `input_text.current_speaker`
-- Automatizaciones `speaker_id_on_command` y `speaker_id_purge_wavs`
+- **Speaker ID no corre solo** (la única automatización en `includes/automations.yaml` es la guardia TV de Mariano). Invocar el add-on a mano o más adelante.
 
 ### Folder Watcher (si no arranca por YAML)
 
@@ -115,7 +114,7 @@ Configura via UI:
 
 ## 8. Usar identidad en automatizaciones
 
-Ejemplo — notificación solo al hablante identificado:
+**Speaker ID no está en YAML desplegado.** La única automatización viva es la guardia TV de Mariano; estos YAML de identidad son ejemplos para más adelante.
 
 ```yaml
 trigger:

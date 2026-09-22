@@ -1,2 +1,2 @@
 speaker_id_purge_old_wavs: >-
-  find /share/assist_pipeline -type f -name '*.wav' -mmin +15 -delete 2>/dev/null || true
+  bash -c 'set +e; root=/share/assist_pipeline; find "$root" -type f -name "*.wav" -mmin +1440 -delete; mapfile -t wavs < <(find "$root" -type f -name "*.wav" -printf "%T@\t%p\n" | sort -nr | cut -f2-); n=${#wavs[@]}; if (( n > 30 )); then rm -f -- "${wavs[@]:30}"; fi; true'

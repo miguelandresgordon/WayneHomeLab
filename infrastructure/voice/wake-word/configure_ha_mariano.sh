@@ -13,7 +13,7 @@ cat <<EOF
 
 1. Pipeline de voz (Configuración → Asistentes de voz):
    - Idioma: Español
-   - STT: openai_whisper_cloud (whisper-large-v3-turbo)
+   - STT: openai_whisper_cloud (whisper-large-v3)
    - TTS: Wyoming Piper (core-piper:10200)
    - Conversation: Home Assistant
 

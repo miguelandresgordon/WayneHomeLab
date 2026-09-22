@@ -7,3 +7,12 @@ identify_speaker:
 reload_speaker_profiles:
   url: "http://127.0.0.1:10400/reload"
   method: POST
+
+# Búsqueda de emisoras en el directorio público Radio Browser (radio-browser.info).
+# Usado por script.poner_radio_browser (voz: custom_sentences/es/radio.yaml).
+radio_browser_search:
+  url: "https://all.api.radio-browser.info/json/stations/search?{{ query }}"
+  method: GET
+  headers:
+    User-Agent: "HomeAssistant-WayneLab/1.0"
+    Accept: "application/json"

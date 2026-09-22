@@ -1,0 +1,62 @@
+# Frases Assist (ES) — Cambiar entrada/fuente de la tele.
+# Solo la Sony Bravia real (media_player.bravia_kd_43xf8596, integración
+# braviatv) soporta select_source; el Google Streamer (tv_ga_2) NO tiene
+# entradas HDMI propias (es él quien está enchufado a la tele).
+# Destino HAOS: /config/custom_sentences/es/tv_entradas.yaml
+language: "es"
+
+intents:
+  CambiaEntradaTele:
+    data:
+      - sentences:
+          - "pon [el] {entrada_tv} en [la] (tele|televisión|television|tv)"
+          - "pon [el] {entrada_tv} [de] [la] (tele|televisión|television|tv)"
+          - "cambia [a] [el] {entrada_tv} en [la] (tele|televisión|television|tv)"
+          - "cambia [la] (tele|televisión|television|tv) a [el] {entrada_tv}"
+          - "pon [la] (tele|televisión|television|tv) en [el] {entrada_tv}"
+          - "selecciona [el] {entrada_tv} en [la] (tele|televisión|television|tv)"
+          - "pon {entrada_tv}"
+
+lists:
+  entrada_tv:
+    values:
+      - in: "hdmi 1"
+        out: "HDMI 1"
+      - in: "hdmi uno"
+        out: "HDMI 1"
+      - in: "hdmi 2"
+        out: "HDMI 2"
+      - in: "hdmi dos"
+        out: "HDMI 2"
+      - in: "hdmi 3"
+        out: "HDMI 3/ARC"
+      - in: "hdmi tres"
+        out: "HDMI 3/ARC"
+      - in: "hdmi arc"
+        out: "HDMI 3/ARC"
+      - in: "hdmi 4"
+        out: "HDMI 4"
+      - in: "hdmi cuatro"
+        out: "HDMI 4"
+      - in: "play"
+        out: "PlayStation 5"
+      - in: "playstation"
+        out: "PlayStation 5"
+      - in: "play station"
+        out: "PlayStation 5"
+      - in: "ps5"
+        out: "PlayStation 5"
+      - in: "play station 5"
+        out: "PlayStation 5"
+      - in: "playstation 5"
+        out: "PlayStation 5"
+      - in: "streamer"
+        out: "TV GA"
+      - in: "chromecast"
+        out: "TV GA"
+      - in: "google streamer"
+        out: "TV GA"
+      - in: "google tv"
+        out: "TV GA"
+      - in: "tv ga"
+        out: "TV GA"

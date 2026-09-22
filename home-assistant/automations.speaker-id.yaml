@@ -1,3 +1,3 @@
 # DEPRECATED — extracto histórico de Speaker ID.
-# El canónico `includes/automations.yaml` está vacío; recrear por UI si hace falta.
+# El canónico `includes/automations.yaml` no incluye Speaker ID; recrear por UI si hace falta.
 []

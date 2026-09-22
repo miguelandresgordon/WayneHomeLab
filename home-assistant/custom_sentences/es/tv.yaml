@@ -1,5 +1,8 @@
-# Frases Assist (ES) — TV del salón = Google Streamer (TV GA).
-# Entidad: media_player.tv_ga_2 (androidtv_remote). No usar la Sony Bravia ni Cast.
+# Frases Assist (ES) — TV del salón = Google Streamer (TV GA) para
+# encender/apagar/volumen/pausa. Entidad: media_player.tv_ga_2 (androidtv_remote).
+# Para cambiar de entrada (HDMI/PlayStation/Streamer) ver tv_entradas.yaml,
+# que sí usa la Sony Bravia real (media_player.bravia_kd_43xf8596, braviatv),
+# porque es la única entidad con select_source.
 # Destino HAOS: /config/custom_sentences/es/tv.yaml
 language: "es"
 
