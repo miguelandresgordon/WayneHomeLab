@@ -8,4 +8,4 @@ def test_alembic_head_is_latest() -> None:
     config = Config("alembic.ini")
     script = ScriptDirectory.from_config(config)
     heads = script.get_heads()
-    assert heads == ["0003_profiles_resumes_answers"]
+    assert heads == ["0004_form_sessions"]

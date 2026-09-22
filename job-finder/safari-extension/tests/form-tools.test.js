@@ -10,6 +10,7 @@ global.Event = class Event {
 
 const {
   buildFieldDescriptor,
+  fillByLocalId,
   fillField,
   inventoryFields,
   neverFillReason,
@@ -246,4 +247,23 @@ test("same-origin iframes are scanned and cross-origin iframes are counted as bl
   assert.equal(inventory.fields.length, 1);
   assert.equal(inventory.fields[0].signals.name, "frame_input");
   assert.equal(inventory.blocked_frames, 1);
+});
+
+test("fillByLocalId uses the last inventory handles and still refuses never-fill fields", () => {
+  const name = fakeField({name: "full_name", autocomplete: "name"});
+  const csrf = fakeField({name: "csrf_token", type: "hidden"});
+  inventoryFields(fakeRoot([name, csrf]));
+
+  assert.deepEqual(fillByLocalId("field-0", "Ana"), {ok: true, reason: null});
+  assert.equal(name.value, "Ana");
+  assert.deepEqual(fillByLocalId("missing", "x"), {ok: false, reason: "unknown_field"});
+});
+
+test("fillByLocalId refuses radio groups even if asked to fill", () => {
+  const remote = fakeRadio("work_mode", "remote", "Remoto", "Modalidad");
+  const hybrid = fakeRadio("work_mode", "hybrid", "Híbrido", "Modalidad");
+  const inventory = inventoryFields(fakeRoot([remote, hybrid]));
+
+  const result = fillByLocalId(inventory.fields[0].local_id, "remote");
+  assert.deepEqual(result, {ok: false, reason: "manual_choice_review"});
 });

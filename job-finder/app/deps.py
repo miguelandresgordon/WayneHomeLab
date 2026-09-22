@@ -9,7 +9,7 @@ from fastapi import Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from app.models import AuthSession, User
+from app.models import AuthSession, ExtensionDevice, User
 from app.security.tokens import hash_token
 
 SESSION_COOKIE = "jf_session"
@@ -30,7 +30,36 @@ def get_db(request: Request) -> Generator[Session, None, None]:
         db.close()
 
 
+def _user_from_bearer(request: Request, db: Session) -> User | None:
+    header = request.headers.get("authorization") or ""
+    if not header.lower().startswith("bearer "):
+        return None
+    raw = header.split(" ", 1)[1].strip()
+    if not raw:
+        return None
+    now = datetime.now(timezone.utc)
+    device = db.scalar(
+        select(ExtensionDevice)
+        .options(selectinload(ExtensionDevice.user))
+        .where(
+            ExtensionDevice.token_hash == hash_token(raw),
+            ExtensionDevice.revoked_at.is_(None),
+            ExtensionDevice.expires_at > now,
+        )
+    )
+    if device is None:
+        return None
+    user = device.user
+    if not user.is_active:
+        return None
+    request.state.auth_via = "bearer"
+    return user
+
+
 def get_optional_user(request: Request, db: Session = Depends(get_db)) -> User | None:
+    header = request.headers.get("authorization") or ""
+    if header.lower().startswith("bearer "):
+        return _user_from_bearer(request, db)
     raw = request.cookies.get(SESSION_COOKIE)
     if not raw:
         return None
@@ -49,6 +78,7 @@ def get_optional_user(request: Request, db: Session = Depends(get_db)) -> User |
     user = auth_session.user
     if not user.is_active:
         return None
+    request.state.auth_via = "cookie"
     return user
 
 
@@ -58,7 +88,17 @@ def require_user(user: User | None = Depends(get_optional_user)) -> User:
     return user
 
 
+def require_cookie_user(request: Request, user: User = Depends(require_user)) -> User:
+    header = request.headers.get("authorization") or ""
+    if header.lower().startswith("bearer "):
+        raise HTTPException(status_code=403, detail="web session required")
+    return user
+
+
 def require_csrf(request: Request) -> None:
+    header = request.headers.get("authorization") or ""
+    if header.lower().startswith("bearer "):
+        return
     cookie = request.cookies.get(CSRF_COOKIE)
     if not cookie:
         raise HTTPException(status_code=403, detail="csrf missing")

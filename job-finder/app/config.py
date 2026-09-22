@@ -34,6 +34,11 @@ class Settings(BaseSettings):
     job_finder_resumes_dir: str = "./data/resumes"
     job_finder_resume_max_bytes: int = 5_242_880  # 5 MiB
 
+    job_finder_extension_token_days: int = 14
+    job_finder_form_session_hours: int = 24
+    job_finder_analyze_rate_limit: int = 60
+    job_finder_analyze_rate_window_seconds: int = 60
+
     job_finder_user_a_email: str | None = None
     job_finder_user_a_password: str | None = None
     job_finder_user_b_email: str | None = None

@@ -1,12 +1,15 @@
 # Job Finder
 
-Asistente doméstico de empleo (dos usuarios). Este runbook cubre hasta la **fase 3** (esqueleto + autenticación + perfiles/CV/respuestas reutilizables). No hay despliegue en `waynelab-core` todavía.
+Asistente doméstico de empleo (dos usuarios). Este runbook cubre hasta la **fase 7** (auth, perfil/CV, inventario Safari, API `analyze`/`fill-result` y sesiones multipágina). La **fase 8** (prueba real LinkedIn → ATS) es un gate manual. No hay despliegue en `waynelab-core`.
+
+**Repo:** se queda en WayneHomeLab hasta el go/no-go de F8 en un ATS real, o hasta F14 (GHCR + host). Extraer ahora no desacopla Caddy/Pi-hole/HA.
 
 ## Alcance actual
 
 - FastAPI + Jinja2 (login real, dos usuarios)
 - Contraseñas Argon2id; cookies `jf_session` (HttpOnly) y `jf_csrf`
 - CSRF en formularios HTML y cabecera `X-CSRF-Token` en la API (multipart: campo `csrf_token`)
+- Tokens de extensión (`Authorization: Bearer`); CSRF no aplica al Bearer. Un Bearer inválido no cae a la cookie.
 - SQLite con WAL + Alembic
 - Health: `GET /api/v1/health`
 - Docker Compose local, límites 256 MiB / 0,5 CPU, usuario no root, filesystem de solo lectura
@@ -17,11 +20,19 @@ Asistente doméstico de empleo (dos usuarios). Este runbook cubre hasta la **fas
   - `POST /api/v1/resumes` (multipart, solo PDF, máx. 5 MiB por defecto) / `GET /api/v1/resumes` / `DELETE /api/v1/resumes/{id}` / `POST /api/v1/resumes/{id}/default` / `GET /api/v1/resumes/{id}/file` (descarga con `Cache-Control: no-store`)
   - `GET/POST/PUT/DELETE /api/v1/reusable-answers` — respuestas guardadas explícitamente por el usuario (nunca autogeneradas)
   - CV almacenados en `JOB_FINDER_RESUMES_DIR` (`/data/resumes` en el contenedor) con nombre opaco (`uuid4().pdf`); solo se valida la cabecera `%PDF-` y el tamaño, nunca se confía en el `Content-Type` del cliente
+- **Fases 6–7** — autorrelleno asistido:
+  - `GET/POST/DELETE /api/v1/auth/extension-tokens` — solo sesión web; el valor crudo se muestra una vez
+  - `POST /api/v1/form-sessions` — reutiliza `(user, origin, tab_key)` mientras la sesión está abierta; un origen distinto crea otra sesión
+  - `POST /api/v1/form-sessions/{id}/analyze` — inventario `schema_version: 1` → correspondencias deterministas (never-fill gana en el servidor)
+  - `POST /api/v1/form-sessions/{id}/fill-result` — qué se aplicó / falló (sin valores de password)
+  - `POST /api/v1/form-sessions/{id}/complete` — marca la candidatura en Job Finder, **no** envía el formulario del ATS
+  - Campos ya rellenados (`fill_status=applied`) salen como `skip` en la siguiente página de la misma sesión
 
 ## Interfaz web
 
-Tras iniciar sesión, `/` ofrece una interfaz Jinja2 + JavaScript ligero para las funciones de la fase 3:
+Tras iniciar sesión, `/` ofrece una interfaz Jinja2 + JavaScript ligero:
 
+- tokens de la extensión Safari (crear / revocar);
 - editar el perfil personal;
 - crear, editar, eliminar y marcar como predeterminados los perfiles de búsqueda;
 - configurar puestos, ubicaciones, modalidad, jornada, nivel y salario mínimo;
@@ -30,44 +41,46 @@ Tras iniciar sesión, `/` ofrece una interfaz Jinja2 + JavaScript ligero para la
 
 La interfaz consume la API `/api/v1`, envía el token CSRF en cada mutación y no interpreta los datos del usuario como HTML.
 
-## Safari Web Extension (fase 4, spike)
+## Safari Web Extension (fases 4–7)
 
-El spike portable está en `job-finder/safari-extension/`:
+El código portable está en `job-finder/safari-extension/`:
 
 - Manifest V3 con `activeTab`, sin acceso permanente a todas las webs;
-- popup para inventariar campos visibles de la pestaña activa;
+- popup: token Bearer, analizar, revisar correspondencias, rellenar solo aprobados, marcar candidatura;
 - exclusión de passwords, hidden, CSRF/tokens, botones y consentimientos;
-- los descriptores no contienen HTML ni valores actuales;
-- relleno básico de texto/select con eventos DOM;
+- los descriptores no contienen HTML ni valores actuales del ATS;
+- relleno de texto/select con eventos DOM; radios, legales y `input[type=file]` no se rellenan solos;
+- MutationObserver con debounce: si el DOM SPA cambia, el siguiente análisis regenera los handles;
 - proyecto Xcode generado para macOS e iOS;
-- fixture sintética y tests Node sin dependencias;
-- **validado manualmente en Safari** (popup, permisos de sitio, DOM y el aviso de capacidades `File`/`DataTransfer`).
+- fixtures sintéticas (`application-form.html`, `advanced-form.html`, `bizneo-like-form.html`) y tests Node.
 
-La asignación automática de PDF a `input[type=file]` sigue siendo un **gate manual**:
-detectar `File`/`DataTransfer` no garantiza que el portal acepte el archivo. El procedimiento
-y el fallback están documentados en `job-finder/safari-extension/README.md`.
+La asignación automática de PDF a `input[type=file]` sigue siendo un **gate manual**.
+El procedimiento y el fallback están en `job-finder/safari-extension/README.md`.
 
 ## Inventario genérico (fase 5)
 
-Endurecido sobre el spike de la fase 4, en `job-finder/safari-extension/extension/form-tools.js`:
+En `job-finder/safari-extension/extension/form-tools.js`:
 
-- los radios que comparten `name` se agrupan en un único descriptor `radio-group` con
-  `options` (evita listar el mismo grupo N veces en la revisión);
-- la etiqueta usa como último recurso la `<legend>` del `<fieldset>` que envuelve el campo
-  (útil para radios y para campos sin `<label>` explícito);
-- `select multiple` se marca `multiple: true` y pasa a revisión manual (`multi_select_review`):
-  el relleno de una lista de valores llega en la fase 6, no antes;
-- se recorren los **shadow roots abiertos** (`element.shadowRoot`) de forma recursiva, para
-  cubrir componentes personalizados de los ATS;
-- se recorren los **iframes del mismo origen** (`iframe.contentDocument`); los de otro origen
-  no se pueden inspeccionar y se cuentan en `blocked_frames` (nunca se adivina su contenido);
-- el inventario devuelve `schema_version: 1` para que el backend (fase 6) pueda validar el
-  contrato sin romperse ante cambios futuros.
+- radios que comparten `name` → un descriptor `radio-group`;
+- etiqueta: `<legend>` del `<fieldset>` como último recurso;
+- `select multiple` → revisión manual;
+- shadow roots abiertos e iframes del mismo origen; cross-origin en `blocked_frames`;
+- `schema_version: 1`.
 
-Fixture ampliada para la prueba manual: `tests/fixtures/advanced-form.html` (+ `embedded-frame.html`
-para el caso de iframe del mismo origen) cubre radios agrupados, `select multiple`, fieldset/legend,
-un campo deshabilitado, un iframe y un componente con shadow DOM abierto. La fixture original
-(`application-form.html`) se mantiene para la prueba básica de la fase 4.
+## Fase 8 — go/no-go (manual)
+
+La API y la extensión ya cubren el vertical slice sintético (tests `test_form_sessions.py`). La prueba real no se puede automatizar aquí: hace falta Safari, una oferta LinkedIn y el ATS (Bizneo u otro) con tu sesión.
+
+Checklist:
+
+1. `docker compose up --build` en `job-finder/` y `curl http://127.0.0.1:8473/api/v1/health`.
+2. En la UI, rellena perfil + CV PDF + un perfil de búsqueda. Crea un token de extensión y pégalo en el popup.
+3. Sideload Xcode: esquema **Job Finder (macOS)**. Activa la extensión en Safari.
+4. Ensayo local: `python3 -m http.server 8765 --directory tests/fixtures` y abre `bizneo-like-form.html`. Analizar → revisar → rellenar aprobados. Consentimientos y Enviar intactos. En el paso 2, volver a analizar: los campos ya aplicados salen como omitidos.
+5. Oferta real: LinkedIn → Apply → portal externo. **No pulses Enviar ni marques legales.** Analizar, revisar, rellenar. Adjunta el CV a mano si el `input[type=file]` no acepta el archivo.
+6. Marcar candidatura en el popup. Anota go/no-go: fill útil / fill parcial / no-go (DOM inaccesible, iframe cross-origin, etc.).
+
+Criterio de éxito: campos de identidad/contacto/modalidad rellenados y verificables; legales, password y envío sin tocar; HTML/cookies del ATS nunca salen al backend.
 
 ## Desarrollo en el Mac
 
@@ -78,13 +91,8 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements-dev.txt
 bash tests/run_tests.sh
+cd safari-extension && npm test
 docker compose up --build
-```
-
-Para aplicar cambios en `.env` o reconstruir los assets:
-
-```bash
-docker compose up --build -d --force-recreate
 ```
 
 Comprobar:
@@ -100,6 +108,6 @@ Usuarios locales por defecto (cámbialos en `.env`): `user-a@local.test` y `user
 
 - Instalar Docker en el host Proxmox
 - Cambiar Caddy o Pi-hole
-- Gmail, integración backend de la extensión, autorrelleno completo, formularios multipágina, scoring y seguimiento
+- Gmail, scoring, ingestión de ofertas, digest HA, HTTPS `jobs.waynehomelab.com`
 
-El HTTPS `jobs.waynehomelab.com` (VPN, mismo patrón que HA) se añade en la fase de despliegue, con `verify_wireguard.sh` / `verify_pihole.sh` en verde.
+El HTTPS VPN se añade en F14, con `verify_wireguard.sh` / `verify_pihole.sh` en verde.

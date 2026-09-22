@@ -13,6 +13,26 @@
 
 <p id="page-message" class="status-message" role="status" aria-live="polite"></p>
 
+<section class="panel" aria-labelledby="extension-title">
+  <h2 id="extension-title">Extensión Safari</h2>
+  <p class="hint">
+    Genera un token de API, pégalo en el popup de la extensión y revócalo cuando deje de usarse.
+    El valor completo solo se muestra una vez.
+  </p>
+  <div id="extension-token-list" class="card-list"></div>
+  <p id="extension-token-empty" class="empty-state">Todavía no hay tokens de extensión.</p>
+  <p id="extension-token-once" class="status-message" hidden></p>
+  <form id="extension-token-form" class="form-grid">
+    <label class="field" for="extension-token-name">
+      Nombre
+      <input id="extension-token-name" name="name" maxlength="80" value="Safari" required>
+    </label>
+    <div class="field-wide form-actions">
+      <button type="submit">Crear token</button>
+    </div>
+  </form>
+</section>
+
 <section class="panel" aria-labelledby="profile-title">
   <h2 id="profile-title">Perfil personal</h2>
   <p class="hint">Datos de contacto que se utilizarán más adelante para preparar formularios.</p>
@@ -200,5 +220,5 @@
   </form>
 </section>
 
-<script src="/static/dashboard.js?v=3" defer></script>
+<script src="/static/dashboard.js?v=4" defer></script>
 {% endblock %}

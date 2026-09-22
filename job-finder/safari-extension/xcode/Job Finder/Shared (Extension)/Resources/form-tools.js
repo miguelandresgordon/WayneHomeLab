@@ -135,7 +135,7 @@
     };
   }
 
-  function buildDescriptors(fields) {
+  function buildIndexedDescriptors(fields) {
     const radioGroups = new Map();
     const singles = [];
     for (const field of fields) {
@@ -150,16 +150,29 @@
       }
     }
     const descriptors = [];
+    const handles = new Map();
     let index = 0;
     for (const field of singles) {
-      descriptors.push(buildFieldDescriptor(field, index));
+      const descriptor = buildFieldDescriptor(field, index);
+      if (!descriptor.review_reason?.startsWith("blocked_type:")) {
+        descriptors.push(descriptor);
+        handles.set(descriptor.local_id, {kind: "single", nodes: [field]});
+      }
       index += 1;
     }
     for (const group of radioGroups.values()) {
-      descriptors.push(buildRadioGroupDescriptor(group, index));
+      const descriptor = buildRadioGroupDescriptor(group, index);
+      descriptors.push(descriptor);
+      handles.set(descriptor.local_id, {kind: "radio-group", nodes: group});
       index += 1;
     }
-    return descriptors.filter((field) => !field.review_reason?.startsWith("blocked_type:"));
+    return {descriptors, handles};
+  }
+
+  let lastHandles = new Map();
+
+  function invalidateHandles() {
+    lastHandles = new Map();
   }
 
   function queryAll(root, selector) {
@@ -218,8 +231,10 @@
     const {roots, blockedFrames} = collectScanRoots(root);
     const rawFields = roots.flatMap((scanRoot) => queryAll(scanRoot, "input, select, textarea"));
     const visibleFields = rawFields.filter(isVisible);
+    const indexed = buildIndexedDescriptors(visibleFields);
+    lastHandles = indexed.handles;
     return {
-      fields: buildDescriptors(visibleFields),
+      fields: indexed.descriptors,
       blocked_frames: blockedFrames,
     };
   }
@@ -252,11 +267,24 @@
     return {ok: field.value === expectedValue, reason: null};
   }
 
+  function fillByLocalId(localId, value) {
+    const handle = lastHandles.get(localId);
+    if (!handle) {
+      return {ok: false, reason: "unknown_field"};
+    }
+    if (handle.kind !== "single") {
+      return {ok: false, reason: "manual_choice_review"};
+    }
+    return fillField(handle.nodes[0], value);
+  }
+
   const api = {
     buildFieldDescriptor,
     buildRadioGroupDescriptor,
     fieldSignals,
+    fillByLocalId,
     fillField,
+    invalidateHandles,
     inventoryFields,
     neverFillReason,
     normalizedType,

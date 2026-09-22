@@ -1,9 +1,8 @@
 # Job Finder
 
 Aplicación doméstica de búsqueda de empleo y autorrelleno asistido (Safari).  
-Fase 3: autenticación de dos usuarios (Argon2id, cookies, CSRF) + perfil, perfiles de búsqueda,
-preferencias, CV (PDF) y respuestas reutilizables, todo aislado por usuario. Sin despliegue en el
-host Proxmox.
+Fases 1–7 locales: auth de dos usuarios, perfil/CV, tokens de extensión, API `analyze`/`fill-result`
+y Safari Web Extension con popup de revisión. Sin despliegue en el host Proxmox.
 
 Runbook: [docs/job-finder.md](../docs/job-finder.md)
 
@@ -23,6 +22,7 @@ docker compose up --build
 
 La portada autenticada permite:
 
+- crear y gestionar tokens de la extensión Safari;
 - editar el perfil personal;
 - crear y gestionar perfiles de búsqueda y preferencias;
 - subir, descargar y seleccionar el CV predeterminado;

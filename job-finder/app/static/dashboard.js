@@ -474,3 +474,77 @@ cancelAnswer?.addEventListener("click", resetAnswerForm);
 loadAnswers().catch((error) => {
   showMessage(`No se pudieron cargar las respuestas: ${error.message}`, true);
 });
+
+const extensionTokenForm = document.querySelector("#extension-token-form");
+const extensionTokenList = document.querySelector("#extension-token-list");
+const extensionTokenEmpty = document.querySelector("#extension-token-empty");
+const extensionTokenOnce = document.querySelector("#extension-token-once");
+
+function renderExtensionToken(token) {
+  const card = document.createElement("article");
+  card.className = "resource-card";
+  const titleRow = document.createElement("div");
+  titleRow.className = "resource-title";
+  const title = document.createElement("h3");
+  title.textContent = token.name;
+  titleRow.append(title);
+  if (token.revoked_at) {
+    const badge = document.createElement("span");
+    badge.className = "badge badge-neutral";
+    badge.textContent = "Revocado";
+    titleRow.append(badge);
+  }
+  const details = document.createElement("p");
+  details.className = "resource-details";
+  details.textContent = `Caduca ${token.expires_at}`;
+  const actions = document.createElement("div");
+  actions.className = "resource-actions";
+  if (!token.revoked_at) {
+    const revokeButton = document.createElement("button");
+    revokeButton.type = "button";
+    revokeButton.className = "button-danger";
+    revokeButton.textContent = "Revocar";
+    revokeButton.addEventListener("click", async () => {
+      try {
+        await apiRequest(`/api/v1/auth/extension-tokens/${token.id}`, {method: "DELETE"});
+        await loadExtensionTokens();
+        showMessage("Token de extensión revocado.");
+      } catch (error) {
+        showMessage(`No se pudo revocar el token: ${error.message}`, true);
+      }
+    });
+    actions.append(revokeButton);
+  }
+  card.append(titleRow, details, actions);
+  return card;
+}
+
+async function loadExtensionTokens() {
+  const payload = await apiRequest("/api/v1/auth/extension-tokens");
+  const tokens = payload.tokens ?? [];
+  extensionTokenList.replaceChildren(...tokens.map(renderExtensionToken));
+  extensionTokenEmpty.hidden = tokens.length > 0;
+}
+
+extensionTokenForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const formData = new FormData(event.currentTarget);
+  try {
+    const created = await apiRequest("/api/v1/auth/extension-tokens", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({name: formData.get("name")?.toString().trim() || "Safari"}),
+    });
+    extensionTokenOnce.hidden = false;
+    extensionTokenOnce.textContent =
+      `Cópialo ahora; no se volverá a mostrar: ${created.token}`;
+    await loadExtensionTokens();
+    showMessage("Token de extensión creado.");
+  } catch (error) {
+    showMessage(`No se pudo crear el token: ${error.message}`, true);
+  }
+});
+
+loadExtensionTokens().catch((error) => {
+  showMessage(`No se pudieron cargar los tokens: ${error.message}`, true);
+});

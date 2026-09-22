@@ -11,6 +11,9 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base
 
 if TYPE_CHECKING:
+    from app.models.application import Application
+    from app.models.extension_device import ExtensionDevice
+    from app.models.form_session import FormSession
     from app.models.profile import UserProfile
     from app.models.resume import Resume
     from app.models.reusable_answer import ReusableAnswer
@@ -49,6 +52,18 @@ class User(Base):
         cascade="all, delete-orphan",
     )
     reusable_answers: Mapped[list["ReusableAnswer"]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+    extension_devices: Mapped[list["ExtensionDevice"]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+    form_sessions: Mapped[list["FormSession"]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+    applications: Mapped[list["Application"]] = relationship(
         back_populates="user",
         cascade="all, delete-orphan",
     )

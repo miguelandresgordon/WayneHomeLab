@@ -57,9 +57,8 @@ def test_html_login_and_home(client) -> None:
     assert 'id="search-profile-list"' in home.text
     assert 'id="resume-form"' in home.text
     assert 'id="resume-list"' in home.text
-    assert 'id="answer-form"' in home.text
-    assert 'id="answer-list"' in home.text
-    assert 'src="/static/dashboard.js?v=3"' in home.text
+    assert 'id="extension-token-form"' in home.text
+    assert 'src="/static/dashboard.js?v=4"' in home.text
 
 
 def test_html_login_rejects_bad_csrf(client) -> None:

@@ -8,12 +8,23 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.bootstrap import bootstrap_users
 from app.config import Settings, get_settings
 from app.db import create_engine_from_settings, session_factory, sqlite_file_path
-from app.routers import auth, health, pages, profile, resumes, reusable_answers, search_profiles, users
+from app.routers import (
+    auth,
+    form_sessions,
+    health,
+    pages,
+    profile,
+    resumes,
+    reusable_answers,
+    search_profiles,
+    users,
+)
 from app.security.rate_limit import LoginLimiter
 from app.services.resumes import ensure_resumes_root, register_resume_session_hooks
 
@@ -61,6 +72,22 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         max_attempts=settings.job_finder_login_rate_limit,
         window_seconds=settings.job_finder_login_rate_window_seconds,
     )
+    app.state.analyze_limiter = LoginLimiter(
+        max_attempts=settings.job_finder_analyze_rate_limit,
+        window_seconds=settings.job_finder_analyze_rate_window_seconds,
+    )
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origin_regex=(
+            r"^https?://(127\.0\.0\.1|localhost)(:\d+)?$"
+            r"|^safari-web-extension://.*$"
+            r"|^chrome-extension://.*$"
+        ),
+        allow_credentials=False,
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type", "X-CSRF-Token", "Idempotency-Key"],
+    )
 
     static_dir = Path(__file__).resolve().parent / "static"
     app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
@@ -72,5 +99,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(search_profiles.router)
     app.include_router(resumes.router)
     app.include_router(reusable_answers.router)
+    app.include_router(form_sessions.router)
     app.include_router(pages.router)
     return app

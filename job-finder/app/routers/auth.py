@@ -13,9 +13,16 @@ from app.cookies import (
     set_csrf_cookie,
     set_session_cookie,
 )
-from app.deps import CSRF_COOKIE, SESSION_COOKIE, get_db, require_csrf
+from app.deps import CSRF_COOKIE, SESSION_COOKIE, get_db, require_cookie_user, require_csrf
+from app.models import User
 from app.security.tokens import new_csrf_token
 from app.services.auth import authenticate, create_auth_session, revoke_auth_session
+from app.services.extension_tokens import (
+    create_extension_token,
+    list_extension_tokens,
+    revoke_extension_token,
+    serialize_device,
+)
 
 router = APIRouter(tags=["auth"])
 
@@ -23,6 +30,10 @@ router = APIRouter(tags=["auth"])
 class LoginBody(BaseModel):
     email: str = Field(min_length=3, max_length=255)
     password: str = Field(min_length=1, max_length=1024)
+
+
+class ExtensionTokenBody(BaseModel):
+    name: str = Field(default="Safari", min_length=1, max_length=80)
 
 
 def _settings(request: Request) -> Settings:
@@ -81,3 +92,38 @@ def logout_json(
     response = JSONResponse({"ok": True})
     clear_session_cookie(response, settings)
     return response
+
+
+@router.get("/api/v1/auth/extension-tokens")
+def list_tokens(
+    db: Session = Depends(get_db),
+    user: User = Depends(require_cookie_user),
+) -> dict[str, object]:
+    devices = list_extension_tokens(db, user)
+    return {"tokens": [serialize_device(device) for device in devices]}
+
+
+@router.post("/api/v1/auth/extension-tokens")
+def create_token(
+    body: ExtensionTokenBody,
+    request: Request,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_cookie_user),
+    _: None = Depends(require_csrf),
+) -> JSONResponse:
+    settings = _settings(request)
+    device, raw = create_extension_token(db, user, settings, body.name)
+    return JSONResponse(serialize_device(device, include_token=raw), status_code=201)
+
+
+@router.delete("/api/v1/auth/extension-tokens/{token_id}")
+def delete_token(
+    token_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_cookie_user),
+    _: None = Depends(require_csrf),
+) -> JSONResponse:
+    device = revoke_extension_token(db, user, token_id)
+    if device is None:
+        raise HTTPException(status_code=404, detail="not found")
+    return JSONResponse(serialize_device(device))

@@ -45,7 +45,7 @@ Satellite1 (Mariano)
 | [docs/speaker-id-mariano.md](docs/speaker-id-mariano.md) | Speaker ID (Colab + add-on) |
 | [docs/reservas-dhcp-bombillas-iot.md](docs/reservas-dhcp-bombillas-iot.md) | Reservas DHCP IoT |
 | [docs/api-costs.md](docs/api-costs.md) | Costes API |
-| [docs/job-finder.md](docs/job-finder.md) | Job Finder fase 3 local + spike Safari macOS/iOS; sin despliegue |
+| [docs/job-finder.md](docs/job-finder.md) | Job Finder fases 1–7 locales + checklist F8; sin despliegue |
 
 ## Estructura del repo
 
@@ -63,7 +63,7 @@ WayneHomeLab/
 │   ├── includes/                # automations, scripts, scenes…
 │   └── addons/speaker-id-mariano/
 ├── voice-pipeline/              # Docker Whisper+Piper (para RPi 3b)
-├── job-finder/                  # FastAPI fase 3 + Safari Web Extension spike
+├── job-finder/                  # FastAPI fases 1–7 + Safari Web Extension
 └── docs/
 ```
 

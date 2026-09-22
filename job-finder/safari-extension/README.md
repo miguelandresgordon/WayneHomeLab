@@ -1,4 +1,20 @@
-# Job Finder Safari Web Extension — Spike + inventario genérico
+# Job Finder Safari Web Extension — inventario, revisión y fill
+
+Fases 4–7. No envía candidaturas, no marca consentimientos y no lee valores actuales
+del formulario. El popup habla con FastAPI mediante un token Bearer (no cookies).
+
+## Estado
+
+- WebExtension Manifest V3 portable en `extension/`
+- Proyecto Xcode macOS+iOS en `xcode/Job Finder/`
+- Inventario `schema_version: 1` sin HTML ni valores
+- Popup: guardar API + token, analizar, revisar, rellenar aprobados, marcar candidatura
+- Never-fill en cliente y servidor: password, hidden, CSRF, consentimientos, legales
+- Relleno de texto y select; radios / file / multi-select solo revisión
+- MutationObserver (debounce 400 ms) invalida handles tras cambios SPA
+- Si cambia el origen de la pestaña, el backend abre una sesión nueva (409 `origin_changed`)
+- Adjuntos PDF: detección `File`/`DataTransfer`; asignación real sigue siendo gate manual
+- Fixture ATS: `tests/fixtures/bizneo-like-form.html` (dos pasos, legales, CSRF, password)
 
 Spike de la fase 4 (validado manualmente en Safari) más el endurecimiento de la fase 5
 para inventariar y rellenar formularios. No envía candidaturas, no marca consentimientos
@@ -59,7 +75,19 @@ xcodebuild \
    ```
 
 7. Abrir `http://127.0.0.1:8765/application-form.html`.
-8. Pulsar el icono Job Finder y después **Analizar formulario**.
+8. En el popup: pega el token creado en `http://127.0.0.1:8473/`, **Guardar conexión**, **Analizar formulario**.
+9. Revisa las correspondencias, **Rellenar aprobados**, comprueba los valores en el DOM. No pulses Enviar.
+
+Resultado esperado (con perfil cargado en la API):
+
+- nombre, correo y modalidad salen como rellenables;
+- no lista password, hidden, CSRF ni botón de envío;
+- CV y consentimiento aparecen como revisión / never-fill;
+- el fill no toca legales.
+
+### Fixture Bizneo-like (fase 8, ensayo)
+
+`http://127.0.0.1:8765/bizneo-like-form.html` — dos pasos. Tras rellenar el paso 1, pulsa Continuar y vuelve a analizar: los campos ya aplicados deben omitirse.
 
 Resultado esperado:
 
