@@ -41,6 +41,7 @@ class InventoryField(BaseModel):
     type: str = Field(min_length=1, max_length=40)
     signals: dict[str, Any] = Field(default_factory=dict)
     required: bool = False
+    has_value: bool = False
     allowed_action: str | None = None
     review_reason: str | None = None
     options: list[dict[str, Any]] | None = None

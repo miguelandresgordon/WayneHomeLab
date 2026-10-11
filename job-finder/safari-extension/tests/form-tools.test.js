@@ -12,6 +12,7 @@ const {
   buildFieldDescriptor,
   fillByLocalId,
   fillField,
+  highlightPending,
   inventoryFields,
   neverFillReason,
 } = require("../extension/form-tools.js");
@@ -30,16 +31,45 @@ function fakeField(overrides = {}) {
     disabled: false,
     value: "",
     labels: [],
-    getAttribute(name) {
-      return attributes[name] ?? null;
-    },
-    closest() {
+    parentElement: null,
+    closest(selector) {
+      const matches = (node) => {
+        const tag = node.tagName?.toLowerCase?.() || "";
+        if (selector === "fieldset") {
+          return tag === "fieldset";
+        }
+        if (selector === "label") {
+          return tag === "label";
+        }
+        return tag === selector;
+      };
+      let node = this.parentElement;
+      while (node) {
+        if (matches(node)) {
+          return node;
+        }
+        node = node.parentElement;
+      }
       return null;
     },
     getBoundingClientRect() {
       return {width: 100, height: 20};
     },
     dispatchEvent() {},
+    style: {},
+    attributes: {...attributes},
+    setAttribute(name, value) {
+      this.attributes[name] = String(value);
+    },
+    getAttribute(name) {
+      return this.attributes[name] ?? attributes[name] ?? null;
+    },
+    removeAttribute(name) {
+      delete this.attributes[name];
+    },
+    scrollIntoView() {
+      this.scrolledIntoView = true;
+    },
     ...overrides,
   };
 }
@@ -266,4 +296,142 @@ test("fillByLocalId refuses radio groups even if asked to fill", () => {
 
   const result = fillByLocalId(inventory.fields[0].local_id, "remote");
   assert.deepEqual(result, {ok: false, reason: "manual_choice_review"});
+});
+
+test("highlightPending outlines review and file fields, never legales or passwords", () => {
+  const name = fakeField({name: "full_name"});
+  const file = fakeField({name: "resume", type: "file"});
+  const legal = fakeField({name: "accept_terms", type: "checkbox"});
+  const password = fakeField({name: "password", type: "password"});
+  const inventory = inventoryFields(fakeRoot([name, file, legal, password]));
+  const fileId = inventory.fields.find((field) => field.signals.name === "resume").local_id;
+  const legalId = inventory.fields.find((field) => field.signals.name === "accept_terms").local_id;
+
+  const result = highlightPending([fileId, legalId, "field-missing"]);
+
+  assert.equal(name.style.outline, undefined);
+  assert.equal(file.style.outline, "2px solid #1d4ed8");
+  assert.equal(file.getAttribute("data-job-finder-highlight"), "1");
+  assert.equal(file.scrolledIntoView, true);
+  assert.equal(legal.style.outline, undefined);
+  assert.equal(legal.getAttribute("data-job-finder-highlight"), null);
+  assert.equal(password.style.outline, undefined);
+  assert.equal(result.highlighted, 1);
+});
+
+function linkChildren(parent, children) {
+  parent.children = children;
+  children.forEach((child, index) => {
+    child.parentElement = parent;
+    child.previousElementSibling = index > 0 ? children[index - 1] : null;
+  });
+  return parent;
+}
+
+function sectionNode(tag, text, children = []) {
+  const node = {
+    tagName: tag.toUpperCase(),
+    textContent: text,
+    children,
+    parentElement: null,
+    previousElementSibling: null,
+    querySelector(selector) {
+      const tags = selector.split(",").map((part) => part.trim().toLowerCase());
+      const walk = (current) => {
+        for (const child of current.children || []) {
+          if (tags.includes(child.tagName?.toLowerCase())) {
+            return child;
+          }
+          const found = walk(child);
+          if (found) {
+            return found;
+          }
+        }
+        return null;
+      };
+      return walk(this);
+    },
+  };
+  return linkChildren(node, children);
+}
+
+test("repeated labels keep their section and entry, without leaking the current value", () => {
+  const filled = "Licenciatura en datos";
+  const educationOne = fakeField({
+    tagName: "TEXTAREA",
+    name: "description",
+    value: filled,
+    labels: [{textContent: "Description"}],
+  });
+  const educationOneSchool = fakeField({
+    name: "school",
+    value: "Universidad",
+    labels: [{textContent: "School"}],
+  });
+  const educationTwo = fakeField({
+    tagName: "TEXTAREA",
+    name: "description",
+    value: "",
+    placeholder: "Description",
+    labels: [{textContent: "Description"}],
+  });
+  const educationTwoSchool = fakeField({
+    name: "school",
+    labels: [{textContent: "School"}],
+  });
+  const work = fakeField({
+    tagName: "TEXTAREA",
+    name: "description",
+    value: "Pipelines on-prem",
+    labels: [{textContent: "Description"}],
+  });
+  const employer = fakeField({
+    name: "employer",
+    value: "AMD",
+    labels: [{textContent: "Employer"}],
+  });
+  const educationEntryOne = sectionNode("div", "", [educationOneSchool, educationOne]);
+  const educationEntryTwo = sectionNode("div", "", [educationTwoSchool, educationTwo]);
+  const workEntry = sectionNode("div", "", [employer, work]);
+  sectionNode("div", "", [
+    sectionNode("h2", "Education"),
+    educationEntryOne,
+    educationEntryTwo,
+    sectionNode("h2", "Work Experience"),
+    workEntry,
+  ]);
+
+  const first = buildFieldDescriptor(educationOne, 0);
+  const second = buildFieldDescriptor(educationTwo, 1);
+  const experience = buildFieldDescriptor(work, 2);
+
+  assert.equal(first.signals.label, "Description");
+  assert.equal(first.signals.section, "Education");
+  assert.equal(first.signals.entry, "1");
+  assert.equal(first.has_value, true);
+  assert.equal(second.signals.section, "Education");
+  assert.equal(second.signals.entry, "2");
+  assert.equal(second.has_value, false);
+  assert.equal(experience.signals.section, "Work Experience");
+  assert.equal(experience.signals.entry, undefined);
+  assert.equal(experience.has_value, true);
+  assert.equal(JSON.stringify(first).includes(filled), false);
+  assert.equal("value" in first, false);
+});
+
+test("fieldset legend stays a section when the control already has a label", () => {
+  const field = fakeField({
+    name: "description",
+    value: "",
+    labels: [{textContent: "Description"}],
+    closest(selector) {
+      return selector === "fieldset" ? fakeFieldset("Education") : null;
+    },
+  });
+
+  const descriptor = buildFieldDescriptor(field, 0);
+
+  assert.equal(descriptor.signals.label, "Description");
+  assert.equal(descriptor.signals.section, "Education");
+  assert.equal(descriptor.has_value, false);
 });

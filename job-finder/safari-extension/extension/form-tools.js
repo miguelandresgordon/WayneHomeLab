@@ -20,13 +20,23 @@
     return (field.type || "text").toLowerCase();
   }
 
+  const SECTION_TEXT_MAX = 80;
+
+  function clipSection(text) {
+    const trimmed = String(text || "").replace(/\s+/g, " ").trim();
+    if (trimmed.length <= SECTION_TEXT_MAX) {
+      return trimmed;
+    }
+    return trimmed.slice(0, SECTION_TEXT_MAX).trim();
+  }
+
   function fieldsetLegend(field) {
     const fieldset = field.closest?.("fieldset");
     const legend = fieldset?.querySelector?.("legend");
     return legend?.textContent?.trim() || "";
   }
 
-  function labelText(field) {
+  function ownLabel(field) {
     const explicit = field.labels?.[0]?.textContent?.trim();
     if (explicit) {
       return explicit;
@@ -35,21 +45,158 @@
     if (aria) {
       return aria;
     }
-    const wrapping = field.closest?.("label")?.textContent?.trim();
-    if (wrapping) {
-      return wrapping;
+    return field.closest?.("label")?.textContent?.trim() || "";
+  }
+
+  function labelText(field) {
+    return ownLabel(field) || fieldsetLegend(field);
+  }
+
+  function labelledByText(element) {
+    const ids = element.getAttribute?.("aria-labelledby");
+    const lookup = element.ownerDocument?.getElementById;
+    if (!ids || typeof lookup !== "function") {
+      return "";
     }
-    return fieldsetLegend(field);
+    const text = ids
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((id) => lookup.call(element.ownerDocument, id)?.textContent || "")
+      .join(" ");
+    return clipSection(text);
+  }
+
+  function groupSectionName(element) {
+    const role = String(element.getAttribute?.("role") || "").toLowerCase();
+    const tag = element.tagName?.toLowerCase?.() || "";
+    if (role !== "group" && role !== "region" && tag !== "section") {
+      return "";
+    }
+    return clipSection(element.getAttribute?.("aria-label") || "") || labelledByText(element);
+  }
+
+  function headingText(element) {
+    if (!element) {
+      return "";
+    }
+    const tag = element.tagName?.toLowerCase?.() || "";
+    if (/^h[1-6]$/.test(tag)) {
+      return clipSection(element.textContent);
+    }
+    if (typeof element.querySelector !== "function") {
+      return "";
+    }
+    const nested = element.querySelector("h1, h2, h3, h4, h5, h6");
+    return nested ? clipSection(nested.textContent) : "";
+  }
+
+  function findPreviousHeadingContext(field) {
+    let node = field;
+    while (node?.parentElement) {
+      let sibling = node.previousElementSibling;
+      while (sibling) {
+        const heading = headingText(sibling);
+        if (heading) {
+          return {section: heading, container: node.parentElement, headingElement: sibling};
+        }
+        sibling = sibling.previousElementSibling;
+      }
+      node = node.parentElement;
+    }
+    return {section: "", container: null, headingElement: null};
+  }
+
+  function sectionContext(field) {
+    if (ownLabel(field)) {
+      const legend = clipSection(fieldsetLegend(field));
+      if (legend) {
+        return {section: legend, container: field.closest?.("fieldset") || null, headingElement: null};
+      }
+    }
+    let node = field.parentElement;
+    while (node) {
+      const named = groupSectionName(node);
+      if (named) {
+        return {section: named, container: node, headingElement: null};
+      }
+      node = node.parentElement;
+    }
+    return findPreviousHeadingContext(field);
+  }
+
+  function isControlElement(element) {
+    const tag = element?.tagName?.toLowerCase?.() || "";
+    return tag === "input" || tag === "select" || tag === "textarea";
+  }
+
+  function nestedControlCount(element) {
+    if (!element) {
+      return 0;
+    }
+    let count = isControlElement(element) ? 1 : 0;
+    for (const child of element.children || []) {
+      count += nestedControlCount(child);
+    }
+    return count;
+  }
+
+  function entryWithin(field, context) {
+    const container = context.container;
+    if (!container?.children) {
+      return "";
+    }
+    let node = field;
+    while (node && node.parentElement && node.parentElement !== container) {
+      node = node.parentElement;
+    }
+    if (!node || node.parentElement !== container) {
+      return "";
+    }
+    let candidates = Array.from(container.children);
+    if (context.headingElement) {
+      const start = candidates.indexOf(context.headingElement);
+      if (start >= 0) {
+        const rest = candidates.slice(start + 1);
+        const nextHeading = rest.findIndex((child) => headingText(child));
+        candidates = nextHeading < 0 ? rest : rest.slice(0, nextHeading);
+      }
+    }
+    const groups = candidates.filter((child) => nestedControlCount(child) > 1);
+    if (groups.length < 2) {
+      return "";
+    }
+    const index = groups.indexOf(node);
+    return index < 0 ? "" : String(index + 1);
   }
 
   function fieldSignals(field) {
-    return {
-      label: labelText(field),
+    const context = sectionContext(field);
+    const label = labelText(field);
+    let section = context.section || "";
+    if (section && section === label) {
+      section = "";
+    }
+    const signals = {
+      label,
       name: field.name || "",
       id: field.id || "",
       autocomplete: field.autocomplete || "",
       placeholder: field.placeholder || "",
+      section,
     };
+    if (section) {
+      const entry = entryWithin(field, context);
+      if (entry) {
+        signals.entry = entry;
+      }
+    }
+    return signals;
+  }
+
+  function matchingText(signals) {
+    return ["label", "name", "id", "autocomplete", "placeholder"]
+      .map((key) => String(signals[key] || ""))
+      .join(" ");
   }
 
   function neverFillReason(field, signals = fieldSignals(field)) {
@@ -57,8 +204,7 @@
     if (SKIPPED_INPUT_TYPES.has(type)) {
       return `blocked_type:${type}`;
     }
-    const combinedSignals = Object.values(signals).join(" ");
-    if (NEVER_FILL_PATTERN.test(combinedSignals)) {
+    if (NEVER_FILL_PATTERN.test(matchingText(signals))) {
       return "sensitive_or_legal";
     }
     if (type === "file") {
@@ -82,6 +228,27 @@
     return !rect || (rect.width > 0 && rect.height > 0);
   }
 
+  function controlHasValue(field) {
+    const type = normalizedType(field);
+    if (type === "checkbox" || type === "radio") {
+      return Boolean(field.checked);
+    }
+    if (type === "file") {
+      return (field.files?.length || 0) > 0;
+    }
+    if (type === "select") {
+      return Array.from(field.options || []).some(
+        (option) => option.selected && String(option.value ?? "").trim() !== "",
+      );
+    }
+    const value = String(field.value || "").trim();
+    if (!value) {
+      return false;
+    }
+    const placeholder = String(field.placeholder || "").trim();
+    return !placeholder || value !== placeholder;
+  }
+
   function buildFieldDescriptor(field, index) {
     const signals = fieldSignals(field);
     const type = normalizedType(field);
@@ -93,6 +260,7 @@
       type,
       signals,
       required: Boolean(field.required),
+      has_value: controlHasValue(field),
       allowed_action: reason ? "review" : "fill",
       review_reason: reason,
     };
@@ -114,18 +282,22 @@
 
   function buildRadioGroupDescriptor(fields, index) {
     const first = fields[0];
+    const signals = fieldSignals(first);
+    const legend = fieldsetLegend(first);
+    if (legend) {
+      signals.label = legend;
+    }
+    if (signals.section && signals.section === signals.label) {
+      signals.section = "";
+      delete signals.entry;
+    }
     return {
       local_id: `field-${index}`,
       element: "input",
       type: "radio-group",
-      signals: {
-        label: fieldsetLegend(first),
-        name: first.name || "",
-        id: "",
-        autocomplete: "",
-        placeholder: "",
-      },
+      signals,
       required: fields.some((field) => field.required),
+      has_value: fields.some((field) => Boolean(field.checked)),
       allowed_action: "review",
       review_reason: "manual_choice_review",
       options: fields.map((field) => ({
@@ -278,12 +450,66 @@
     return fillField(handle.nodes[0], value);
   }
 
+  const HIGHLIGHT_ATTR = "data-job-finder-highlight";
+
+  function shouldHighlightNode(node) {
+    const reason = neverFillReason(node);
+    if (!reason) {
+      return true;
+    }
+    return reason === "manual_file_review" || reason === "manual_choice_review";
+  }
+
+  function clearHighlights() {
+    for (const handle of lastHandles.values()) {
+      for (const node of handle.nodes || []) {
+        if (node?.getAttribute?.(HIGHLIGHT_ATTR) === "1") {
+          if (node.style) {
+            node.style.outline = "";
+            node.style.outlineOffset = "";
+          }
+          node.removeAttribute?.(HIGHLIGHT_ATTR);
+        }
+      }
+    }
+  }
+
+  function highlightPending(localIds) {
+    clearHighlights();
+    let highlighted = 0;
+    let firstNode = null;
+    for (const localId of localIds || []) {
+      const handle = lastHandles.get(localId);
+      if (!handle) {
+        continue;
+      }
+      for (const node of handle.nodes || []) {
+        if (!shouldHighlightNode(node)) {
+          continue;
+        }
+        if (node.style) {
+          node.style.outline = "2px solid #1d4ed8";
+          node.style.outlineOffset = "2px";
+        }
+        node.setAttribute?.(HIGHLIGHT_ATTR, "1");
+        highlighted += 1;
+        if (!firstNode) {
+          firstNode = node;
+        }
+      }
+    }
+    firstNode?.scrollIntoView?.({block: "center", inline: "nearest"});
+    return {highlighted};
+  }
+
   const api = {
     buildFieldDescriptor,
     buildRadioGroupDescriptor,
+    clearHighlights,
     fieldSignals,
     fillByLocalId,
     fillField,
+    highlightPending,
     invalidateHandles,
     inventoryFields,
     neverFillReason,

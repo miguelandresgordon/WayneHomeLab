@@ -59,6 +59,10 @@
       }
       return Promise.resolve({results});
     }
+    if (message?.type === "JOB_FINDER_HIGHLIGHT") {
+      const result = globalThis.JobFinderFormTools.highlightPending(message.local_ids || []);
+      return Promise.resolve(result);
+    }
     return undefined;
   });
 })();

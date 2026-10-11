@@ -15,6 +15,12 @@ NEVER_FILL_RE = re.compile(
 BLOCKED_TYPES = {"password", "hidden", "submit", "button", "reset", "image"}
 REVIEW_TYPES = {"file", "checkbox", "radio", "radio-group"}
 SCHEMA_VERSION = 1
+COLLECTION_SECTION_RE = re.compile(
+    r"(education|work experience|professional experience|employment history|"
+    r"formaci[oó]n|educaci[oó]n|experiencia)",
+    re.I,
+)
+ALREADY_FILLED_EXPLANATION = "El formulario ya tiene un valor; no se sobrescribe."
 
 
 @dataclass(frozen=True)
@@ -33,8 +39,22 @@ def _p(*raw: str) -> tuple[re.Pattern[str], ...]:
 RULES: tuple[Rule, ...] = (
     Rule("email", _p(r"\b(e-?mail|correo)\b"), ("email",), source="user"),
     Rule(
+        "first_name",
+        _p(
+            r"\b(first.?name|given.?name|nombre de pila)\b",
+            r"^nombre$",
+            r"\bnombre\b(?!\s+completo)",
+        ),
+        ("given-name",),
+    ),
+    Rule(
+        "last_name",
+        _p(r"\b(last.?name|family.?name|surname|apellidos?)\b"),
+        ("family-name",),
+    ),
+    Rule(
         "full_name",
-        _p(r"\b(full.?name|nombre completo|your name)\b", r"^name$", r"^nombre$"),
+        _p(r"\b(full.?name|nombre completo|your name)\b", r"^name$"),
         ("name",),
     ),
     Rule(
@@ -93,9 +113,16 @@ def field_fingerprint(field: dict[str, Any]) -> str:
             str(signals.get("name") or ""),
             str(signals.get("id") or ""),
             str(signals.get("label") or ""),
+            str(signals.get("section") or ""),
+            str(signals.get("entry") or ""),
         ]
     ).lower()
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:32]
+
+
+def is_collection_section(field: dict[str, Any]) -> bool:
+    section = str((field.get("signals") or {}).get("section") or "")
+    return bool(section and COLLECTION_SECTION_RE.search(section))
 
 
 def _combined_signals(field: dict[str, Any]) -> str:
@@ -179,6 +206,16 @@ def _select_option_value(raw: str, options: list[dict[str, Any]] | None) -> str:
     return raw
 
 
+def split_full_name(full_name: str | None) -> tuple[str | None, str | None]:
+    """Split identity into given / family name on the first space. No extra profile columns."""
+    text = str(full_name or "").strip()
+    if not text:
+        return None, None
+    first, _, rest = text.partition(" ")
+    last = rest.strip() or None
+    return first, last
+
+
 def _lookup_value(rule: Rule, context: dict[str, Any]) -> str | None:
     profile = context.get("profile") or {}
     preference = context.get("preference") or {}
@@ -186,6 +223,10 @@ def _lookup_value(rule: Rule, context: dict[str, Any]) -> str | None:
         value = context.get("email")
         return str(value) if value else None
     if rule.source == "profile":
+        if rule.profile_key in {"first_name", "last_name"}:
+            first, last = split_full_name(profile.get("full_name"))
+            value = first if rule.profile_key == "first_name" else last
+            return str(value) if value else None
         value = profile.get(rule.profile_key)
         return str(value) if value else None
     if rule.source == "preference":
@@ -224,6 +265,7 @@ def map_field(
         "explanation": "",
         "sensitivity": "normal",
         "already_resolved": fingerprint in resolved_fingerprints,
+        "has_value": bool(field.get("has_value")),
     }
 
     if blocked:
@@ -243,8 +285,13 @@ def map_field(
             "explanation": "Ya rellenado en esta sesión; no se vuelve a preguntar.",
         }
 
-    answer_match = _match_reusable_answer(field, context.get("answers") or [])
-    rule_match = _match_rule(field)
+    in_collection = is_collection_section(field)
+    answer_match = (
+        None
+        if in_collection
+        else _match_reusable_answer(field, context.get("answers") or [])
+    )
+    rule_match = None if in_collection else _match_rule(field)
 
     profile_key = None
     value: str | None = None
@@ -314,6 +361,18 @@ def map_field(
             "sensitivity": sensitivity,
             "allowed_action": "fill",
             "review_reason": None,
+        }
+
+    if base["has_value"] and not value:
+        return {
+            **base,
+            "profile_key": profile_key,
+            "value": value,
+            "confidence": confidence,
+            "explanation": ALREADY_FILLED_EXPLANATION,
+            "sensitivity": sensitivity,
+            "allowed_action": "review",
+            "review_reason": "already_filled",
         }
 
     return {

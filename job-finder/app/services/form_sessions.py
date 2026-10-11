@@ -42,6 +42,9 @@ def serialize_session(session: FormSession) -> dict[str, Any]:
 
 
 def serialize_mapping(row: FormField) -> dict[str, Any]:
+    raw_signals = dict(row.signals_json or {})
+    has_value = bool(raw_signals.get("has_value"))
+    signals = {key: value for key, value in raw_signals.items() if key != "has_value"}
     return {
         "local_id": row.local_id,
         "fingerprint": row.fingerprint,
@@ -57,8 +60,17 @@ def serialize_mapping(row: FormField) -> dict[str, Any]:
         "already_resolved": row.already_resolved,
         "fill_status": row.fill_status,
         "type": row.type,
-        "signals": row.signals_json,
+        "has_value": has_value,
+        "signals": signals,
     }
+
+
+def signals_for_storage(mapping: dict[str, Any]) -> dict[str, Any]:
+    """Persist the filled flag beside signals without a new column. It is not a match signal."""
+    signals = {key: value for key, value in dict(mapping.get("signals") or {}).items() if key != "has_value"}
+    if mapping.get("has_value"):
+        signals["has_value"] = True
+    return signals
 
 
 def get_own_session(db: Session, user: User, session_id: int) -> FormSession | None:
@@ -280,7 +292,7 @@ def analyze_session(
             fingerprint=mapping["fingerprint"],
             element=str(mapping["element"]),
             type=str(mapping["type"]),
-            signals_json=mapping["signals"],
+            signals_json=signals_for_storage(mapping),
             required=bool(mapping["required"]),
             allowed_action=mapping["allowed_action"],
             review_reason=mapping["review_reason"],

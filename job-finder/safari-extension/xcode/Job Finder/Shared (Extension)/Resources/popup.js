@@ -1,6 +1,7 @@
 const extensionApi = globalThis.browser ?? globalThis.chrome;
 const scanButton = document.querySelector("#scan");
 const fillButton = document.querySelector("#fill");
+const downloadResumeButton = document.querySelector("#download-resume");
 const completeButton = document.querySelector("#complete");
 const status = document.querySelector("#status");
 const result = document.querySelector("#result");
@@ -52,12 +53,13 @@ async function apiRequest(path, options = {}) {
   if (!token) {
     throw new Error("Falta el token de la extensión. Crea uno en Job Finder y pégalo aquí.");
   }
-  const headers = new Headers(options.headers ?? {});
+  const {parseJson = true, ...fetchOptions} = options;
+  const headers = new Headers(fetchOptions.headers ?? {});
   headers.set("Authorization", `Bearer ${token}`);
-  if (options.body && !headers.has("Content-Type")) {
+  if (fetchOptions.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
-  const response = await fetch(`${apiBase}${path}`, {...options, headers});
+  const response = await fetch(`${apiBase}${path}`, {...fetchOptions, headers});
   if (!response.ok) {
     let detail = `Error HTTP ${response.status}`;
     try {
@@ -70,7 +72,43 @@ async function apiRequest(path, options = {}) {
     error.status = response.status;
     throw error;
   }
-  return response.status === 204 ? null : response.json();
+  if (response.status === 204) {
+    return null;
+  }
+  return parseJson ? response.json() : response.blob();
+}
+
+function mappingTitle(mapping) {
+  const signals = mapping.signals || {};
+  const name = signals.label || signals.name || signals.id || mapping.local_id;
+  const parts = [];
+  if (signals.section) {
+    parts.push(signals.section);
+  }
+  if (signals.entry) {
+    parts.push(String(signals.entry));
+  }
+  parts.push(name);
+  return parts.join(" · ");
+}
+
+function mappingPreview(mapping) {
+  if (mapping.allowed_action === "never") {
+    return "bloqueado";
+  }
+  if (mapping.value) {
+    return mapping.value;
+  }
+  if (mapping.doc_ref?.filename) {
+    return mapping.doc_ref.filename;
+  }
+  if (mapping.has_value || mapping.review_reason === "already_filled") {
+    return "ya relleno";
+  }
+  if (mapping.allowed_action === "skip") {
+    return mapping.explanation || "Ya rellenado en esta sesión";
+  }
+  return "sin valor";
 }
 
 function renderMappings(mappings, inventory) {
@@ -85,17 +123,11 @@ function renderMappings(mappings, inventory) {
     checkbox.checked = mapping.allowed_action === "fill" && Boolean(mapping.value);
     checkbox.disabled = mapping.allowed_action === "never" || mapping.allowed_action === "skip";
     const text = document.createElement("div");
-    const name =
-      mapping.signals?.label ||
-      mapping.signals?.name ||
-      mapping.signals?.id ||
-      mapping.local_id;
     const title = document.createElement("strong");
-    title.textContent = name;
+    title.textContent = mappingTitle(mapping);
     const meta = document.createElement("div");
     meta.className = "meta";
-    const valuePreview = mapping.allowed_action === "never" ? "bloqueado" : mapping.value || mapping.doc_ref?.filename || "sin valor";
-    meta.textContent = `${mapping.allowed_action} · ${valuePreview}`;
+    meta.textContent = `${mapping.allowed_action} · ${mappingPreview(mapping)}`;
     text.append(title, meta);
     label.append(checkbox, text);
     item.append(label);
@@ -117,7 +149,68 @@ function renderMappings(mappings, inventory) {
     (skipped > 0 ? ` ${skipped} campo(s) ya resueltos en esta sesión.` : "");
   result.hidden = false;
   fillButton.hidden = !mappings.some((mapping) => mapping.allowed_action === "fill");
+  downloadResumeButton.hidden = resumeDocRef(mappings) == null;
   completeButton.hidden = currentSession == null;
+}
+
+function resumeDocRef(mappings) {
+  return mappings.find((mapping) => mapping.doc_ref?.kind === "resume" && mapping.doc_ref.id)?.doc_ref ?? null;
+}
+
+function reviewLocalIds(mappings) {
+  return mappings
+    .filter((mapping) => mapping.allowed_action === "review")
+    .map((mapping) => mapping.local_id);
+}
+
+function originPatternFor(tab) {
+  let parsed;
+  try {
+    parsed = new URL(tab.url);
+  } catch {
+    throw new Error("Esta pestaña no tiene una URL válida.");
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new Error("Abre el formulario del ATS en http o https e inténtalo de nuevo.");
+  }
+  // Match patterns reject an explicit port. http://host/* covers every port.
+  const host = parsed.hostname.includes(":") ? `[${parsed.hostname}]` : parsed.hostname;
+  return `${parsed.protocol}//${host}/*`;
+}
+
+async function ensureOriginPermission(tab) {
+  const origin = originPatternFor(tab);
+  const permissions = {origins: [origin]};
+  if (typeof extensionApi.permissions?.contains === "function") {
+    const already = await extensionApi.permissions.contains(permissions);
+    if (already) {
+      return;
+    }
+  }
+  if (typeof extensionApi.permissions?.request !== "function") {
+    return;
+  }
+  const granted = await extensionApi.permissions.request(permissions);
+  if (!granted) {
+    throw new Error(
+      `Safari no tiene permiso para ${new URL(tab.url).origin}. Acepta el origen del ATS e inténtalo de nuevo.`,
+    );
+  }
+}
+
+async function highlightReviewFields(tab, mappings) {
+  const localIds = reviewLocalIds(mappings);
+  if (!tab?.id || localIds.length === 0) {
+    return;
+  }
+  try {
+    await extensionApi.tabs.sendMessage(tab.id, {
+      type: "JOB_FINDER_HIGHLIGHT",
+      local_ids: localIds,
+    });
+  } catch {
+    // Highlight is assistive; a missing content script should not fail analyze/fill.
+  }
 }
 
 async function activeTab() {
@@ -129,6 +222,7 @@ async function activeTab() {
 }
 
 async function injectAndScan(tab) {
+  await ensureOriginPermission(tab);
   await extensionApi.scripting.executeScript({
     target: {tabId: tab.id},
     files: ["form-tools.js", "content.js"],
@@ -199,6 +293,7 @@ scanButton.addEventListener("click", async () => {
   scanButton.disabled = true;
   result.hidden = true;
   fillButton.hidden = true;
+  downloadResumeButton.hidden = true;
   completeButton.hidden = true;
   setStatus("Analizando la página…");
   try {
@@ -208,6 +303,7 @@ scanButton.addEventListener("click", async () => {
     const analyzed = await analyzeWithSession(currentSession, currentInventory);
     currentSession = analyzed.session;
     renderMappings(analyzed.mappings, currentInventory);
+    await highlightReviewFields(currentTab, analyzed.mappings);
     setStatus(`${analyzed.mappings.length} campos analizados. Revisa antes de rellenar.`);
   } catch (error) {
     setStatus(
@@ -243,11 +339,37 @@ fillButton.addEventListener("click", async () => {
       body: JSON.stringify({results: filled.results || []}),
     });
     const applied = (filled.results || []).filter((item) => item.ok).length;
+    await highlightReviewFields(currentTab, currentMappings);
     setStatus(`Rellenados ${applied} de ${approved.length} campos. Consentimientos y envío siguen en tus manos.`);
   } catch (error) {
     setStatus(`No se pudo rellenar: ${error.message}`, true);
   } finally {
     fillButton.disabled = false;
+  }
+});
+
+downloadResumeButton.addEventListener("click", async () => {
+  const ref = resumeDocRef(currentMappings);
+  if (!ref) {
+    return;
+  }
+  downloadResumeButton.disabled = true;
+  try {
+    const blob = await apiRequest(`/api/v1/resumes/${ref.id}/file`, {parseJson: false});
+    const objectUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = objectUrl;
+    link.download = ref.filename || "cv.pdf";
+    link.rel = "noopener";
+    document.body.append(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(objectUrl);
+    setStatus(`CV descargado (${ref.filename || "cv.pdf"}). Adjúntalo a mano en el campo de archivo.`);
+  } catch (error) {
+    setStatus(`No se pudo descargar el CV: ${error.message}`, true);
+  } finally {
+    downloadResumeButton.disabled = false;
   }
 });
 
