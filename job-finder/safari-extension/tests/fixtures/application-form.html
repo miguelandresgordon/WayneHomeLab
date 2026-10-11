@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Formulario de candidatura de prueba</title>
+</head>
+<body>
+  <main>
+    <h1>Candidatura de prueba</h1>
+    <form>
+      <label>Nombre completo <input name="full_name" autocomplete="name" required></label>
+      <label>Correo <input name="email" type="email" autocomplete="email" required></label>
+      <label>Teléfono <input name="phone" type="tel" autocomplete="tel"></label>
+      <label>
+        Modalidad
+        <select name="work_mode">
+          <option value="">Selecciona</option>
+          <option value="remote">Remoto</option>
+          <option value="hybrid">Híbrido</option>
+          <option value="onsite">Presencial</option>
+        </select>
+      </label>
+      <label>Motivación <textarea name="motivation"></textarea></label>
+      <label>Currículum <input name="resume" type="file" accept="application/pdf,.pdf"></label>
+      <label><input name="accept_terms" type="checkbox"> Acepto las condiciones</label>
+      <input name="csrf_token" type="hidden" value="must-never-leave-the-page">
+      <label>Contraseña <input name="password" type="password" value="must-never-leave-the-page"></label>
+      <button type="submit">Enviar (no usar en el spike)</button>
+    </form>
+  </main>
+</body>
+</html>
