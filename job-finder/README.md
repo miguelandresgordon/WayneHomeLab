@@ -1,8 +1,7 @@
 # Job Finder
 
 Aplicación doméstica de búsqueda de empleo y autorrelleno asistido (Safari).  
-Fases 1–7 locales: auth de dos usuarios, perfil/CV, tokens de extensión, API `analyze`/`fill-result`
-y Safari Web Extension con popup de revisión. Sin despliegue en el host Proxmox.
+Fases 1–7 locales más el **kit de la fase 8** (permiso del origen ATS, mapeo nombre/apellidos, descarga de CV, log de ensayo). El go/no-go real es manual en Safari. Sin despliegue en el host Proxmox.
 
 Runbook: [docs/job-finder.md](../docs/job-finder.md)
 

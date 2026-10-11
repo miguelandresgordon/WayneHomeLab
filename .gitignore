@@ -74,6 +74,7 @@ job-finder/data/
 job-finder/*.db
 job-finder/*.db-wal
 job-finder/*.db-shm
+job-finder/docs/f8-trial-log.md
 job-finder/safari-extension/**/xcuserdata/
 job-finder/safari-extension/**/DerivedData/
 

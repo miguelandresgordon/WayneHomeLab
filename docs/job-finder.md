@@ -1,6 +1,6 @@
 # Job Finder
 
-Asistente doméstico de empleo (dos usuarios). Este runbook cubre hasta la **fase 7** (auth, perfil/CV, inventario Safari, API `analyze`/`fill-result` y sesiones multipágina). La **fase 8** (prueba real LinkedIn → ATS) es un gate manual. No hay despliegue en `waynelab-core`.
+Asistente doméstico de empleo (dos usuarios). Este runbook cubre hasta el **kit de la fase 8** (auth, perfil/CV, inventario Safari, API `analyze`/`fill-result`, sesiones multipágina y ensayo LinkedIn → ATS). El **go/no-go** de F8 es manual: no hay despliegue en `waynelab-core`.
 
 **Repo:** se queda en WayneHomeLab hasta el go/no-go de F8 en un ATS real, o hasta F14 (GHCR + host). Extraer ahora no desacopla Caddy/Pi-hole/HA.
 
@@ -41,12 +41,13 @@ Tras iniciar sesión, `/` ofrece una interfaz Jinja2 + JavaScript ligero:
 
 La interfaz consume la API `/api/v1`, envía el token CSRF en cada mutación y no interpreta los datos del usuario como HTML.
 
-## Safari Web Extension (fases 4–7)
+## Safari Web Extension (fases 4–8)
 
 El código portable está en `job-finder/safari-extension/`:
 
-- Manifest V3 con `activeTab`, sin acceso permanente a todas las webs;
-- popup: token Bearer, analizar, revisar correspondencias, rellenar solo aprobados, marcar candidatura;
+- Manifest V3 con `activeTab` y `optional_host_permissions`; el popup pide el origen de la pestaña **antes** de inyectar scripts (necesario en ATS `https://`);
+- popup: token Bearer, analizar, revisar correspondencias, rellenar solo aprobados, descargar el CV predeterminado, marcar candidatura;
+- tras analizar, resalta campos `review` / file (nunca legales ni password) y hace scroll al primero;
 - exclusión de passwords, hidden, CSRF/tokens, botones y consentimientos;
 - los descriptores no contienen HTML ni valores actuales del ATS;
 - relleno de texto/select con eventos DOM; radios, legales y `input[type=file]` no se rellenan solos;
@@ -54,7 +55,7 @@ El código portable está en `job-finder/safari-extension/`:
 - proyecto Xcode generado para macOS e iOS;
 - fixtures sintéticas (`application-form.html`, `advanced-form.html`, `bizneo-like-form.html`) y tests Node.
 
-La asignación automática de PDF a `input[type=file]` sigue siendo un **gate manual**.
+La asignación automática de PDF a `input[type=file]` sigue siendo un **gate manual**: usa **Descargar CV predeterminado** en el popup y adjúntalo a mano.
 El procedimiento y el fallback están en `job-finder/safari-extension/README.md`.
 
 ## Inventario genérico (fase 5)
@@ -65,22 +66,46 @@ En `job-finder/safari-extension/extension/form-tools.js`:
 - etiqueta: `<legend>` del `<fieldset>` como último recurso;
 - `select multiple` → revisión manual;
 - shadow roots abiertos e iframes del mismo origen; cross-origin en `blocked_frames`;
-- `schema_version: 1`.
+- `schema_version: 1`. La sección y, si hay varias entradas, su índice viajan en `signals` (`section`, `entry`). Un campo que ya tiene contenido se marca `already_filled`; el texto del ATS no se envía.
 
 ## Fase 8 — go/no-go (manual)
 
-La API y la extensión ya cubren el vertical slice sintético (tests `test_form_sessions.py`). La prueba real no se puede automatizar aquí: hace falta Safari, una oferta LinkedIn y el ATS (Bizneo u otro) con tu sesión.
+La API y la extensión cubren el vertical slice sintético (tests `test_form_sessions.py` / `test_mapping.py`). La prueba real no se automatiza: hace falta Safari, una oferta LinkedIn y el ATS con tu sesión. Plantilla de log: [job-finder/docs/f8-trial-log.example.md](../job-finder/docs/f8-trial-log.example.md) → copia a `job-finder/docs/f8-trial-log.md` (gitignored).
 
-Checklist:
+**Oferta válida:** LinkedIn → **Apply en la web de la empresa** (portal externo: Bizneo u otro). **No** Easy Apply in-app. **No** pulses Enviar ni marques legales.
+
+### Pre-vuelo
 
 1. `docker compose up --build` en `job-finder/` y `curl http://127.0.0.1:8473/api/v1/health`.
-2. En la UI, rellena perfil + CV PDF + un perfil de búsqueda. Crea un token de extensión y pégalo en el popup.
-3. Sideload Xcode: esquema **Job Finder (macOS)**. Activa la extensión en Safari.
-4. Ensayo local: `python3 -m http.server 8765 --directory tests/fixtures` y abre `bizneo-like-form.html`. Analizar → revisar → rellenar aprobados. Consentimientos y Enviar intactos. En el paso 2, volver a analizar: los campos ya aplicados salen como omitidos.
-5. Oferta real: LinkedIn → Apply → portal externo. **No pulses Enviar ni marques legales.** Analizar, revisar, rellenar. Adjunta el CV a mano si el `input[type=file]` no acepta el archivo.
-6. Marcar candidatura en el popup. Anota go/no-go: fill útil / fill parcial / no-go (DOM inaccesible, iframe cross-origin, etc.).
+2. En la UI, rellena perfil (nombre completo, que se parte en nombre/apellidos) + CV PDF + un perfil de búsqueda. Crea un token de extensión y pégalo en el popup.
+3. Sideload Xcode: esquema **Job Finder (macOS)**. Activa la extensión en Safari. Al analizar un ATS `https://`, acepta el permiso del origen si Safari lo pide.
+4. Ensayo local: `python3 -m http.server 8765 --directory tests/fixtures` (desde `job-finder/safari-extension/`) y abre `bizneo-like-form.html`. Analizar → revisar → rellenar aprobados. Consentimientos y Enviar intactos. Nombre/Apellidos deben rellenarse. En el paso 2, volver a analizar: los campos ya aplicados salen como omitidos.
 
-Criterio de éxito: campos de identidad/contacto/modalidad rellenados y verificables; legales, password y envío sin tocar; HTML/cookies del ATS nunca salen al backend.
+### Ensayo real
+
+5. Oferta real con portal externo. Analizar, revisar, rellenar aprobados. Los campos pendientes (`review` / file) se resaltan en la página. Descarga el CV desde el popup y adjúntalo a mano si el `input[type=file]` no acepta el archivo.
+6. **Marcar candidatura** en el popup (estado `applied` en Job Finder). El formulario del ATS **no** se envía.
+7. Rellena el log anonimizado: hostname del ATS, conteos fill/review/never/skip, PDF ok/fallback, veredicto.
+
+### Criterios de aceptación (autorrelleno; sin HA/CI/Gmail)
+
+- Inventario sin HTML ni valores actuales del ATS; el backend no recibe cookies.
+- Correspondencias explicables; fill **solo** de campos aprobados.
+- Never-fill: password, hidden, CSRF, consentimientos y legales.
+- Submit / Enviar intacto; no se automatiza Easy Apply ni se raspa LinkedIn.
+- Origen nuevo = sesión nueva; campos ya aplicados = `skip` en la misma sesión.
+- `blocked_frames` si hay iframe cruzado; la extensión no adivina el DOM inaccesible.
+- Identidad / contacto / modalidad rellenados y verificables en el DOM (fill útil o, como mínimo, fill parcial documentado).
+- Application `applied` **sin** enviar el ATS.
+- PII de terceros y HTML real **no** se commitean.
+
+### Veredicto
+
+- **fill útil** — identidad/contacto/modalidad rellenados y comprobados; legales y envío intactos.
+- **fill parcial** — parte útil + campos a mano (file, radios, custom elements); sigue siendo go condicionado.
+- **no-go** — DOM inaccesible, iframe cross-origin que contiene el formulario, permiso denegado, o never-fill/submit rotos.
+
+El checkbox de F8 en `AGENTS.md` se marca **después** de anotar este veredicto, no al dejar el kit listo.
 
 ## Desarrollo en el Mac
 

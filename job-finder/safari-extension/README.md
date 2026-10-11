@@ -1,36 +1,26 @@
 # Job Finder Safari Web Extension — inventario, revisión y fill
 
-Fases 4–7. No envía candidaturas, no marca consentimientos y no lee valores actuales
+Fases 4–8. No envía candidaturas, no marca consentimientos y no lee valores actuales
 del formulario. El popup habla con FastAPI mediante un token Bearer (no cookies).
 
 ## Estado
 
 - WebExtension Manifest V3 portable en `extension/`
 - Proyecto Xcode macOS+iOS en `xcode/Job Finder/`
-- Inventario `schema_version: 1` sin HTML ni valores
-- Popup: guardar API + token, analizar, revisar, rellenar aprobados, marcar candidatura
+- Inventario `schema_version: 1` sin HTML ni valores. La sección repetida (Education, Work Experience) va en `signals.section` / `signals.entry`; si el control ya tiene contenido, solo se envía `has_value`
+- Popup: guardar API + token, analizar, revisar, rellenar aprobados, descargar CV, marcar candidatura
+- Al analizar, pide `optional_host_permissions` del origen de la pestaña (ATS `https://`)
+- Resalta campos `review` / file (nunca legales ni password) y hace scroll al primero
 - Never-fill en cliente y servidor: password, hidden, CSRF, consentimientos, legales
 - Relleno de texto y select; radios / file / multi-select solo revisión
 - MutationObserver (debounce 400 ms) invalida handles tras cambios SPA
 - Si cambia el origen de la pestaña, el backend abre una sesión nueva (409 `origin_changed`)
-- Adjuntos PDF: detección `File`/`DataTransfer`; asignación real sigue siendo gate manual
+- Adjuntos PDF: detección `File`/`DataTransfer`; asignación real sigue siendo gate manual (botón de descarga en el popup)
 - Fixture ATS: `tests/fixtures/bizneo-like-form.html` (dos pasos, legales, CSRF, password)
-
-Spike de la fase 4 (validado manualmente en Safari) más el endurecimiento de la fase 5
-para inventariar y rellenar formularios. No envía candidaturas, no marca consentimientos
-y no lee valores actuales del formulario.
-
-## Estado
-
-- WebExtension Manifest V3 portable en `extension/`
-- Proyecto Xcode macOS+iOS generado en `xcode/Job Finder/`
-- Inventario de campos visibles sin HTML ni valores, con `schema_version: 1`
-- Lista de exclusión: password, hidden, CSRF/token, consentimientos y legales
-- Relleno básico de texto y select con eventos `input`, `change` y `blur`
-- Adjuntos PDF: solo detección de `File`/`DataTransfer`; prueba real pendiente
 - **Fase 5:** radios agrupados por `name`, leyenda de `fieldset` como fallback de etiqueta,
   `select multiple` marcado para revisión manual, shadow DOM abierto e iframes del mismo
   origen recorridos recursivamente (los de otro origen se cuentan en `blocked_frames`)
+- Ensayo real F8: [docs/job-finder.md](../../docs/job-finder.md) y plantilla [docs/f8-trial-log.example.md](../docs/f8-trial-log.example.md)
 
 ## Pruebas automáticas
 
@@ -91,11 +81,11 @@ Resultado esperado (con perfil cargado en la API):
 
 Resultado esperado:
 
-- detecta nombre, correo, teléfono, modalidad, motivación, CV y consentimiento;
+- detecta y rellena nombre, apellidos, nombre completo, correo, teléfono y modalidad;
 - no lista password, hidden, CSRF ni botón de envío;
-- CV y consentimiento aparecen como revisión manual;
+- CV y consentimiento aparecen como revisión / never-fill; el popup ofrece descargar el CV;
 - el popup indica si Safari expone `File` y `DataTransfer`;
-- no modifica ni envía el formulario.
+- el fill no toca legales ni envía el formulario.
 
 ### Fixture avanzada (fase 5)
 
