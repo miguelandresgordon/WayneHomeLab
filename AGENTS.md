@@ -229,6 +229,9 @@ WayneHomeLab/
 ├── voice-pipeline/              # Docker Compose STT/TTS (para RPi 3b cuando esté listo)
 │   ├── docker-compose.yaml      # Whisper + Piper Wyoming
 │   └── .env.example
+├── job-finder/                  # FastAPI fases 1–7 + Safari Web Extension (analyze/fill)
+│   ├── docker-compose.yaml      # límites 256 MiB / 0,5 CPU; bind 127.0.0.1:8473
+│   └── .env.example
 └── docs/                        # Arquitectura, guías, costes
     ├── ARCHITECTURE.md
     ├── pihole.md
@@ -240,7 +243,8 @@ WayneHomeLab/
     ├── runpod-train-mariano-movil.md
     ├── speaker-id-mariano.md
     ├── reservas-dhcp-bombillas-iot.md
-    └── api-costs.md
+    ├── api-costs.md
+    └── job-finder.md
 ```
 
 ## Pendiente / Próximos pasos
@@ -288,3 +292,8 @@ WayneHomeLab/
 - [ ] Instalar add-on `speaker-id-mariano` en HAOS VM y verificar `input_text.current_speaker`
 - [x] Config HA modular alineada con Samba `/config` (`home-assistant/includes/`)
 - [x] Limpieza docs obsoletas «Proyecto Charo» (FASE1, API/SETUP/TROUBLESHOOTING Charo, charo-core, deployment Pi4)
+- [x] Job Finder fases 1–3 local: auth + UI de perfil, búsquedas, CV y respuestas (`job-finder/`, [docs/job-finder.md](docs/job-finder.md)).
+- [x] Job Finder fase 4 (spike Safari): MV3 + inventario/fill seguro + Xcode macOS/iOS compilado; validado manualmente en Safari (DOM + gate `input[type=file]`).
+- [x] Job Finder fase 5 (inventario genérico): grupos de radios, leyenda de fieldset, `select multiple`, shadow DOM abierto e iframes del mismo origen; fixture avanzada + tests Node.
+- [x] Job Finder fases 6–7: tokens de extensión, `FormSession`, API `analyze`/`fill-result`, popup de revisión, never-fill de servidor y skip multipágina. Sigue en este repo (no extraer hasta F8 real o F14).
+- [ ] Job Finder fase 8: prueba real LinkedIn → ATS (checklist en [docs/job-finder.md](docs/job-finder.md)). No Docker en el host Proxmox hasta probe de RAM. No tocar Caddy/Pi-hole en fases 1–8.
