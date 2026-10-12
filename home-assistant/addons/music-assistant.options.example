@@ -1,0 +1,14 @@
+# Opciones del add-on Music Assistant en HAOS (Supervisor → Apps → Music Assistant).
+# No son YAML de /config: se aplican en la UI del add-on o:
+#   ha apps options no existe en HA 2026; usar Supervisor API /addons/<slug>/options
+#
+# slug: d5369777_music_assistant
+# versión pin: 2.10.2 (stable)
+#
+# Providers (viven en el volumen del add-on, no aquí):
+#   ON:  Spotify, Spotify Connect, Sendspin, Home Assistant
+#   OFF: Smart Fades (PyTorch/OOM en VM 4 GB), Chromecast, AirPlay, DLNA
+# Runbook: docs/music-assistant.md
+
+log_level: info
+safe_mode: false
