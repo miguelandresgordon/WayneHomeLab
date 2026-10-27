@@ -70,9 +70,9 @@ WayneHomeLab/
 ## Quick start (operación diaria)
 
 ```bash
-# Tras reboot inesperado del RPi 5 (rompe pve-cluster vía cloud-init):
-scp infrastructure/nodes/core/fix_proxmox_cluster.sh pi@192.168.1.100:/tmp/
-ssh -t pi@192.168.1.100 "sudo bash /tmp/fix_proxmox_cluster.sh && sudo qm start 100"
+# Si tras un reboot caen todas las VMs (pve-cluster roto por cloud-init; fix permanente e idempotente):
+scp -r infrastructure/nodes/core pi@192.168.1.100:/tmp/waynelab-core
+ssh -t pi@192.168.1.100 "sudo bash /tmp/waynelab-core/fix_proxmox_cluster.sh"
 
 # Smoke DNS / VPN+HTTPS:
 bash infrastructure/nodes/pihole/verify_pihole.sh

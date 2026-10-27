@@ -44,25 +44,17 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed diagrams and data 
 
 ## Known Issues & Fixes
 
-### Proxmox cluster IPC (recurrent after every reboot)
-Cloud-init rewrites `/etc/hosts` on each boot, setting `waynelab-core → 127.0.1.1`, which breaks `pve-cluster` and `pvestatd`.
+### Proxmox cluster IPC (todas las VMs caídas tras reboot)
+**Síntoma**: tras un reboot del host `192.168.1.100` responde pero HAOS/Pi-hole/WireGuard no (`:8123` cerrado). `pve-cluster`/`pvestatd` en `failed`, `pve-guests` con `status=111`; el log dice `Unable to resolve node name 'waynelab-core' to a non-loopback IP`.
 
-**Fix** (run after every unexpected reboot):
+**Causa raíz**: `/boot/firmware/user-data` (seed NoCloud) tenía `manage_etc_hosts: true`. El user-data **pisa** `/etc/cloud/cloud.cfg` y `cloud.cfg.d/`, así que editar solo `cloud.cfg` (fix antiguo) no sobrevivía al reboot: cloud-init reescribía `/etc/hosts` con `127.0.1.1 waynelab-core` y `pmxcfs` no arrancaba.
+
+**Fix permanente** (idempotente; una sola vez, y también como recuperación):
 ```bash
-ssh -t pi@192.168.1.100 "sudo bash /tmp/fix_proxmox_cluster.sh && sudo qm start 100"
+scp -r infrastructure/nodes/core pi@192.168.1.100:/tmp/waynelab-core
+ssh -t pi@192.168.1.100 "sudo bash /tmp/waynelab-core/fix_proxmox_cluster.sh"
 ```
-
-If the script is missing from `/tmp` (lost after reboot), copy it again:
-```bash
-scp infrastructure/nodes/core/fix_proxmox_cluster.sh pi@192.168.1.100:/tmp/
-```
-
-The fix is in `infrastructure/nodes/core/fix_proxmox_cluster.sh`.
-
-### Permanent cloud-init fix
-```bash
-ssh -t pi@192.168.1.100 "sudo sed -i 's/^manage_etc_hosts:.*/manage_etc_hosts: false/' /etc/cloud/cloud.cfg"
-```
+Hace: `manage_etc_hosts: false` en user-data + cloud.cfg + cloud.cfg.d; instala `/usr/local/sbin/waynelab-ensure-hosts` y el drop-in `pve-cluster.service.d/waynelab.conf` (repara `/etc/hosts` en cada arranque de `pve-cluster`, sin límite de reintentos); reinicia servicios y arranca las VMs `onboot` con `pvesh create /nodes/<nodo>/startall` (`pve-guests` rechaza `systemctl restart`). Verificar tras reboot: `grep manage_etc_hosts /boot/firmware/user-data` → `false`.
 
 ### HAOS VM not starting after Proxmox fix
 ```bash
@@ -208,7 +200,9 @@ WayneHomeLab/
 │   │   └── wireguard.conf
 │   └── nodes/
 │       ├── core/                # RPi 5 (Proxmox host)
-│       │   ├── fix_proxmox_cluster.sh  # Fix cloud-init /etc/hosts bug (frecuente)
+│       │   ├── fix_proxmox_cluster.sh  # Fix permanente cloud-init /etc/hosts (user-data + guard systemd)
+│       │   ├── ensure_hosts.sh         # Guard /etc/hosts → waynelab-ensure-hosts (ExecStartPre pve-cluster)
+│       │   ├── systemd/pve-cluster-waynelab.conf  # Drop-in pve-cluster (self-heal, sin límite de reintentos)
 │       │   ├── setup_host.sh
 │       │   └── sysctl.conf
 │       ├── pihole/              # install_pihole.sh + pihole.toml.example

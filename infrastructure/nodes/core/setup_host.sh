@@ -161,6 +161,11 @@ EOF
     log "KVM modules configured."
 }
 
+configure_cloud_init_hosts() {
+    log "Persisting cloud-init manage_etc_hosts=false (user-data + guard for pve-cluster)..."
+    bash "${SCRIPT_DIR}/fix_proxmox_cluster.sh" --no-restart
+}
+
 configure_ssh_hardening() {
     log "Hardening SSH configuration..."
 
@@ -223,6 +228,7 @@ main() {
     configure_bridge_networking
     apply_kernel_tuning
     load_kvm_modules
+    configure_cloud_init_hosts
     configure_ssh_hardening
     setup_automatic_updates
     print_summary

@@ -200,7 +200,7 @@ Solo si se cumplen **todos**:
 
 | Síntoma | Causa probable | Acción |
 |---------|----------------|--------|
-| `pve-cluster` down tras reboot | `/etc/hosts` → `127.0.1.1` | `fix_proxmox_cluster.sh` + `qm start 100` (y 101) |
+| `pve-cluster` down tras reboot | `/etc/hosts` → `127.0.1.1` (`manage_etc_hosts: true` en `/boot/firmware/user-data`) | `fix_proxmox_cluster.sh` (arranca también las VMs `onboot`) |
 | SSH Mac → guest denied | Cloud-init con clave de root | `SSH_KEY_FILE=/home/pi/.ssh/authorized_keys` o añadir pubkey vía host (§1) |
 | VM no coge IP | Cloud-init / bridge | serial / `ipconfig0` |
 | Ads siguen saliendo | DNS2 / DoH / Private Relay / IPv6 | Quitar DNS2; desactivar Private Relay/DoH en prueba; revisar DNS IPv6 del router |
