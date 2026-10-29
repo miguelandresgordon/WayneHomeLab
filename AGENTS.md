@@ -85,6 +85,19 @@ ssh -t pi@192.168.1.100 "sudo qm start 102"   # onboot=1; startup order=2
 - User: `pi` (not `root` — root SSH requires key, not configured)
 - Always use `ssh -t` for sudo commands
 
+### Satellite1 + lámpara + Tuya «no disponibles» con HA y Proxmox sanos (Wi-Fi 2,4 GHz)
+**Síntoma**: HA responde (`:8123`), pero Satellite1 (`.85`), lámpara Xiaomi (`.121`) y bombilla Tuya (`.118`, `tuya_local`) no resuelven ARP ni ping; el interruptor de HA no hace nada. Log HA: `Can't connect to ESPHome API … [Errno 113]`, `Lámpara: Unable to discover the device`, `tuya_local … error 901`.
+
+**Causa raíz (2026-10-29)**: el radio 2,4 GHz del router Movistar HGU quedó colgado (≈ 07:03 del 2026-10-28) aunque el portal lo mostraba activo con SSID/clave correctos. Los tres dispositivos son **solo 2,4 GHz** y cayeron a la vez; no es Proxmox/HAOS/Pi-hole (sin cortes de enlace, VMs vivas, sin DHCP en Pi-hole) ni DHCP (ningún MAC IoT en otra IP). Reiniciar solo el Wi-Fi desde el portal **no** lo arregló; el **reinicio completo del router** (desenchufar 30 s, esperar ~3 min) sí: Satellite1 y lámpara volvieron solos con la misma IP/clave API. No es corregible desde este repo: el router no está bajo IaC.
+
+**Pendiente**: la bombilla Tuya (`tuya_local`, `.118`, error 901) sigue sin responder tras el reinicio; se trata aparte. Nota: la tabla «Devices Configured» lista la bombilla Antela en `.122` y HA tiene `.118`.
+
+**Verificar y arreglar**:
+```bash
+bash infrastructure/nodes/core/verify_iot_wifi.sh      # veredicto: Wi-Fi 2,4 GHz vs. DHCP vs. HA caído
+```
+Si falla: 1) reinicio completo del router (no basta reiniciar el Wi-Fi desde el portal); 2) apagar/encender la lámpara y reconectar el USB-C del Satellite1; HA los recupera solo. Si persiste, en `http://192.168.1.1` comprobar que el 2,4 GHz usa `wifi_ssid`/`wifi_password` de `/config/esphome/secrets.yaml` (HAOS), WPA2 personal, canal fijo 1/6/11 a 20 MHz, sin «Smart WiFi»/band-steering. Si el SSID/clave cambió definitivamente, actualiza `secrets.yaml` de ESPHome y reflashea el Satellite1 (`infrastructure/voice/wake-word/esphome/USB_BOOTLOADER.md`).
+
 ### RunPod Mariano (train en curso / reintentos)
 - Network volume mínimo **200 GB**. Con 100 GB AudioSet agota cuota → Exit **999**.
 - Wrapper obligatorio: `/usr/local/bin/tar` → `/usr/bin/tar --no-same-owner --no-same-permissions` (se pierde en cada Start del contenedor).
@@ -201,6 +214,7 @@ WayneHomeLab/
 │   └── nodes/
 │       ├── core/                # RPi 5 (Proxmox host)
 │       │   ├── fix_proxmox_cluster.sh  # Fix permanente cloud-init /etc/hosts (user-data + guard systemd)
+│       │   ├── verify_iot_wifi.sh      # Diagnóstico Satellite1/lámpara/Tuya (Wi-Fi 2,4 GHz vs DHCP vs HA)
 │       │   ├── ensure_hosts.sh         # Guard /etc/hosts → waynelab-ensure-hosts (ExecStartPre pve-cluster)
 │       │   ├── systemd/pve-cluster-waynelab.conf  # Drop-in pve-cluster (self-heal, sin límite de reintentos)
 │       │   ├── setup_host.sh
