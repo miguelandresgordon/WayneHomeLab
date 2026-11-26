@@ -221,3 +221,8 @@ CambiaEntradaTele:
         entrada: "{{ entrada_tv }}"
   speech:
     text: "Pongo {{ entrada_tv }} en la tele."
+
+# Alucinaciones de Whisper (silencio/TV): no hacer nada y no hablar.
+# Frases: custom_sentences/es/ruido.yaml
+IgnorarRuido:
+  description: Ignora alucinaciones típicas del STT
