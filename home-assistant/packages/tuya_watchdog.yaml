@@ -1,0 +1,298 @@
+# ==============================================================================
+# Package: watchdog Tuya Local — Luz Habitación (bombilla Antela, dormitorio)
+#
+# Entidad: light.luz_habitacion (custom_components/tuya_local, protocolo 3.3)
+# Host:    192.168.1.118:6668/tcp. Debe coincidir con la config entry de
+#          tuya_local Y con la reserva DHCP por MAC en el router.
+# Runbook: docs/tuya-watchdog.md
+#
+# Flujo:
+#   1. Gracia de 2 min: tuya_local reintenta solo y un micro-corte Wi-Fi vuelve
+#      en segundos. No se actúa, pero caída y reconexión quedan registradas.
+#   2. Pasada la gracia, cada intento sondea 6668/tcp desde HA:
+#        up    → la bombilla está en la LAN pero la integración no reconecta
+#                (socket colgado) → homeassistant.reload_config_entry.
+#        down  → fuera de la LAN (error 901): recargar no sirve, solo registra.
+#        error → sonda rota: recarga a ciegas (sujeta al tope por hora).
+#   3. Backoff exponencial entre intentos: 2, 4, 8, 16, 32, 60, 60… min,
+#      persistido en input_datetime (sobrevive a reinicios de HA)
+#      + tope duro de 3 recargas por hora.
+#   4. En el intento 4 (~16 min caída): notificación persistente con pasos.
+#   5. Historial (últimos 30 eventos) en sensor.tuya_watchdog_luz_habitacion
+#      + log de HA con logger `tuya_watchdog`.
+#
+# Si cambia la entidad o la IP: buscar y reemplazar `luz_habitacion` / la IP.
+# Pausar (p. ej. si se apaga a menudo desde el interruptor de pared):
+#   input_boolean.tuya_watchdog_pausado → on.
+# ==============================================================================
+
+input_boolean:
+  tuya_watchdog_pausado:
+    name: Tuya watchdog pausado
+    icon: mdi:pause-circle-outline
+
+input_datetime:
+  tuya_watchdog_proximo_intento:
+    name: Tuya watchdog próximo intento
+    has_date: true
+    has_time: true
+    icon: mdi:timer-sand
+
+counter:
+  tuya_watchdog_intentos:
+    name: Tuya watchdog intentos (caída actual)
+    icon: mdi:restart
+    restore: true
+  tuya_luz_habitacion_reconexiones:
+    name: Luz Habitación reconexiones
+    icon: mdi:lan-connect
+    restore: true
+
+shell_command:
+  # Sonda L4 (bash /dev/tcp, sin nc). Siempre sale con 0 e imprime up/down/error:
+  # shell_command registra un ERROR en el log si returncode ≠ 0.
+  tuya_watchdog_probe_luz_habitacion: >-
+    bash -c 'command -v timeout >/dev/null || { echo error; exit 0; };
+    if timeout 5 bash -c "exec 3<>/dev/tcp/192.168.1.118/6668" 2>/dev/null;
+    then echo up; else echo down; fi'
+
+template:
+  # Registro de reconexiones: un evento tuya_watchdog_event por caída,
+  # recuperación o intento. Trigger-based → restaura estado y atributos.
+  - triggers:
+      - trigger: event
+        event_type: tuya_watchdog_event
+        event_data:
+          entity_id: light.luz_habitacion
+    sensor:
+      - name: Tuya watchdog Luz Habitación
+        unique_id: tuya_watchdog_luz_habitacion
+        default_entity_id: sensor.tuya_watchdog_luz_habitacion
+        icon: mdi:lightbulb-alert-outline
+        state: "{{ trigger.event.data.accion }}"
+        attributes:
+          detalle: "{{ trigger.event.data.detalle | default('') }}"
+          intento: "{{ trigger.event.data.intento | default(0) | int(0) }}"
+          # Más reciente primero. `epoch` lo usa el tope de recargas por hora.
+          historial: >-
+            {% set prev = this.attributes.get('historial', []) if this is defined else [] %}
+            {% set entrada = {
+              'ts': now().strftime('%Y-%m-%d %H:%M:%S'),
+              'epoch': now().timestamp() | int,
+              'accion': trigger.event.data.accion,
+              'intento': trigger.event.data.intento | default(0) | int(0),
+              'detalle': trigger.event.data.detalle | default('')
+            } %}
+            {{ ([entrada] + (prev if prev is sequence and prev is not string else []))[:30] }}
+
+automation:
+  - id: tuya_watchdog_luz_habitacion_estado
+    alias: "Tuya watchdog — Luz Habitación (registro caída/reconexión)"
+    description: >-
+      Registra cada caída y reconexión de light.luz_habitacion, incluidos los
+      micro-cortes que tuya_local recupera solo. Al reconectar resetea el
+      backoff y retira la notificación.
+    mode: queued
+    max: 10
+    triggers:
+      - trigger: state
+        id: caida
+        entity_id: light.luz_habitacion
+        not_from:
+          - unavailable
+          - unknown
+        to:
+          - unavailable
+          - unknown
+      - trigger: state
+        id: reconexion
+        entity_id: light.luz_habitacion
+        from:
+          - unavailable
+          - unknown
+        not_to:
+          - unavailable
+          - unknown
+    variables:
+      # Inicio de la caída: último evento `caida` del historial. Más fiable que
+      # from_state.last_changed, que se reinicia al recargar la config entry.
+      inicio_caida: >-
+        {% set h = state_attr('sensor.tuya_watchdog_luz_habitacion', 'historial') or [] %}
+        {% set c = h | selectattr('accion', 'eq', 'caida') | list %}
+        {{ c[0].epoch if c else as_timestamp(trigger.from_state.last_changed) | int }}
+    actions:
+      - choose:
+          - conditions:
+              - condition: trigger
+                id: caida
+              # Al arrancar/descargar, HA pone la entidad en unavailable con
+              # restored: true; no es una caída de la bombilla.
+              - condition: template
+                value_template: "{{ not (trigger.to_state.attributes.restored | default(false)) }}"
+            sequence:
+              - event: tuya_watchdog_event
+                event_data:
+                  entity_id: light.luz_habitacion
+                  accion: caida
+                  intento: 0
+                  detalle: "{{ trigger.from_state.state }} → {{ trigger.to_state.state }}"
+              - action: system_log.write
+                data:
+                  logger: tuya_watchdog
+                  level: info
+                  message: "light.luz_habitacion caída ({{ trigger.from_state.state }} → {{ trigger.to_state.state }})"
+          - conditions:
+              - condition: trigger
+                id: reconexion
+            sequence:
+              - variables:
+                  intentos: "{{ states('counter.tuya_watchdog_intentos') | int(0) }}"
+                  # Restaurada en el arranque sin caída en curso → no es reconexión.
+                  arranque: >-
+                    {{ (trigger.from_state.attributes.restored | default(false)) and intentos == 0 }}
+                  caida_s: "{{ (now().timestamp() - inicio_caida | float(0)) | int }}"
+              - if:
+                  - condition: template
+                    value_template: "{{ not arranque }}"
+                then:
+                  - action: counter.increment
+                    target:
+                      entity_id: counter.tuya_luz_habitacion_reconexiones
+                  - event: tuya_watchdog_event
+                    event_data:
+                      entity_id: light.luz_habitacion
+                      accion: reconectada
+                      intento: "{{ intentos }}"
+                      detalle: >-
+                        {{ trigger.to_state.state }} tras {{ caida_s }} s;
+                        {{ 'sola (tuya_local)' if intentos == 0 else intentos ~ ' intento(s) del watchdog' }}
+                  - action: system_log.write
+                    data:
+                      logger: tuya_watchdog
+                      level: info
+                      message: "light.luz_habitacion reconectada tras {{ caida_s }} s (intentos watchdog: {{ intentos }})"
+              # Siempre (idempotente): resetea backoff y notificación.
+              - action: counter.reset
+                target:
+                  entity_id: counter.tuya_watchdog_intentos
+              - action: input_datetime.set_datetime
+                target:
+                  entity_id: input_datetime.tuya_watchdog_proximo_intento
+                data:
+                  timestamp: "{{ now().timestamp() | int }}"
+              - action: persistent_notification.dismiss
+                data:
+                  notification_id: tuya_watchdog_luz_habitacion
+
+  - id: tuya_watchdog_luz_habitacion_recuperar
+    alias: "Tuya watchdog — Luz Habitación (recuperación con backoff)"
+    description: >-
+      Si light.luz_habitacion lleva ≥ 2 min unavailable/unknown, sondea
+      6668/tcp y recarga la config entry de tuya_local solo si la bombilla
+      está en la LAN. Backoff exponencial 2→60 min y máx. 3 recargas/hora.
+    mode: single
+    max_exceeded: silent
+    triggers:
+      # Tick barato: las condiciones filtran; el backoff vive en input_datetime.
+      - trigger: time_pattern
+        minutes: "/1"
+    variables:
+      backoff_base_min: 2
+      backoff_max_min: 60
+      max_recargas_hora: 3
+      notificar_en_intento: 4
+    conditions:
+      - condition: state
+        entity_id: input_boolean.tuya_watchdog_pausado
+        state: "off"
+      # Gracia: micro-cortes Wi-Fi y reintentos propios de tuya_local.
+      - condition: state
+        entity_id: light.luz_habitacion
+        state:
+          - unavailable
+          - unknown
+        for: "00:02:00"
+      - condition: template
+        value_template: >-
+          {{ now().timestamp() >=
+             state_attr('input_datetime.tuya_watchdog_proximo_intento', 'timestamp') | float(0) }}
+    actions:
+      - variables:
+          intento: "{{ states('counter.tuya_watchdog_intentos') | int(0) + 1 }}"
+          espera_min: "{{ [backoff_base_min * 2 ** (intento - 1), backoff_max_min] | min }}"
+          recargas_ultima_hora: >-
+            {% set h = state_attr('sensor.tuya_watchdog_luz_habitacion', 'historial') or [] %}
+            {{ h | selectattr('accion', 'eq', 'recarga')
+                 | selectattr('epoch', 'ge', now().timestamp() - 3600)
+                 | list | count }}
+      # Programar el siguiente intento antes de nada: si algo falla abajo,
+      # el backoff ya está aplicado.
+      - action: counter.increment
+        target:
+          entity_id: counter.tuya_watchdog_intentos
+      - action: input_datetime.set_datetime
+        target:
+          entity_id: input_datetime.tuya_watchdog_proximo_intento
+        data:
+          timestamp: "{{ (now().timestamp() + espera_min * 60) | int }}"
+      - action: shell_command.tuya_watchdog_probe_luz_habitacion
+        response_variable: sonda
+        continue_on_error: true
+      - variables:
+          sonda_estado: >-
+            {% set s = (sonda.stdout | default('') | trim) if sonda is defined else '' %}
+            {{ s if s in ['up', 'down'] else 'error' }}
+          resultado: >-
+            {{ 'inalcanzable' if sonda_estado == 'down'
+               else ('limite_hora' if recargas_ultima_hora | int >= max_recargas_hora
+               else 'recarga') }}
+      - if:
+          - condition: template
+            value_template: "{{ resultado == 'recarga' }}"
+        then:
+          # Resuelve la config entry desde la entidad: no fija el entry_id.
+          - action: homeassistant.reload_config_entry
+            target:
+              entity_id: light.luz_habitacion
+            continue_on_error: true
+      - event: tuya_watchdog_event
+        event_data:
+          entity_id: light.luz_habitacion
+          accion: "{{ resultado }}"
+          intento: "{{ intento }}"
+          detalle: >-
+            sonda 6668/tcp={{ sonda_estado }}; recargas última hora={{ recargas_ultima_hora }};
+            próximo intento en {{ espera_min }} min
+      - action: system_log.write
+        data:
+          logger: tuya_watchdog
+          level: warning
+          message: >-
+            light.luz_habitacion intento {{ intento }}: {{ resultado }}
+            (sonda={{ sonda_estado }}, próximo en {{ espera_min }} min)
+      - if:
+          - condition: template
+            value_template: "{{ intento == notificar_en_intento }}"
+        then:
+          - action: persistent_notification.create
+            data:
+              notification_id: tuya_watchdog_luz_habitacion
+              title: "Luz Habitación (Tuya) sin conexión"
+              message: >-
+                `light.luz_habitacion` lleva {{ intento }} intentos del watchdog
+                sin volver (tuya_local, 192.168.1.118:6668). Sonda TCP: **{{ sonda_estado }}**.
+
+                {% if sonda_estado == 'down' -%}
+                La bombilla no está en la LAN; recargar la integración no sirve.
+                1) Apaga y enciende su interruptor de pared (10 s).
+                2) Si Satellite1 y la lámpara también cayeron: Wi-Fi 2,4 GHz del
+                router (`verify_iot_wifi.sh`).
+                3) Si vuelve con otra IP: reserva DHCP por MAC (`docs/reservas-dhcp-bombillas-iot.md`).
+                {%- else -%}
+                La bombilla responde pero tuya_local no reconecta: cierra Smart Life
+                en el móvil (protocolo 3.3 admite pocas conexiones locales) y revisa
+                la local_key si se reemparejó.
+                {%- endif %}
+
+                El watchdog sigue reintentando (backoff hasta 60 min). Runbook:
+                `docs/tuya-watchdog.md`.

@@ -9,6 +9,7 @@
 # Layout (igual que deploy_speaker_id_ha_config.sh):
 #   /config/configuration.yaml            ← home-assistant/configuration.haos.yaml
 #   /config/includes/*.yaml               ← home-assistant/includes/*.yaml
+#   /config/packages/*.yaml               ← home-assistant/packages/*.yaml
 #   /config/custom_sentences/es/*.yaml    ← home-assistant/custom_sentences/es/*.yaml
 #   /config/secrets.yaml                  ← no se toca
 set -euo pipefail
@@ -33,6 +34,7 @@ INCLUDE_FILES=(
 )
 
 SENTENCES_SRC="$REPO_ROOT/home-assistant/custom_sentences/es"
+PACKAGES_SRC="$REPO_ROOT/home-assistant/packages"
 
 log() { printf '[deploy-ha-voice] %s\n' "$*"; }
 
@@ -44,7 +46,7 @@ fi
 log "Desplegando a ${HA_USER}@${HA_HOST}:${HA_CONFIG}"
 
 ssh "${HA_USER}@${HA_HOST}" \
-  "mkdir -p ${HA_CONFIG}/includes ${HA_CONFIG}/themes ${HA_CONFIG}/custom_sentences/es"
+  "mkdir -p ${HA_CONFIG}/includes ${HA_CONFIG}/packages ${HA_CONFIG}/themes ${HA_CONFIG}/custom_sentences/es"
 
 scp "$REPO_ROOT/home-assistant/configuration.haos.yaml" \
   "${HA_USER}@${HA_HOST}:${HA_CONFIG}/configuration.yaml"
@@ -60,6 +62,12 @@ for f in "${INCLUDE_FILES[@]}"; do
 done
 
 shopt -s nullglob
+# configuration.yaml carga packages/ con !include_dir_named (puede estar vacío)
+for src in "$PACKAGES_SRC"/*.yaml; do
+  log "Copiando packages/$(basename "$src")..."
+  scp "$src" "${HA_USER}@${HA_HOST}:${HA_CONFIG}/packages/$(basename "$src")"
+done
+
 sentence_files=("$SENTENCES_SRC"/*.yaml)
 if [[ ${#sentence_files[@]} -eq 0 ]]; then
   log "❌ No hay custom_sentences en ${SENTENCES_SRC}"

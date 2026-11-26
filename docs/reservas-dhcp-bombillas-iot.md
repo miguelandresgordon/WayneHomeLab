@@ -25,7 +25,7 @@ Adapta a tu red. Suponiendo LAN `192.168.1.0/24` y router en `192.168.1.1`:
 | Host Proxmox (Pi 5) | *(ya fijada)* | `192.168.1.100` | — |
 | Home Assistant VM | *(reserva existente)* | `192.168.1.110` | — |
 | Bombilla Xiaomi | `AA:BB:CC:DD:EE:01` | `192.168.1.121` | Xiaomi Home |
-| Bombilla Antela | `AA:BB:CC:DD:EE:02` | `192.168.1.122` | Smart Life |
+| Bombilla Antela | `AA:BB:CC:DD:EE:02` | `192.168.1.118` | Smart Life + HA `tuya_local` (IP de la config entry; ver [tuya-watchdog.md](tuya-watchdog.md)) |
 
 **Consejo:** Usa IPs **fuera del rango dinámico** del router. Si el DHCP reparte `.50–`.199`, reserva en `.121–`.130` o por encima de `.200`.
 
@@ -130,11 +130,11 @@ Desde tu Mac:
 ```bash
 # Sustituye por tus IPs reservadas
 ping -c 2 192.168.1.121
-ping -c 2 192.168.1.122
+ping -c 2 192.168.1.118
 
 # Comprobar que la MAC corresponde (desde el router o arp tras ping)
 arp -a | grep 192.168.1.121
-arp -a | grep 192.168.1.122
+arp -a | grep 192.168.1.118
 ```
 
 En **Xiaomi Home** y **Smart Life**: la IP del dispositivo debe coincidir con la reservada.
@@ -156,7 +156,7 @@ En **Alexa**: prueba *«Alexa, enciende [nombre bombilla]»* — debe seguir fun
 
 1. **Integración Tuya** (nube) o **Local Tuya** (local, más estable ante cortes de nube).
 2. Para Local Tuya necesitas: IP fija, `device_id`, `local_key`, `version` (se obtienen con *Tuya IoT* + herramientas de extracción).
-3. IP: `192.168.1.122`.
+3. IP: `192.168.1.118`.
 
 Documentación HA: [Tuya](https://www.home-assistant.io/integrations/tuya/) · [Local Tuya (HACS)](https://github.com/rodpayne/home-assistant-localtuya).
 
@@ -199,7 +199,7 @@ No hace falta re-vincular Alexa tras la reserva DHCP.
 - [ ] MAC bombilla Xiaomi anotada
 - [ ] MAC bombilla Antela anotada
 - [ ] Reserva `192.168.1.121` → MAC Xiaomi
-- [ ] Reserva `192.168.1.122` → MAC Antela
+- [ ] Reserva `192.168.1.118` → MAC Antela
 - [ ] Reserva `192.168.1.53` → MAC Pi-hole VM (si usas Pi-hole; ver [pihole.md](pihole.md))
 - [ ] Reinicio bombillas y verificación ping
 - [ ] Alexa probada en ambas

@@ -56,7 +56,7 @@ graph LR
 | RPi 3b | 192.168.1.101 | waynelab-edge | Edge (no operativo aún) |
 | Satellite1 | 192.168.1.85 | — | ESPHome mic + speaker |
 | Lámpara Xiaomi | 192.168.1.121 | — | Xiaomi Miot Auto |
-| Bombilla Antela | 192.168.1.122 | — | Tuya (pendiente Local Tuya) |
+| Bombilla Antela | 192.168.1.118 | — | Tuya Local (`light.luz_habitacion`) + watchdog ([tuya-watchdog.md](tuya-watchdog.md)) |
 | MacBook | DHCP | — | Development |
 | Training PC | DHCP | — | Windows 11, fallback train CPU |
 

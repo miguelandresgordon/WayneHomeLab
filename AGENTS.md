@@ -90,7 +90,7 @@ ssh -t pi@192.168.1.100 "sudo qm start 102"   # onboot=1; startup order=2
 
 **Causa raíz (2026-10-29)**: el radio 2,4 GHz del router Movistar HGU quedó colgado (≈ 07:03 del 2026-10-28) aunque el portal lo mostraba activo con SSID/clave correctos. Los tres dispositivos son **solo 2,4 GHz** y cayeron a la vez; no es Proxmox/HAOS/Pi-hole (sin cortes de enlace, VMs vivas, sin DHCP en Pi-hole) ni DHCP (ningún MAC IoT en otra IP). Reiniciar solo el Wi-Fi desde el portal **no** lo arregló; el **reinicio completo del router** (desenchufar 30 s, esperar ~3 min) sí: Satellite1 y lámpara volvieron solos con la misma IP/clave API. No es corregible desde este repo: el router no está bajo IaC.
 
-**Pendiente**: la bombilla Tuya (`tuya_local`, `.118`, error 901) sigue sin responder tras el reinicio; se trata aparte. Nota: la tabla «Devices Configured» lista la bombilla Antela en `.122` y HA tiene `.118`.
+**Pendiente**: la bombilla Tuya (`light.luz_habitacion`, `tuya_local`, `.118`, error 901) sigue fuera de la LAN tras el reinicio: sin ARP, sin 6668/tcp en ningún host y sin broadcast UDP Tuya. Necesita ciclo de corriente físico + reserva DHCP por MAC a `.118` (no tiene). Watchdog HA + runbook: [docs/tuya-watchdog.md](docs/tuya-watchdog.md).
 
 **Verificar y arreglar**:
 ```bash
@@ -128,7 +128,7 @@ Satellite1 (MicroWakeWord "Mariano")
 | Dispositivo | Integración | IP/ID | Notas |
 |-------------|-------------|-------|-------|
 | Lámpara Xiaomi (yeelink.light.mono6) | Xiaomi Miot Auto (HACS) | IP reservada `.121` | Token en gestor contraseñas |
-| Bombilla Antela | Smart Life / Tuya | IP reservada `.122` | Pendiente Local Tuya |
+| Bombilla Antela (`light.luz_habitacion`) | Tuya Local (HACS `tuya_local`, v3.3) | `.118` (reserva DHCP pendiente) | Watchdog `packages/tuya_watchdog.yaml`; Tuya nube cargada con su luz deshabilitada |
 | Satellite1 c7ffe4 | ESPHome | `192.168.1.85` | Wake word: Mariano |
 | Sony BRAVIA 4K | Android TV Remote | — | Descubierto automáticamente |
 | Google TV Streamer (TV GA) | Android TV Remote | — | Descubierto automáticamente |
@@ -164,7 +164,9 @@ Satellite1 (MicroWakeWord "Mariano")
 
 ## Automatizaciones HA
 
-YAML canónico: `home-assistant/includes/automations.yaml` → `/config/includes/automations.yaml`. Única automatización: sensibilidad Mariano según TV (`satellite1_tv_wake_word_sensitivity`; Slightly si `tv_ga_2` o Bravia on/playing, Moderately tras 5 min paradas). Sin mute, botones, Speaker ID ni hábitos.
+YAML canónico: `home-assistant/includes/automations.yaml` → `/config/includes/automations.yaml`. Única automatización de voz: sensibilidad Mariano según TV (`satellite1_tv_wake_word_sensitivity`; Slightly si `tv_ga_2` o Bravia on/playing, Moderately tras 5 min paradas). Sin mute, botones, Speaker ID ni hábitos.
+
+Packages (`home-assistant/packages/` → `/config/packages/`, `homeassistant.packages: !include_dir_named`): features autocontenidas. `tuya_watchdog.yaml`: watchdog de `light.luz_habitacion` (gracia 2 min, sonda 6668/tcp, `reload_config_entry` solo si la bombilla está en la LAN, backoff 2→60 min, máx. 3 recargas/h, historial en `sensor.tuya_watchdog_luz_habitacion`, pausa `input_boolean.tuya_watchdog_pausado`). Runbook: [docs/tuya-watchdog.md](docs/tuya-watchdog.md).
 
 Scripts Assist (solo voz/UI): `script.poner_radio` / `parar_radio` / `pon_la_radio`, `script.apagar_tele` / `encender_tele` (siempre `media_player.tv_ga_2`). Frases: `custom_sentences/es/{luces,tv,radio}.yaml`.
 
@@ -233,6 +235,8 @@ WayneHomeLab/
 │   │   ├── automations.yaml     # sensibilidad Mariano según TV (única)
 │   │   ├── scripts.yaml
 │   │   └── sensors.yaml
+│   ├── packages/
+│   │   └── tuya_watchdog.yaml   # watchdog light.luz_habitacion (tuya_local)
 │   └── secrets.yaml.example
 ├── weather-intelligence/        # WIC v1 slim (Docker local; docs/wic.md)
 ├── voice-pipeline/              # Docker Compose STT/TTS (para RPi 3b cuando esté listo)
@@ -252,6 +256,7 @@ WayneHomeLab/
     ├── runpod-train-mariano-movil.md
     ├── speaker-id-mariano.md
     ├── reservas-dhcp-bombillas-iot.md
+    ├── tuya-watchdog.md
     ├── api-costs.md
     └── job-finder.md
 ```
@@ -266,7 +271,9 @@ WayneHomeLab/
 - [x] HA HTTPS remoto vía WireGuard (`https://ha.waynehomelab.com` con túnel; `verify_wireguard.sh` OK)
 - [ ] Weather Intelligence Center v1 slim: Docker local en el Mac (`weather-intelligence/`, rama `feature/wic-v1-slim`) — [docs/wic.md](docs/wic.md). Sin despliegue RPi/Caddy.
 - [ ] RPi 3b: instalar DietPi + Docker + `voice-pipeline/` (Whisper+Piper) para descargar HA VM
-- [ ] Bombilla Antela (Dormitorio): Tuya nube → entidad `light.bombilla_dormitorio`, luego Local Tuya IP `.122`. No agrupar con la lámpara del salón.
+- [x] Bombilla Antela (Dormitorio) en Tuya Local: `light.luz_habitacion` (`.118`). No agrupar con la lámpara del salón.
+- [x] Watchdog Tuya (`packages/tuya_watchdog.yaml`) desplegado — [docs/tuya-watchdog.md](docs/tuya-watchdog.md)
+- [ ] Bombilla Antela: reserva DHCP por MAC a `.118` en el router + ciclo de corriente (fuera de la LAN desde el 2026-10-28)
 - [ ] Wake word personalizada «Mariano» — ver [docs/wake-word-mariano.md](docs/wake-word-mariano.md) y `infrastructure/voice/wake-word/`
 - [x] Wake word "Mariano": infra en `infrastructure/voice/wake-word/` + runbook `docs/wake-word-mariano.md`
 - [x] Captura de muestras personales (34 WAV Assist) + export `export_personal_samples.sh`
