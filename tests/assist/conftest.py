@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 import yaml
-from hassil import Intents, recognize
+from hassil import Intents, recognize_best
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SENTENCES_DIR = REPO_ROOT / "home-assistant" / "custom_sentences" / "es"
@@ -43,7 +43,8 @@ def match(custom_intents: Intents):
     """match(text) -> (intent_name, {slot: value}) or (None, {})."""
 
     def _match(text: str) -> tuple[str | None, dict]:
-        res = recognize(text, custom_intents)
+        # Same ranking as HA (fewer wildcards / more literal text first).
+        res = recognize_best(text, custom_intents, language="es")
         if res is None:
             return None, {}
         return res.intent.name, {k: v.value for k, v in res.entities.items()}

@@ -15,27 +15,40 @@ def _lower(slots: dict) -> dict:
     return {k: str(v).strip().lower() for k, v in slots.items()}
 
 
+ANCHORS = ("la canción ", "la cancion ", "el tema ", "una canción ", "la ", "el ")
+
+
+def effective_query(slots: dict) -> str:
+    """What script.musica_buscar_y_poner searches: nombre without anchor + artista."""
+    s = _lower(slots)
+    nombre = s.get("nombre", "")
+    for a in ANCHORS:
+        if nombre.startswith(a):
+            nombre = nombre[len(a):]
+            break
+    return f"{nombre} de {s['artista']}" if s.get("artista") else nombre
+
+
 @pytest.mark.parametrize(
-    "text,nombre,artista",
+    "text,query",
     [
-        ("pon la canción Despacito de Luis Fonsi", "despacito", "luis fonsi"),
-        ("Pon la canción House Tour de Sabrina Carpenter.", "house tour", "sabrina carpenter"),
-        ("ponme el tema Malamente de Rosalía", "malamente", "rosalía"),
-        ("Reproduce una canción de Los Caños", None, "los caños"),
-        ("pon la canción Bohemian Rhapsody", "bohemian rhapsody", None),
+        ("pon la canción Despacito de Luis Fonsi", "despacito de luis fonsi"),
+        ("Pon la canción House Tour de Sabrina Carpenter.", "house tour de sabrina carpenter"),
+        ("ponme el tema Malamente de Rosalía", "malamente de rosalía"),
+        ("pon la canción Bohemian Rhapsody", "bohemian rhapsody"),
+        ("pon la canción Hijo de la Luna", "hijo de la luna"),
     ],
 )
-def test_song(match, text, nombre, artista) -> None:
+def test_song_anchored_passes_full_query(match, text, query) -> None:
     intent, slots = match(text)
-    slots = _lower(slots)
-    if nombre is None:
-        assert intent == "MusicaArtista"
-        assert slots["artista"] == artista
-        return
     assert intent == "MusicaCancion"
-    assert slots["nombre"] == nombre
-    if artista:
-        assert slots["artista"] == artista
+    assert effective_query(slots) == query
+
+
+def test_one_song_of_artist_is_artist_intent(match) -> None:
+    intent, slots = match("Reproduce una canción de Los Caños")
+    assert intent == "MusicaArtista"
+    assert _lower(slots)["artista"] == "los caños"
 
 
 @pytest.mark.parametrize(
@@ -54,27 +67,24 @@ def test_bare_song_only_with_library_artist(match, text, nombre, artista) -> Non
 
 
 @pytest.mark.parametrize(
-    "text,nombre,artista",
+    "text,query",
     [
-        ("pon el disco Motomami de Rosalía", "motomami", "rosalía"),
-        ("pon el álbum Short n' Sweet de Sabrina Carpenter", "short n' sweet", "sabrina carpenter"),
-        ("ponme el disco El Madrileño", "el madrileño", None),
+        ("pon el disco Motomami de Rosalía", "motomami de rosalía"),
+        ("pon el álbum Short n' Sweet de Sabrina Carpenter", "short n' sweet de sabrina carpenter"),
+        ("ponme el disco El Madrileño", "el madrileño"),
     ],
 )
-def test_album(match, text, nombre, artista) -> None:
+def test_album(match, text, query) -> None:
     intent, slots = match(text)
     assert intent == "MusicaDisco"
-    s = _lower(slots)
-    assert s["nombre"] == nombre
-    if artista:
-        assert s["artista"] == artista
+    assert _lower(slots)["nombre"] == query
 
 
 @pytest.mark.parametrize(
     "text,nombre",
     [
         ("pon mi playlist En bucle", "en bucle"),
-        ("pon la playlist Alicia y Miguel", "alicia y miguel"),
+        ("pon la playlist Alicia y Miguel", "alicia + miguel"),
         ("ponme mi lista Camarón", "camarón"),
         ("pon mi lista de reproducción hip hop", "hip hop"),
     ],

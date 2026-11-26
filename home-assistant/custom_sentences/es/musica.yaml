@@ -1,0 +1,109 @@
+# Frases Assist (ES) — Spotify vía Music Assistant en el Satellite1 (F2).
+# Destino HAOS: /config/custom_sentences/es/musica.yaml
+#
+# Formas ancladas («la canción», «el disco», «mi playlist», «música de») con
+# comodín; la forma suelta «pon X de Y» solo si Y es un artista de tu
+# biblioteca (lista {artista_biblioteca}, generada por
+# infrastructure/voice/music/sync_music_lists.py en musica_biblioteca.yaml).
+# Así no roba «pon un temporizador de 5 minutos» ni «pon el brillo de...».
+# Búsqueda y elección del mejor resultado: script.musica_buscar_y_poner.
+# Tests: tests/assist/test_musica_sentences.py
+language: "es"
+
+expansion_rules:
+  poner_m: "(pon|ponme|pone|con|reproduce|escucha|quiero (escuchar|oír|oir)|me pones|puedes poner)"
+  cancion: "(canción|cancion|tema)"
+
+intents:
+  MusicaCancion:
+    data:
+      - sentences:
+          # «X de Y» entra entero en {nombre}: la búsqueda de Spotify y la
+          # puntuación título+artista del script resuelven el artista (y no
+          # rompen títulos con «de», p. ej. «Hijo de la Luna»).
+          - "<poner_m> [la] <cancion> {nombre}"
+          - "<poner_m> {nombre} de {artista_biblioteca:artista}"
+
+  MusicaDisco:
+    data:
+      - sentences:
+          - "<poner_m> el (disco|álbum|album) {nombre}"
+
+  MusicaPlaylist:
+    data:
+      - sentences:
+          - "<poner_m> (mi|la) (playlist|lista [de reproducción]) {playlist_biblioteca:nombre}"
+          - "<poner_m> (mi|la) (playlist|lista [de reproducción]) {nombre}"
+
+  MusicaArtista:
+    data:
+      - sentences:
+          - "<poner_m> (música|musica|algo|canciones) de {artista}"
+          - "<poner_m> una <cancion> de {artista}"
+
+  MusicaSiguiente:
+    data:
+      - sentences:
+          - "siguiente [<cancion>]"
+          - "[pon] la siguiente [<cancion>]"
+          - "pasa [de] <cancion>"
+          - "(salta|sáltate|cambia) [esta] <cancion>"
+          - "otra <cancion>"
+
+  MusicaAnterior:
+    data:
+      - sentences:
+          - "[la] <cancion> anterior"
+          - "anterior"
+          - "[pon] la anterior"
+          - "vuelve a la anterior"
+
+  MusicaPausa:
+    data:
+      - sentences:
+          - "pausa [la música|la musica|la canción|la cancion]"
+          - "(para|detén|deten) la (música|musica|canción|cancion)"
+          - "pon en pausa [la música|la musica]"
+
+  MusicaSigue:
+    data:
+      - sentences:
+          - "(sigue|continúa|continua|reanuda|dale) [la música|la musica|la canción|la cancion]"
+          - "quita la pausa"
+
+  VolumenSube:
+    data:
+      - sentences:
+          - "sube [el] volumen [de la música|de la musica|de la radio]"
+          - "(súbele|subele|súbelo|subelo)"
+          - "más (alto|volumen)"
+
+  VolumenBaja:
+    data:
+      - sentences:
+          - "baja [el] volumen [de la música|de la musica|de la radio]"
+          - "(bájale|bajale|bájalo|bajalo)"
+          - "más bajo"
+          - "menos volumen"
+
+  VolumenPon:
+    data:
+      - sentences:
+          - "[pon el] volumen [al|a] {nivel}[%| por ciento]"
+
+  MusicaQueSuena:
+    data:
+      - sentences:
+          - "qué (suena|está sonando|es esto)"
+          - "qué <cancion> es [esta]"
+          - "cómo se llama esta <cancion>"
+
+lists:
+  nombre:
+    wildcard: true
+  artista:
+    wildcard: true
+  nivel:
+    range:
+      from: 0
+      to: 100
