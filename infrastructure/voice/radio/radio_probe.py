@@ -220,7 +220,8 @@ def _esphome_logs(stop: threading.Event, sink: list[str]) -> None:
 
 def run_live(args: argparse.Namespace) -> int:
     ha = HA(_token())
-    player = MA_PLAYER if args.route == "ma" else ESPHOME_PLAYER
+    # script.poner_radio plays via Music Assistant since F1b (ESPHome only as fallback)
+    player = ESPHOME_PLAYER if args.route == "esphome" else MA_PLAYER
     url = STATIONS[args.station]
     original_volume = ha.state(player)["attributes"].get("volume_level")
 
