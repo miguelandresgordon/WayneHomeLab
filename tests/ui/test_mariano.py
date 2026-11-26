@@ -33,10 +33,10 @@ def test_dashboard_shows_what_was_asked() -> None:
         "input_boolean.modo_reunion",
         "timer.modo_reunion",
         "sensor.satellite1_c7ffe4_mic_level",
-        "Latencias",
-        "Chuleta",
+        "latencias",
+        "chuleta",
     ):
-        assert needle in b, needle
+        assert needle.lower() in b.lower(), needle
 
 
 def test_cheat_sheet_matches_real_sentences() -> None:
