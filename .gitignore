@@ -120,3 +120,6 @@ Xiaomi-cloud-tokens-extractor/
 
 # Listas de la biblioteca de Spotify (datos personales; generado)
 home-assistant/custom_sentences/es/musica_biblioteca.yaml
+
+# Tarjetas de terceros descargadas con checksum (fetch_frontend_vendor.sh)
+home-assistant/www/wayne/vendor/
