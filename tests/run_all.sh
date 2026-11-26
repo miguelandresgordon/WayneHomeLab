@@ -26,9 +26,9 @@ PY_BIN="$(dirname "$PY")"
 export PATH="$PY_BIN:$PATH"
 
 ensure_python_deps() {
-  if ! "$PY" -c "import pytest, yaml, hassil, yamllint, rapidfuzz" 2>/dev/null; then
+  if ! "$PY" -c "import pytest, yaml, hassil, yamllint, rapidfuzz, jinja2, home_assistant_intents" 2>/dev/null; then
     log "Installing test deps into $(dirname "$PY")..."
-    "$PY" -m pip install --quiet pytest pyyaml hassil yamllint rapidfuzz
+    "$PY" -m pip install --quiet pytest pyyaml hassil yamllint rapidfuzz jinja2 home-assistant-intents websockets requests
   fi
 }
 
