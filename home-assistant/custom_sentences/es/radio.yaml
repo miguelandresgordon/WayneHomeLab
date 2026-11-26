@@ -1,34 +1,40 @@
 # Frases Assist (ES) — radio en Satellite1
 # Destino HAOS: /config/custom_sentences/es/radio.yaml
+#
+# Variantes reales de Groq (F0, 2026-11-26): tras el wake word se recorta el
+# «Pon» inicial y llega «Con la SER», «Hola SER», «O la cadena SER»,
+# «¡Von la SER!», «Ponla SER», «Hola, Cadena Cero». Se aceptan como verbo.
+# Tests: tests/assist/test_radio_sentences.py
 language: "es"
+
+expansion_rules:
+  # Verbo de «poner la radio», incluidas las formas recortadas por el STT.
+  poner: "(pon|por|ponme|ponla|pone|von|con|o|hola|sintoniza|sintonízame|sintonizame|reproduce|escucha|enciende|quiero (oír|oir|escuchar)|me pones|puedes poner)"
+  parar: "(para|apaga|quita|stop|detén|deten|corta)"
+  cortesia: "[por favor]"
 
 intents:
   PonRadioFavorita:
     data:
       - sentences:
-          - "pon [la] radio"
-          - "ponme [la] radio"
-          - "reproduce [la] radio"
-          - "pon radio"
+          - "<poner> [la] radio <cortesia>"
         slots:
           emisora: ser
       - sentences:
-          - "pon [la] [radio] {emisora}"
-          - "ponme [la] [radio] {emisora}"
-          - "reproduce [la] [radio] {emisora}"
-          - "quiero [escuchar] [la] [radio] {emisora}"
-          - "escucha [la] [radio] {emisora}"
+          - "<poner> [la] [radio] {emisora} [en la radio] <cortesia>"
           - "ponme a {emisora}"
+          # Solo el nombre (el STT se comió el verbo entero): «la ser».
+          - "[la] {emisora}"
 
   ParaRadioFavorita:
     data:
       - sentences:
-          - "para [la] radio"
-          - "apaga [la] radio"
-          - "quita [la] radio"
+          - "<parar> [la] radio"
+          - "<parar> [la] {emisora}"
+          - "(silencia|silencio) [la] radio"
+          - "(cállate|callate|calla|silencio)"
           - "para de (escuchar|reproducir) [la radio]"
           - "deja de (escuchar|reproducir) [la radio]"
-          - "stop [la] radio"
 
   # Cualquier emisora que no esté en la lista cerrada "emisora" de arriba
   # (p.ej. BBC, Cadena 100...) cae aquí y se busca por nombre en Radio Browser.
@@ -65,9 +71,18 @@ intents:
           - "quiero [escuchar] [una] radio {criterio}"
 
 lists:
+  # Nombre libre para Radio Browser (PonRadioBrowser). Sin esta lista HA
+  # respondía «Unknown error» a «pon la radio BBC» (2026-11-26).
+  consulta:
+    wildcard: true
+
   emisora:
     values:
       - in: "ser"
+        out: "ser"
+      - in: "cadena cero"
+        out: "ser"
+      - in: "ser madrid"
         out: "ser"
       - in: "la ser"
         out: "ser"
@@ -106,6 +121,8 @@ lists:
       - in: "rne"
         out: "radio3"
       - in: "rne radio 3"
+        out: "radio3"
+      - in: "radio 3 de rne"
         out: "radio3"
       - in: "roncudo"
         out: "roncudo"

@@ -32,6 +32,20 @@ ToggleLaLampara:
   speech:
     text: "Cambio la lámpara."
 
+# Brillo con verbo recortado por el STT («Con la lámpara al 50%»).
+# Frases: custom_sentences/es/luces.yaml (LamparaBrillo)
+LamparaBrillo:
+  description: Ajusta el brillo de la lámpara Xiaomi del salón
+  action:
+    - action: light.turn_on
+      target:
+        entity_id: light.yeelink_mono6_6409_light
+      data:
+        brightness_pct: "{{ brillo | int(50) }}"
+      continue_on_error: true
+  speech:
+    text: "Lámpara al {{ brillo | int(50) }} por ciento."
+
 PonRadioFavorita:
   description: Reproduce una emisora favorita en Satellite1
   action:
@@ -207,3 +221,8 @@ CambiaEntradaTele:
         entrada: "{{ entrada_tv }}"
   speech:
     text: "Pongo {{ entrada_tv }} en la tele."
+
+# Alucinaciones de Whisper (silencio/TV): no hacer nada y no hablar.
+# Frases: custom_sentences/es/ruido.yaml
+IgnorarRuido:
+  description: Ignora alucinaciones típicas del STT

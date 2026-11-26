@@ -1,0 +1,36 @@
+# Expectativas de NLU en vivo (infrastructure/voice/nlu_live_check.py).
+# Frases reales de Groq (F0) + órdenes diarias. `intent: null` = no debe hacer nada.
+cases:
+  # Radio — variantes recortadas reales
+  - {text: "Pon la cadena SER.", intent: PonRadioFavorita}
+  - {text: "Con la SER.", intent: PonRadioFavorita}
+  - {text: "Hola SER.", intent: PonRadioFavorita}
+  - {text: "O la cadena SER.", intent: PonRadioFavorita}
+  - {text: "¡Von la SER!", intent: PonRadioFavorita}
+  - {text: "Ponla SER.", intent: PonRadioFavorita}
+  - {text: "Por la SER.", intent: PonRadioFavorita}
+  - {text: "Hola, Cadena Cero.", intent: PonRadioFavorita}
+  - {text: "la ser", intent: PonRadioFavorita}
+  - {text: "sintoniza radio 3", intent: PonRadioFavorita}
+  - {text: "Pon radio 3", intent: PonRadioFavorita}
+  - {text: "Pon la radio BBC", intent: PonRadioBrowser}
+  - {text: "Para la radio.", intent: ParaRadioFavorita}
+  - {text: "Cállate.", intent: ParaRadioFavorita}
+  # Lámpara
+  - {text: "Con la lámpara al 50%.", intent: LamparaBrillo}
+  - {text: "Con el brillo de la lámpara al máximo.", intent: LamparaBrillo}
+  - {text: "Pon la lámpara al mínimo.", intent: [HassLightSet, LamparaBrillo]}
+  - {text: "Pon el brillo de la lámpara al 50%.", intent: [HassLightSet, LamparaBrillo]}
+  - {text: "Sube el brillo de la lámpara.", intent: HassLightSet}
+  - {text: "enciende la lámpara", intent: EnciendeLaLampara}
+  - {text: "Entiende la lámpara.", intent: EnciendeLaLampara}
+  - {text: "apaga la lámpara", intent: ApagaLaLampara}
+  - {text: "Apagada la lámpara.", intent: ApagaLaLampara}
+  # Tele
+  - {text: "enciende la tele", intent: EnciendeLaTele}
+  - {text: "apaga la tele", intent: ApagaLaTele}
+  - {text: "Aparar la tele.", intent: ApagaLaTele}
+  - {text: "Pon el HDMI 3 en la tele.", intent: CambiaEntradaTele}
+  # Ruido real de TV / alucinaciones: no deben disparar radio ni luces
+  - {text: "Gracias por ver el video.", intent: IgnorarRuido}
+  - {text: "¿Qué va a ser movido?", intent: [null, HassNevermind, HassGetState]}  # consulta inocua
