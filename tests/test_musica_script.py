@@ -76,8 +76,12 @@ def test_empty_candidates_gives_minus_one() -> None:
 def test_plays_on_music_assistant_player_and_returns_what_it_put() -> None:
     blob = yaml.dump(_script(), allow_unicode=True)
     assert "music_assistant.search" in blob
-    assert "music_assistant.play_media" in blob
-    assert "media_player.satellite1" in blob
+    # Fire-and-forget: MA's play_media blocks ~30 s while it loads a whole
+    # playlist/album (measured 2026-11-26); the voice reply must not wait.
+    assert "script.turn_on" in blob and "script.musica_reproducir_uri" in blob
+    assert "music_assistant.play_media" not in blob
+    helper = yaml.dump(yaml.safe_load((HA / "includes" / "scripts.yaml").read_text(encoding="utf-8"))["musica_reproducir_uri"])
+    assert "music_assistant.play_media" in helper and "media_player.satellite1" in helper
     assert "response_variable: resultado" in blob or "response_variable" in blob
     assert "get_library" in blob  # own playlists first
 
