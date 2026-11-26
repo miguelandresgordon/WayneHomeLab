@@ -17,8 +17,10 @@ log() { printf '[ha-backup] %s\n' "$*" >&2; }
 
 backup_cmd() {
   local stamp="$1"
-  printf 'mkdir -p %s && cd /config && tar czf %s/config-%s.tar.gz --exclude=secrets.yaml --exclude=esphome/secrets.yaml --exclude=esphome/.esphome --ignore-failed-read %s 2>/dev/null; ls -l %s/config-%s.tar.gz' \
-    "$BACKUP_DIR" "$BACKUP_DIR" "$stamp" "${PATHS[*]}" "$BACKUP_DIR" "$stamp"
+  # busybox tar (HAOS SSH add-on): no --ignore-failed-read, so keep existing paths only.
+  # shellcheck disable=SC2016 # $p/$P expand on the remote side on purpose
+  printf 'mkdir -p %s && cd /config && P=""; for p in %s; do [ -e "$p" ] && P="$P $p"; done; tar czf %s/config-%s.tar.gz --exclude=secrets.yaml --exclude=esphome/secrets.yaml --exclude=esphome/.esphome $P && ls -l %s/config-%s.tar.gz' \
+    "$BACKUP_DIR" "${PATHS[*]}" "$BACKUP_DIR" "$stamp" "$BACKUP_DIR" "$stamp"
 }
 
 main() {
