@@ -14,7 +14,9 @@ setup() {
 }
 
 @test "serve_model fails without mariano files" {
-  run "$WAKE_WORD_DIR/serve_model.sh" "$WAKE_WORD_DIR/models"
+  EMPTY_DIR="$(mktemp -d)"
+  run "$WAKE_WORD_DIR/serve_model.sh" "$EMPTY_DIR"
+  rmdir "$EMPTY_DIR"
   [ "$status" -eq 1 ]
   [[ "$output" == *"Faltan mariano.json"* ]]
 }
@@ -25,7 +27,7 @@ setup() {
   cp "$WAKE_WORD_DIR/models/mariano.json.example" "$TMPDIR/mariano.json"
   echo "mock-tflite-content" > "$TMPDIR/mariano.tflite"
 
-  MWW_SERVE_PORT="$TEST_PORT" "$WAKE_WORD_DIR/serve_model.sh" "$TMPDIR" &
+  MWW_SERVE_PORT="$TEST_PORT" "$WAKE_WORD_DIR/serve_model.sh" "$TMPDIR" >/dev/null 2>&1 3>&- &
   SERVER_PID=$!
   sleep 2
 
@@ -90,7 +92,8 @@ setup() {
 @test "setup_trainer_nvidia cpu dry-run omits gpus" {
   run "$WAKE_WORD_DIR/setup_trainer_nvidia.sh" --cpu --dry-run
   [ "$status" -eq 0 ]
-  [[ "$output" != *"--gpus all"* ]]
+  # The CPU log line says "sin --gpus all"; only the docker command matters.
+  ! grep -v '^\[setup-trainer-nvidia\]' <<<"$output" | grep -q -- "--gpus all"
   [[ "$output" == *"CPU"* ]] || [[ "$output" == *"cpu"* ]]
 }
 

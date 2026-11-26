@@ -79,6 +79,8 @@ scp "${REPO_ROOT}/home-assistant/themes/wayne_default.yaml" \
   "${HA_USER}@${HA_HOST}:${HA_CONFIG}/themes/wayne_default.yaml"
 
 log "Registrando integración Folder Watcher (config entry)..."
+# Mixed expansion on purpose: ${HA_CONFIG}/${FOLDER_WATCHER_ENTRY_ID} local, \$vars remote.
+# shellcheck disable=SC2087
 ssh "${HA_USER}@${HA_HOST}" bash -s <<EOF
 set -euo pipefail
 CFG="${HA_CONFIG}/.storage/core.config_entries"

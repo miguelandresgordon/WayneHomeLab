@@ -29,4 +29,5 @@ echo "  TFLite: http://${LOCAL_IP}:${PORT}/mariano.tflite"
 echo "Pulsa Ctrl+C para detener."
 
 cd "$MODELS_DIR"
-python3 -m http.server "$PORT" --bind "$HOST"
+# exec: Ctrl+C / kill llegan directamente al servidor (sin huérfanos)
+exec python3 -m http.server "$PORT" --bind "$HOST"
