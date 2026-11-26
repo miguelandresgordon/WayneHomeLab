@@ -18,12 +18,12 @@ packages:
     refresh: 1d
     files:
       # Main config files, don't remove
-    - config/satellite1.base.yaml
-    - config/common/dashboard_build.yaml
-    - path: config/common/components.external.yaml
-      vars:
-        ext_comp_repo_url: *repo_url
-        ext_comp_repo_ref: *repo_ref
+      - config/satellite1.base.yaml
+      - config/common/dashboard_build.yaml
+      - path: config/common/components.external.yaml
+        vars:
+          ext_comp_repo_url: *repo_url
+          ext_comp_repo_ref: *repo_ref
 
       ## OPTIONALLY, uncomment if want extra memory, wifi and xmos control of the device.
       # - config/common/debug.yaml

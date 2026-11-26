@@ -28,7 +28,8 @@ DOCKER_DATA_DIR="${SSD_MOUNT}/docker"
 # Functions
 # ------------------------------------------------------------------------------
 log() {
-    local msg="[$(date '+%Y-%m-%d %H:%M:%S')] $*"
+    local msg
+    msg="[$(date '+%Y-%m-%d %H:%M:%S')] $*"
     echo "$msg"
     echo "$msg" >> "$LOG_FILE"
 }

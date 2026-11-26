@@ -21,7 +21,8 @@ LOG_FILE="/var/log/setup_host.log"
 # Functions
 # ------------------------------------------------------------------------------
 log() {
-    local msg="[$(date '+%Y-%m-%d %H:%M:%S')] $*"
+    local msg
+    msg="[$(date '+%Y-%m-%d %H:%M:%S')] $*"
     echo "$msg"
     echo "$msg" >> "$LOG_FILE"
 }

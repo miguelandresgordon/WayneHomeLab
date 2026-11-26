@@ -130,7 +130,7 @@ if [[ "$MODE" == "--resume" ]]; then
     for d in fma_16k chime_16k audioset_16k mit_rirs; do
       if [[ -d "$DATA_DIR/$d" ]]; then
         log "Eliminando $DATA_DIR/$d (features ya cacheadas)..."
-        rm -rf "$DATA_DIR/$d"
+        rm -rf "${DATA_DIR:?}/$d"
       fi
     done
   fi
@@ -149,7 +149,7 @@ if [[ "$MODE" == "--aggressive" ]]; then
   for feat in generated_augmented_features personal_augmented_features reviewed_negative_features; do
     if [[ -d "$DATA_DIR/$feat" ]]; then
       log "Eliminando $DATA_DIR/$feat (rebuildable)..."
-      rm -rf "$DATA_DIR/$feat"
+      rm -rf "${DATA_DIR:?}/$feat"
       cleaned=1
     fi
   done
@@ -172,7 +172,7 @@ if [[ "$MODE" == "--aggressive" ]]; then
         wav_count="$(find "$root/$cooked" -name '*.wav' 2>/dev/null | wc -l | tr -d ' ')"
         if [[ "${wav_count:-0}" -gt 100 ]]; then
           log "Eliminando $root/$raw (${wav_count} WAV en $cooked)..."
-          rm -rf "$root/$raw"
+          rm -rf "${root:?}/$raw"
           cleaned=1
         fi
       fi
