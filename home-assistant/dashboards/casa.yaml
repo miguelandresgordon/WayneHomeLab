@@ -1,0 +1,7 @@
+title: Casa
+views:
+  - title: Casa
+    path: inicio
+    theme: wayne_default
+    type: sections
+    sections: []

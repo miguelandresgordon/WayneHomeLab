@@ -30,6 +30,35 @@ homeassistant:
 
 frontend:
   themes: !include_dir_merge_named themes
+  # Fuentes locales del tema wayne_default (sin peticiones externas)
+  extra_module_url:
+    - /local/wayne/wayne-fonts.js
+    # apexcharts-card v2.2.3 local (infrastructure/ha/fetch_frontend_vendor.sh)
+    - /local/wayne/vendor/apexcharts-card.js
+
+# Dashboards YAML versionados (home-assistant/dashboards/). Los de la UI siguen
+# en modo storage. Sin require_admin: Alicia (no admin) los ve.
+lovelace:
+  mode: storage
+  dashboards:
+    wayne-casa:
+      mode: yaml
+      title: Casa
+      icon: mdi:home-variant-outline
+      show_in_sidebar: true
+      filename: dashboards/casa.yaml
+    wayne-tiempo:
+      mode: yaml
+      title: Tiempo
+      icon: mdi:weather-partly-cloudy
+      show_in_sidebar: true
+      filename: dashboards/tiempo.yaml
+    wayne-mariano:
+      mode: yaml
+      title: Mariano
+      icon: mdi:account-voice
+      show_in_sidebar: true
+      filename: dashboards/mariano.yaml
 
 automation: !include includes/automations.yaml
 script: !include includes/scripts.yaml

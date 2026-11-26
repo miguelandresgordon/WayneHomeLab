@@ -1,3 +1,115 @@
+# wayne_default — tema oscuro plano (X/Revolut + docs/design-refs).
+# Fondo casi negro, 2 grises neutros, un acento frío y colores de estado.
+# Sin degradados, sin sombras, sin píldoras: bordes de 1 px y esquinas rectas.
+# Fuentes locales (Inter + JetBrains Mono) vía /local/wayne/wayne-fonts.js.
+#
+# Paleta
+#   negro      #000000  fondo
+#   gris 1     #16181C  superficies (cards, cabecera, sidebar seleccionada)
+#   gris 2     #2F3336  bordes y divisores
+#   texto      #E7E9EA  principal · #71767B secundario
+#   acento     #1D9BF0  azul frío
+#   estado     #00BA7C verde · #FFAD1F ámbar · #F4212E rojo
 wayne_default:
-  primary-color: "#03a9f4"
-  accent-color: "#ff9800"
+  # Base
+  primary-background-color: "#000000"
+  secondary-background-color: "#0B0C0E"
+  card-background-color: "#16181C"
+  ha-card-background: "#16181C"
+  primary-text-color: "#E7E9EA"
+  secondary-text-color: "#71767B"
+  disabled-text-color: "#3E4144"
+  text-primary-color: "#FFFFFF"
+  divider-color: "#2F3336"
+  outline-color: "#2F3336"
+  primary-color: "#1D9BF0"
+  dark-primary-color: "#1A8CD8"
+  light-primary-color: "#8ECDF8"
+  accent-color: "#1D9BF0"
+  mdc-theme-primary: "#1D9BF0"
+  link-text-color: "#1D9BF0"
+
+  # Estado
+  success-color: "#00BA7C"
+  warning-color: "#FFAD1F"
+  error-color: "#F4212E"
+  info-color: "#1D9BF0"
+  state-icon-color: "#71767B"
+  state-icon-active-color: "#1D9BF0"
+  state-active-color: "#1D9BF0"
+  state-on-color: "#1D9BF0"
+  state-off-color: "#3E4144"
+  state-light-on-color: "#FFAD1F"
+  state-media_player-playing-color: "#00BA7C"
+  state-unavailable-color: "#F4212E"
+
+  # Cards: planas, 1 px, sin sombra
+  ha-card-border-radius: "2px"
+  ha-card-border-width: "1px"
+  ha-card-border-color: "#2F3336"
+  ha-card-box-shadow: "none"
+  ha-card-header-font-family: "'JetBrains Mono', ui-monospace, monospace"
+  ha-dialog-border-radius: "2px"
+  ha-badge-border-radius: "2px"
+  ha-border-radius-pill: "2px"
+  ha-border-radius-sm: "2px"
+  ha-border-radius-md: "2px"
+  ha-border-radius-lg: "2px"
+  ha-border-radius-xl: "2px"
+  ha-border-radius-2xl: "2px"
+  ha-border-radius-3xl: "2px"
+  ha-border-radius-4xl: "2px"
+  ha-border-radius-6xl: "2px"
+  ha-tile-icon-border-radius: "2px"
+  control-button-border-radius: "2px"
+  feature-border-radius: "2px"
+  mush-card-primary-font-weight: "600"
+
+  # Cabecera y barra lateral
+  app-header-background-color: "#000000"
+  app-header-text-color: "#E7E9EA"
+  app-header-border-bottom: "1px solid #2F3336"
+  sidebar-background-color: "#000000"
+  sidebar-text-color: "#E7E9EA"
+  sidebar-icon-color: "#71767B"
+  sidebar-selected-background-color: "#16181C"
+  sidebar-selected-icon-color: "#1D9BF0"
+  sidebar-selected-text-color: "#E7E9EA"
+  sidebar-border-color: "#2F3336"
+
+  # Formularios
+  input-fill-color: "#0B0C0E"
+  input-ink-color: "#E7E9EA"
+  input-label-ink-color: "#71767B"
+  input-idle-line-color: "#2F3336"
+  input-hover-line-color: "#71767B"
+  input-outlined-idle-border-color: "#2F3336"
+  input-outlined-hover-border-color: "#71767B"
+  input-disabled-fill-color: "#0B0C0E"
+  mdc-text-field-fill-color: "#0B0C0E"
+  switch-checked-color: "#1D9BF0"
+  switch-checked-button-color: "#FFFFFF"
+  switch-checked-track-color: "#1D9BF0"
+  switch-unchecked-button-color: "#71767B"
+  switch-unchecked-track-color: "#2F3336"
+  paper-slider-knob-color: "#1D9BF0"
+  paper-slider-active-color: "#1D9BF0"
+  paper-slider-container-color: "#2F3336"
+
+  # Tipografía (local)
+  ha-font-family-body: "Inter, system-ui, sans-serif"
+  ha-font-family-heading: "Inter, system-ui, sans-serif"
+  ha-font-family-code: "'JetBrains Mono', ui-monospace, monospace"
+  code-font-family: "'JetBrains Mono', ui-monospace, monospace"
+  primary-font-family: "Inter, system-ui, sans-serif"
+  paper-font-common-base_-_font-family: "Inter, system-ui, sans-serif"
+
+  # Gráficos (history / statistics)
+  graph-color-1: "#1D9BF0"
+  graph-color-2: "#00BA7C"
+  graph-color-3: "#FFAD1F"
+  graph-color-4: "#F4212E"
+  graph-color-5: "#E7E9EA"
+  energy-grid-consumption-color: "#1D9BF0"
+  history-unavailable-color: "#2F3336"
+  history-unknown-color: "#3E4144"
