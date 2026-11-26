@@ -192,7 +192,8 @@ def _esphome_logs(stop: threading.Event, sink: list[str]) -> None:
     import aioesphomeapi
     from aioesphomeapi import LogLevel
 
-    pattern = re.compile(r"media|speaker|audio|http|buffer|underrun|stream|wifi|error|fail|timeout|reset|decoder", re.I)
+    # Everything except the ambient-light sensor spam (ltr_als_ps warns every second).
+    noise = re.compile(r"ltr_als_ps")
 
     async def run() -> None:
         cli = aioesphomeapi.APIClient(SATELLITE_HOST, 6053, None, noise_psk=psk)
@@ -201,10 +202,10 @@ def _esphome_logs(stop: threading.Event, sink: list[str]) -> None:
         def on_log(msg) -> None:  # noqa: ANN001
             text = msg.message.decode(errors="replace") if isinstance(msg.message, bytes) else str(msg.message)
             text = re.sub(r"\x1b\[[0-9;]*m", "", text)
-            if pattern.search(text):
+            if not noise.search(text):
                 sink.append(f"{time.time():.1f} {text}")
 
-        unsub = cli.subscribe_logs(on_log, log_level=LogLevel.LOG_LEVEL_DEBUG)
+        unsub = cli.subscribe_logs(on_log, log_level=LogLevel.LOG_LEVEL_VERY_VERBOSE)
         while not stop.is_set():
             await asyncio.sleep(0.5)
         if callable(unsub):
