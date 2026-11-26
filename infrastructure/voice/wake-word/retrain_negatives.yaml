@@ -1,0 +1,36 @@
+# Negativos para reentrenar «Mariano» (F3c). Lo prepara
+# prepare_retrain_negatives.py en retrain_data/negatives/<kind>/ (gitignored).
+# Objetivo: que la TV en español, la voz alta y la radio/música propias NO
+# disparen el wake word, sin perder detección con música alta (positivos con
+# ruido de reproducción: guion_muestras_mariano.md).
+clip_seconds: 10
+sources:
+  # Activaciones falsas REALES del Satellite1 (TV/conversación), del pipeline
+  # de Assist: los mejores negativos posibles (mismo micro, misma sala).
+  - kind: voz_alta
+    from: assist_false_wakes
+    min_dur_s: 6
+  - kind: tv_es
+    name: la1
+    url: https://rtvelivestream.rtve.es/rtvesec/la1/la1_main.m3u8
+    minutes: 30
+  - kind: tv_es
+    name: 24h
+    url: https://rtvelivestream.rtve.es/rtvesec/24h/24h_main.m3u8
+    minutes: 20
+  - kind: radio_habla
+    name: ser
+    url: https://playerservices.streamtheworld.com/api/livestream-redirect/SER_MADRID.mp3
+    minutes: 30
+  - kind: radio_habla
+    name: rne1
+    url: https://rtvelivestream.rtve.es/rtvesec/rne/rne_r1_main.m3u8
+    minutes: 15
+  - kind: musica
+    name: radio3
+    url: https://rtvelivestream.rtve.es/rtvesec/rne/rne_r3_main.m3u8
+    minutes: 30
+  - kind: musica
+    name: los40
+    url: https://playerservices.streamtheworld.com/api/livestream-redirect/LOS40.mp3
+    minutes: 30
