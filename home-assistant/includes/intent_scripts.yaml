@@ -226,3 +226,146 @@ CambiaEntradaTele:
 # Frases: custom_sentences/es/ruido.yaml
 IgnorarRuido:
   description: Ignora alucinaciones típicas del STT
+
+# ---------------------------------------------------------------------------
+# Spotify vía Music Assistant (F2). Frases: custom_sentences/es/musica.yaml
+# Reproduce en media_player.satellite1 (MA) y confirma qué ha puesto.
+# ---------------------------------------------------------------------------
+MusicaCancion:
+  description: Pone una canción (búsqueda difusa en Spotify)
+  action:
+    - action: script.musica_buscar_y_poner
+      data:
+        tipo: track
+        nombre: "{{ nombre | default('') }}"
+        artista: "{{ artista | default('') }}"
+      response_variable: r
+  speech:
+    text: >-
+      {% if r.encontrado %}Pongo {{ r.nombre }}{% if r.artista %}, de {{ r.artista }}{% endif %}.
+      {% else %}No he encontrado {{ nombre | default(artista) }}.{% endif %}
+
+MusicaDisco:
+  description: Pone un disco
+  action:
+    - action: script.musica_buscar_y_poner
+      data:
+        tipo: album
+        nombre: "{{ nombre | default('') }}"
+      response_variable: r
+  speech:
+    text: >-
+      {% if r.encontrado %}Pongo el disco {{ r.nombre }}{% if r.artista %}, de {{ r.artista }}{% endif %}.
+      {% else %}No he encontrado el disco {{ nombre }}.{% endif %}
+
+MusicaPlaylist:
+  description: Pone una playlist (primero las tuyas)
+  action:
+    - action: script.musica_buscar_y_poner
+      data:
+        tipo: playlist
+        nombre: "{{ nombre | default('') }}"
+      response_variable: r
+  speech:
+    text: >-
+      {% if r.encontrado %}Pongo la playlist {{ r.nombre }}.
+      {% else %}No he encontrado la playlist {{ nombre }}.{% endif %}
+
+MusicaArtista:
+  description: Pone música de un artista
+  action:
+    - action: script.musica_buscar_y_poner
+      data:
+        tipo: artist
+        nombre: "{{ artista | default('') }}"
+      response_variable: r
+  speech:
+    text: >-
+      {% if r.encontrado %}Pongo música de {{ r.nombre }}.
+      {% else %}No he encontrado a {{ artista }}.{% endif %}
+
+MusicaSiguiente:
+  description: Siguiente canción
+  action:
+    - action: media_player.media_next_track
+      target:
+        entity_id: media_player.satellite1
+      continue_on_error: true
+  speech:
+    text: ""
+
+MusicaAnterior:
+  description: Canción anterior
+  action:
+    - action: media_player.media_previous_track
+      target:
+        entity_id: media_player.satellite1
+      continue_on_error: true
+  speech:
+    text: ""
+
+MusicaPausa:
+  description: Pausa la música
+  action:
+    - action: media_player.media_pause
+      target:
+        entity_id: media_player.satellite1
+      continue_on_error: true
+  speech:
+    text: ""
+
+MusicaSigue:
+  description: Reanuda la música
+  action:
+    - action: media_player.media_play
+      target:
+        entity_id: media_player.satellite1
+      continue_on_error: true
+  speech:
+    text: ""
+
+# Volumen del altavoz del Satellite1 (afecta a radio, música y voz).
+VolumenSube:
+  description: Sube 10 puntos el volumen del Satellite1
+  action:
+    - action: media_player.volume_set
+      target:
+        entity_id: media_player.satellite1_c7ffe4_media_player
+      data:
+        volume_level: "{{ [1.0, (state_attr('media_player.satellite1_c7ffe4_media_player', 'volume_level') | float(0.5)) + 0.1] | min | round(2) }}"
+      continue_on_error: true
+  speech:
+    text: ""
+
+VolumenBaja:
+  description: Baja 10 puntos el volumen del Satellite1
+  action:
+    - action: media_player.volume_set
+      target:
+        entity_id: media_player.satellite1_c7ffe4_media_player
+      data:
+        volume_level: "{{ [0.05, (state_attr('media_player.satellite1_c7ffe4_media_player', 'volume_level') | float(0.5)) - 0.1] | max | round(2) }}"
+      continue_on_error: true
+  speech:
+    text: ""
+
+VolumenPon:
+  description: Fija el volumen del Satellite1
+  action:
+    - action: media_player.volume_set
+      target:
+        entity_id: media_player.satellite1_c7ffe4_media_player
+      data:
+        volume_level: "{{ ([5, nivel | int(50), 100] | sort)[1] / 100 }}"
+      continue_on_error: true
+  speech:
+    text: "Volumen al {{ nivel }}."
+
+MusicaQueSuena:
+  description: Dice qué está sonando en Music Assistant
+  speech:
+    text: >-
+      {% set t = state_attr('media_player.satellite1', 'media_title') %}
+      {% set a = state_attr('media_player.satellite1', 'media_artist') %}
+      {% if is_state('media_player.satellite1', 'playing') and t %}Suena {{ t }}{% if a %}, de {{ a }}{% endif %}.
+      {% else %}Ahora no está sonando nada.{% endif %}
