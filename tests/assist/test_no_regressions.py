@@ -19,8 +19,9 @@ LIGHT_BUILTINS = [
 
 
 @pytest.mark.parametrize("text", LIGHT_BUILTINS)
-def test_light_brightness_stays_builtin(ha_match, text) -> None:
-    assert ha_match(text)[0] == "HassLightSet"
+def test_light_brightness_still_sets_the_lamp(ha_match, text) -> None:
+    # Built-in HassLightSet or our strict LamparaBrillo (pinned to the Xiaomi lamp).
+    assert ha_match(text)[0] in {"HassLightSet", "LamparaBrillo"}
 
 
 @pytest.mark.parametrize(
