@@ -6,10 +6,12 @@
 # Desplegar: infrastructure/voice/wake-word/deploy_ha_voice_config.sh
 # ==============================================================================
 - id: satellite1_tv_wake_word_sensitivity
-  alias: "Satellite1 — sensibilidad wake word según TV"
+  alias: "Satellite1 — sensibilidad wake word según TV y reproducción"
   description: >-
-    Slightly sensitive si tv_ga_2 o Bravia están on/playing.
-    Moderately sensitive si ambas llevan 5 min paradas. No mutea.
+    Slightly sensitive si tv_ga_2 o Bravia están on/playing (guardia de TV).
+    Very sensitive si el propio Satellite1 reproduce radio/música (su eco se
+    cancela en el XMOS y a volumen alto le cuesta oír «Mariano»).
+    Moderately sensitive cuando todo lleva 5 min parado. No mutea.
   mode: restart
   triggers:
     - trigger: state
@@ -34,6 +36,19 @@
         - "off"
         - standby
       for: "00:05:00"
+    - trigger: state
+      id: sat_playing
+      entity_id:
+        - media_player.satellite1
+        - media_player.satellite1_c7ffe4_media_player
+      to: playing
+    - trigger: state
+      id: sat_stopped
+      entity_id:
+        - media_player.satellite1
+        - media_player.satellite1_c7ffe4_media_player
+      from: playing
+      for: "00:05:00"
     - trigger: homeassistant
       id: ha_start
       event: start
@@ -43,12 +58,20 @@
           id: ha_start
       then:
         - delay: "00:00:30"
+    - variables:
+        tv_on: >-
+          {{ states('media_player.tv_ga_2') in ['playing', 'on']
+             or states('media_player.bravia_kd_43xf8596') in ['playing', 'on'] }}
+        tv_known: >-
+          {{ states('media_player.tv_ga_2') not in ['unavailable', 'unknown']
+             and states('media_player.bravia_kd_43xf8596') not in ['unavailable', 'unknown'] }}
+        sat_playing: >-
+          {{ is_state('media_player.satellite1', 'playing')
+             or is_state('media_player.satellite1_c7ffe4_media_player', 'playing') }}
     - choose:
         - conditions:
             - condition: template
-              value_template: >-
-                {{ states('media_player.tv_ga_2') in ['playing', 'on']
-                   or states('media_player.bravia_kd_43xf8596') in ['playing', 'on'] }}
+              value_template: "{{ tv_on }}"
           sequence:
             - action: select.select_option
               target:
@@ -58,9 +81,17 @@
               continue_on_error: true
         - conditions:
             - condition: template
-              value_template: >-
-                {{ states('media_player.tv_ga_2') not in ['playing', 'on', 'unavailable', 'unknown']
-                   and states('media_player.bravia_kd_43xf8596') not in ['playing', 'on', 'unavailable', 'unknown'] }}
+              value_template: "{{ sat_playing }}"
+          sequence:
+            - action: select.select_option
+              target:
+                entity_id: select.satellite1_c7ffe4_wake_word_sensitivity
+              data:
+                option: Very sensitive
+              continue_on_error: true
+        - conditions:
+            - condition: template
+              value_template: "{{ tv_known and not tv_on and not sat_playing }}"
           sequence:
             - action: select.select_option
               target:
