@@ -30,6 +30,9 @@ homeassistant:
 
 frontend:
   themes: !include_dir_merge_named themes
+  # Fuentes locales del tema wayne_default (sin peticiones externas)
+  extra_module_url:
+    - /local/wayne/wayne-fonts.js
 
 automation: !include includes/automations.yaml
 script: !include includes/scripts.yaml
