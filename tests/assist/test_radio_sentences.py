@@ -115,3 +115,13 @@ def test_stop_phrases(match, text) -> None:
 )
 def test_non_radio_sentences_do_not_start_the_radio(match, text) -> None:
     assert match(text)[0] not in {"PonRadioFavorita", "PonRadioBrowser", "PonRadioLista", "PonRadioAleatoria"}
+
+
+@pytest.mark.parametrize("text", ["Por la SER.", "por la cadena ser"])
+def test_por_is_a_clipped_pon(match, text) -> None:
+    assert match(text) == ("PonRadioFavorita", {"emisora": "ser"})
+
+
+@pytest.mark.parametrize("text", ["Cállate.", "calla", "silencio"])
+def test_shut_up_stops_playback(match, text) -> None:
+    assert match(text)[0] == "ParaRadioFavorita"
