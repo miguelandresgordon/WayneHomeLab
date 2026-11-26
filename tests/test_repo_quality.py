@@ -50,7 +50,7 @@ def test_yaml_files_pass_yamllint() -> None:
         check=False,
     )
     errors = [ln for ln in res.stdout.splitlines() if "[error]" in ln]
-    assert not errors, "\n".join(errors)
+    assert res.returncode == 0 and not errors, "\n".join(errors) or res.stderr
 
 
 @pytest.mark.skipif(shutil.which("shellcheck") is None, reason="shellcheck not installed")
