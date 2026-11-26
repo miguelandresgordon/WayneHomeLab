@@ -32,5 +32,5 @@ cases:
   - {text: "Aparar la tele.", intent: ApagaLaTele}
   - {text: "Pon el HDMI 3 en la tele.", intent: CambiaEntradaTele}
   # Ruido real de TV / alucinaciones: no deben disparar radio ni luces
-  - {text: "Gracias por ver el video.", intent: [null, HassNevermind]}
+  - {text: "Gracias por ver el video.", intent: IgnorarRuido}
   - {text: "¿Qué va a ser movido?", intent: [null, HassNevermind, HassGetState]}  # consulta inocua

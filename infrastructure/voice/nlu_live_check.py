@@ -75,7 +75,8 @@ def main() -> int:
     results = asyncio.run(_debug([c["text"] for c in cases]))
     if args.verbose:
         for c, r in zip(cases, results):
-            print(f"{c['text']!r:48} -> {(r or {}).get('intent', {}).get('name')}")
+            partial = " (partial)" if r and r.get("match") is False else ""
+            print(f"{c['text']!r:48} -> {(r or {}).get('intent', {}).get('name')}{partial}")
     failures = evaluate(cases, results)
     for f in failures:
         print("FAIL", f)
