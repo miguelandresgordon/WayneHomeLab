@@ -298,14 +298,14 @@ musica_buscar_y_poner:
         - condition: template
           value_template: "{{ (mejor | int) >= 0 }}"
       then:
-        - action: music_assistant.play_media
+        # Sin esperar: MA tarda ~30 s en cargar una playlist/disco entero.
+        - action: script.turn_on
           target:
-            entity_id: media_player.satellite1
+            entity_id: script.musica_reproducir_uri
           data:
-            media_id: "{{ elegido.uri }}"
-            media_type: "{{ tipo_n }}"
-            enqueue: replace
-          continue_on_error: true
+            variables:
+              uri: "{{ elegido.uri }}"
+              tipo: "{{ tipo_n }}"
     - variables:
         resultado:
           encontrado: "{{ (mejor | int) >= 0 }}"
@@ -314,3 +314,33 @@ musica_buscar_y_poner:
           tipo: "{{ tipo_n }}"
     - stop: ""
       response_variable: resultado
+
+musica_reproducir_uri:
+  alias: Reproducir URI de Music Assistant en Satellite1
+  description: Reproduce un elemento de Music Assistant (lo lanza musica_buscar_y_poner sin esperar)
+  icon: mdi:play
+  mode: restart
+  fields:
+    uri:
+      name: URI
+      required: true
+      selector:
+        text:
+    tipo:
+      name: Tipo
+      required: true
+      selector:
+        text:
+  sequence:
+    - action: media_player.media_stop
+      target:
+        entity_id: media_player.satellite1_c7ffe4_media_player
+      continue_on_error: true
+    - action: music_assistant.play_media
+      target:
+        entity_id: media_player.satellite1
+      data:
+        media_id: "{{ uri }}"
+        media_type: "{{ tipo }}"
+        enqueue: replace
+      continue_on_error: true

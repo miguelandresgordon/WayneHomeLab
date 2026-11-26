@@ -86,10 +86,13 @@ PonRadioBrowser:
         modo: byname
         consulta: "{{ consulta }}"
       response_variable: rb_result
+    # intent_script solo pasa a speech lo que devuelve la acción
+    - stop: ""
+      response_variable: rb_result
   speech:
     text: >-
-      {% if rb_result.encontrada %}
-        Pongo {{ rb_result.nombre }}.
+      {% if action_response.encontrada %}
+        Pongo {{ action_response.nombre }}.
       {% else %}
         No he encontrado ninguna emisora llamada {{ consulta }}.
       {% endif %}
@@ -101,10 +104,13 @@ PonRadioAleatoria:
       data:
         modo: random
       response_variable: rb_result
+    # intent_script solo pasa a speech lo que devuelve la acción
+    - stop: ""
+      response_variable: rb_result
   speech:
     text: >-
-      {% if rb_result.encontrada %}
-        Pongo {{ rb_result.nombre }}. Una radio al azar de todo el mundo.
+      {% if action_response.encontrada %}
+        Pongo {{ action_response.nombre }}. Una radio al azar de todo el mundo.
       {% else %}
         No he podido encontrar una radio aleatoria ahora mismo.
       {% endif %}
@@ -117,10 +123,13 @@ PonRadioLista:
         modo: "{{ criterio.split(':')[0] }}"
         consulta: "{{ criterio.split(':')[1] if ':' in criterio else '' }}"
       response_variable: rb_result
+    # intent_script solo pasa a speech lo que devuelve la acción
+    - stop: ""
+      response_variable: rb_result
   speech:
     text: >-
-      {% if rb_result.encontrada %}
-        Pongo {{ rb_result.nombre }}.
+      {% if action_response.encontrada %}
+        Pongo {{ action_response.nombre }}.
       {% else %}
         No he encontrado ninguna emisora para esa categoría.
       {% endif %}
@@ -240,9 +249,12 @@ MusicaCancion:
         nombre: "{{ nombre | default('') }}"
         artista: "{{ artista | default('') }}"
       response_variable: r
+    # intent_script solo pasa a speech lo que devuelve la acción
+    - stop: ""
+      response_variable: r
   speech:
     text: >-
-      {% if r.encontrado %}Pongo {{ r.nombre }}{% if r.artista %}, de {{ r.artista }}{% endif %}.
+      {% if action_response.encontrado %}Pongo {{ action_response.nombre }}{% if action_response.artista %}, de {{ action_response.artista }}{% endif %}.
       {% else %}No he encontrado {{ nombre | default(artista) }}.{% endif %}
 
 MusicaDisco:
@@ -253,9 +265,12 @@ MusicaDisco:
         tipo: album
         nombre: "{{ nombre | default('') }}"
       response_variable: r
+    # intent_script solo pasa a speech lo que devuelve la acción
+    - stop: ""
+      response_variable: r
   speech:
     text: >-
-      {% if r.encontrado %}Pongo el disco {{ r.nombre }}{% if r.artista %}, de {{ r.artista }}{% endif %}.
+      {% if action_response.encontrado %}Pongo el disco {{ action_response.nombre }}{% if action_response.artista %}, de {{ action_response.artista }}{% endif %}.
       {% else %}No he encontrado el disco {{ nombre }}.{% endif %}
 
 MusicaPlaylist:
@@ -266,9 +281,12 @@ MusicaPlaylist:
         tipo: playlist
         nombre: "{{ nombre | default('') }}"
       response_variable: r
+    # intent_script solo pasa a speech lo que devuelve la acción
+    - stop: ""
+      response_variable: r
   speech:
     text: >-
-      {% if r.encontrado %}Pongo la playlist {{ r.nombre }}.
+      {% if action_response.encontrado %}Pongo la playlist {{ action_response.nombre }}.
       {% else %}No he encontrado la playlist {{ nombre }}.{% endif %}
 
 MusicaArtista:
@@ -279,9 +297,12 @@ MusicaArtista:
         tipo: artist
         nombre: "{{ artista | default('') }}"
       response_variable: r
+    # intent_script solo pasa a speech lo que devuelve la acción
+    - stop: ""
+      response_variable: r
   speech:
     text: >-
-      {% if r.encontrado %}Pongo música de {{ r.nombre }}.
+      {% if action_response.encontrado %}Pongo música de {{ action_response.nombre }}.
       {% else %}No he encontrado a {{ artista }}.{% endif %}
 
 MusicaSiguiente:
