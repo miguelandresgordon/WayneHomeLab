@@ -372,3 +372,24 @@ musica_reproducir_uri:
         media_type: "{{ tipo }}"
         enqueue: replace
       continue_on_error: true
+
+apagar_todo:
+  alias: Apagar todo
+  description: Apaga la lámpara del salón, la tele y la música/radio del Satellite1
+  icon: mdi:power
+  mode: single
+  sequence:
+    - action: light.turn_off
+      target:
+        entity_id: light.yeelink_mono6_6409_light
+      continue_on_error: true
+    - action: media_player.turn_off
+      target:
+        entity_id: media_player.tv_ga_2
+      continue_on_error: true
+    - action: media_player.media_stop
+      target:
+        entity_id:
+          - media_player.satellite1
+          - media_player.satellite1_c7ffe4_media_player
+      continue_on_error: true
