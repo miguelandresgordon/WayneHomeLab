@@ -117,3 +117,6 @@ weather-intelligence/data/*.db-wal
 
 # Third-party token extractor (local only)
 Xiaomi-cloud-tokens-extractor/
+
+# Listas de la biblioteca de Spotify (datos personales; generado)
+home-assistant/custom_sentences/es/musica_biblioteca.yaml

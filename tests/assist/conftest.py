@@ -6,15 +6,23 @@ from pathlib import Path
 
 import pytest
 import yaml
-from hassil import Intents, recognize
+from hassil import Intents, recognize_best
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SENTENCES_DIR = REPO_ROOT / "home-assistant" / "custom_sentences" / "es"
 
 
+def sentence_files() -> list[Path]:
+    """Versioned sentences + the library-list template (deterministic: the real
+    generated musica_biblioteca.yaml is personal data and is ignored here)."""
+    files = [f for f in sorted(SENTENCES_DIR.glob("*.yaml")) if f.name != "musica_biblioteca.yaml"]
+    files.append(SENTENCES_DIR / "musica_biblioteca.yaml.example")
+    return files
+
+
 def load_custom_intents() -> Intents:
     merged: dict = {"language": "es", "intents": {}, "lists": {}, "expansion_rules": {}}
-    for path in sorted(SENTENCES_DIR.glob("*.yaml")):
+    for path in sentence_files():
         data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
         for key in ("intents", "lists", "expansion_rules"):
             for name, value in (data.get(key) or {}).items():
@@ -35,7 +43,8 @@ def match(custom_intents: Intents):
     """match(text) -> (intent_name, {slot: value}) or (None, {})."""
 
     def _match(text: str) -> tuple[str | None, dict]:
-        res = recognize(text, custom_intents)
+        # Same ranking as HA (fewer wildcards / more literal text first).
+        res = recognize_best(text, custom_intents, language="es")
         if res is None:
             return None, {}
         return res.intent.name, {k: v.value for k, v in res.entities.items()}
@@ -64,7 +73,7 @@ def ha_match():
     from hassil.intents import TextSlotList
 
     base = copy.deepcopy(home_assistant_intents.get_intents("es"))
-    for path in sorted(SENTENCES_DIR.glob("*.yaml")):
+    for path in sentence_files():
         data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
         for name, value in (data.get("intents") or {}).items():
             blocks = copy.deepcopy(value["data"])
