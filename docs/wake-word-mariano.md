@@ -268,7 +268,53 @@ flowchart TD
 
 ## 4. Automatizaciones HA
 
-Una sola: `satellite1_tv_wake_word_sensitivity` en [`automations.yaml`](../home-assistant/includes/automations.yaml). Baja Mariano a Slightly si `media_player.tv_ga_2` o `media_player.bravia_kd_43xf8596` están `on`/`playing`; restaura Moderately cuando ambas llevan 5 min paradas (`idle`/`paused`/`off`/`standby`). Tras un arranque de HA espera 30 s y sincroniza. No mutea.
+`satellite1_tv_wake_word_sensitivity` en [`automations.yaml`](../home-assistant/includes/automations.yaml) (F3, 2026-11):
+
+| Situación | Sensibilidad |
+|---|---|
+| `media_player.tv_ga_2` o Bravia `on`/`playing` (guardia de TV, manda siempre) | Slightly |
+| El propio Satellite1 reproduce radio/música (`media_player.satellite1` o el ESPHome) | Very |
+| Todo parado 5 min | Moderately |
+
+Con reproducción propia se sube la sensibilidad porque su eco lo cancela el
+XMOS y a volumen alto le cuesta oír «Mariano»; tras detectar el wake word el
+firmware ya baja la música 20 dB (`on_start` → `apply_ducking`). Tras un
+arranque de HA espera 30 s y sincroniza. No mutea.
+
+### Modo reunión ([`packages/modo_reunion.yaml`](../home-assistant/packages/modo_reunion.yaml))
+
+Apaga el wake word (`switch.satellite1_c7ffe4_wake_word_activo`, firmware F3:
+desactiva los modelos sin parar el micro) y pone el aro LED en ámbar tenue.
+
+- **Entrar**: «Mariano, activa el modo reunión», el botón del dashboard, o solo
+  si `sensor.satellite1_c7ffe4_mic_level` > −30 dBFS durante 2 min sin tele
+  encendida ni radio/música en el Satellite1.
+- **Salir** (sin wake word no hay voz directa): doble pulsación del botón
+  Action, pulsación simple + «desactiva el modo reunión», dashboard,
+  temporizador de 2 h, o 10 min por debajo de −45 dBFS.
+- Calibrar umbrales: mira el histórico de `sensor.satellite1_c7ffe4_mic_level`
+  en silencio, conversación normal, voz alta y tele, y ajusta `above`/`below`
+  (mantén ≥ 10 dB de histéresis; lo exige `tests/test_satellite1_f3.py`).
+
+### Firmware fijado y rollback
+
+El YAML del Satellite1 fija `ref` al commit de staging con el que se compiló el
+firmware vivo (`9814bf5`, 2026-09-10) y se compila con **ESPHome 2026.8.2** en
+Docker (no con el add-on, que va por delante):
+
+```bash
+B=$(mktemp -d); cp infrastructure/voice/wake-word/esphome/satellite1-c7ffe4.yaml "$B"/
+ssh root@192.168.1.110 'cat /config/esphome/secrets.yaml' > "$B/secrets.yaml"; chmod 600 "$B/secrets.yaml"
+docker run --rm -v "$B":/config ghcr.io/esphome/esphome:2026.8.2 compile satellite1-c7ffe4.yaml
+docker run --rm -v "$B":/config ghcr.io/esphome/esphome:2026.8.2 upload satellite1-c7ffe4.yaml --device 192.168.1.85
+rm -f "$B/secrets.yaml"
+```
+
+**Rollback**: el bootloader no tiene rollback OTA. Si el firmware nuevo arranca
+pero algo falla, compila y sube
+[`satellite1-c7ffe4.last-good.yaml`](../infrastructure/voice/wake-word/esphome/satellite1-c7ffe4.last-good.yaml)
+igual que arriba. Si no arranca, flash por USB
+([`USB_BOOTLOADER.md`](../infrastructure/voice/wake-word/esphome/USB_BOOTLOADER.md)).
 
 El mute del Satellite1 (`switch.satellite1_c7ffe4_mute_microphones`) solo cambia a mano (HA o Action largo). Sin botones, Speaker ID ni hábitos.
 
@@ -288,6 +334,23 @@ Smoke (tras el deploy + restart, comprobar que la automatización aparece en HA)
 1. Encender Streamer o Bravia → `select.satellite1_c7ffe4_wake_word_sensitivity` = Slightly sensitive
 2. Apagar ambas y esperar 5 min → Moderately sensitive
 3. Confirmar que `switch.satellite1_c7ffe4_mute_microphones` no cambia
+
+## Reentrenamiento F3 (preparado, sin lanzar)
+
+Para oír «Mariano» con música alta y no despertarse con la tele:
+
+1. Positivos: [`guion_muestras_mariano.md`](../infrastructure/voice/wake-word/guion_muestras_mariano.md)
+   con `record_wake_samples.sh <alicia|miguel> <condición> 10` (≈ 50 por persona).
+2. Negativos: `prepare_retrain_negatives.py` según
+   [`retrain_negatives.yaml`](../infrastructure/voice/wake-word/retrain_negatives.yaml):
+   las activaciones falsas reales del Satellite1 (106 clips largos de TV y
+   conversación en `/share/assist_pipeline`, transcripción F0 en
+   `~/.local/share/wayne/assist_transcripts_2026-11-26.jsonl`) + ~3 h de
+   La 1, 24h, SER, RNE 1, Radio 3 y LOS40 en clips de 10 s.
+3. Entrenar con el flujo de RunPod de este documento (sección 1-D) subiendo
+   también `retrain_data/negatives/` como `negative_samples`, o en el PC
+   Windows en CPU (gratis, lento).
+4. OTA con el modelo nuevo (cuenta como una de las 2 OTAs de F3).
 
 ## 5. Diagnosticar STT ("no me entiende")
 

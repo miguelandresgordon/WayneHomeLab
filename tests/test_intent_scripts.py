@@ -19,7 +19,11 @@ def _custom_intents() -> set[str]:
 
 
 def _scripts() -> dict:
-    return yaml.safe_load((HA / "includes" / "intent_scripts.yaml").read_text(encoding="utf-8"))
+    scripts = yaml.safe_load((HA / "includes" / "intent_scripts.yaml").read_text(encoding="utf-8"))
+    # Packages may bring their own intent_script (merged by HA).
+    for p in (HA / "packages").glob("*.yaml"):
+        scripts.update((yaml.safe_load(p.read_text(encoding="utf-8")) or {}).get("intent_script") or {})
+    return scripts
 
 
 def test_every_custom_intent_has_a_handler() -> None:
