@@ -15,6 +15,23 @@ El enrolamiento combina **grabación local en el Mac** (micro nativo) + **cómpu
 
 > **Nota sobre disco y micrófono.** El speaker ID es ligero (~32 MB: modelo 26 MB + clips diminutos), nada que ver con el wake word (~25 GB). 7 GB de Drive sobran. El micro se graba **en el Mac**, no en Colab: el kernel de Colab es remoto y no accede al micro, y la grabación por navegador no funciona desde Cursor. **No se necesita MCP ni Chromium.**
 
+## 0. Enrolar con el Satellite1 (recomendado, 2026-11)
+
+Medido el 2026-11-26: con el perfil «miguel» grabado en junio con el micro del
+Mac, 8 órdenes reales de Miguel al Satellite1 puntúan 0,22–0,47 (umbral 0,6) →
+todas «desconocido». El perfil tiene que salir del **mismo micro** que se usa.
+
+1. `date +%Y-%m-%dT%H:%M` (apunta la hora).
+2. Di al Satellite1 las 12 frases de
+   [`guion_enrolado.md`](../infrastructure/voice/speaker-id/guion_enrolado.md).
+3. `./infrastructure/voice/speaker-id/enroll_speaker.sh alicia <hora>` — recoge
+   los WAV, entrena todas las personas de `samples/`, valida, copia a
+   `/share/speaker-id` y recarga el add-on.
+4. Repite con `miguel`. Opcional: borra `samples/miguel/clip_*.wav` (micro del
+   Mac) antes de reentrenar para que no arrastren el centroide.
+
+Las secciones 1–3 (micro del Mac + Colab) quedan como alternativa.
+
 ## 1. Grabar muestras en el Mac
 
 ```bash
@@ -95,7 +112,7 @@ Componentes clave ya en el repo:
 - `allowlist_external_dirs` para `/share/assist_pipeline` y `/share/speaker-id`
 - Folder Watcher (configurar via UI, ver sección anterior)
 - `input_text.current_speaker`
-- **Speaker ID no corre solo** (la única automatización en `includes/automations.yaml` es la guardia TV de Mariano). Invocar el add-on a mano o más adelante.
+- **Cableado activo**: `packages/speaker_id.yaml` (Folder Watcher `closed` → `rest_command.identify_speaker` → `input_text.current_speaker` + evento `speaker_identified`).
 
 ### Folder Watcher (si no arranca por YAML)
 
@@ -114,7 +131,7 @@ Configura via UI:
 
 ## 8. Usar identidad en automatizaciones
 
-**Speaker ID no está en YAML desplegado.** La única automatización viva es la guardia TV de Mariano; estos YAML de identidad son ejemplos para más adelante.
+La identificación ya corre sola (`packages/speaker_id.yaml`). No hay comportamientos por hablante desplegados: estos YAML son ejemplos.
 
 ```yaml
 trigger:

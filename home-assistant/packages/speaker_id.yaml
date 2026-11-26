@@ -1,0 +1,49 @@
+# Speaker ID — identifica quién habla en cada orden al Satellite1 (F4).
+#
+# Flujo: el pipeline Assist guarda el WAV de la orden en /share/assist_pipeline
+# (assist_pipeline.debug_recording_dir) → Folder Watcher emite «closed» →
+# add-on speaker-id-mariano (POST /identify, :10400) →
+# input_text.current_speaker + evento speaker_identified {person, score, ...}.
+#
+# Solo identificación: sin comportamientos por hablante.
+# Perfiles en /share/speaker-id (docs/speaker-id-mariano.md, enroll_speaker.sh).
+# Destino HAOS: /config/packages/speaker_id.yaml
+
+automation:
+  - id: speaker_id_identify_on_new_wav
+    alias: "Speaker ID — identificar hablante de cada orden"
+    description: >-
+      Al cerrarse el WAV de una orden de voz, pregunta al add-on quién habla,
+      guarda el nombre en input_text.current_speaker y emite speaker_identified.
+    mode: queued
+    max: 5
+    triggers:
+      - trigger: event
+        event_type: folder_watcher
+        event_data:
+          event_type: closed
+    conditions:
+      - condition: template
+        value_template: "{{ trigger.event.data.path is string and trigger.event.data.path.endswith('.wav') }}"
+    actions:
+      - action: rest_command.identify_speaker
+        data:
+          path: "{{ trigger.event.data.path }}"
+        response_variable: spk
+        continue_on_error: true
+      - if:
+          - condition: template
+            value_template: "{{ spk is defined and spk.status == 200 and spk.content is mapping }}"
+        then:
+          - action: input_text.set_value
+            target:
+              entity_id: input_text.current_speaker
+            data:
+              value: "{{ spk.content.person if spk.content.is_known else 'desconocido' }}"
+            continue_on_error: true
+          - event: speaker_identified
+            event_data:
+              person: "{{ spk.content.person }}"
+              score: "{{ spk.content.score }}"
+              is_known: "{{ spk.content.is_known }}"
+              path: "{{ trigger.event.data.path }}"
