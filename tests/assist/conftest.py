@@ -13,10 +13,10 @@ SENTENCES_DIR = REPO_ROOT / "home-assistant" / "custom_sentences" / "es"
 
 
 def sentence_files() -> list[Path]:
-    """Versioned sentences + the library lists (real file if generated, else the template)."""
-    files = sorted(SENTENCES_DIR.glob("*.yaml"))
-    if not (SENTENCES_DIR / "musica_biblioteca.yaml").is_file():
-        files.append(SENTENCES_DIR / "musica_biblioteca.yaml.example")
+    """Versioned sentences + the library-list template (deterministic: the real
+    generated musica_biblioteca.yaml is personal data and is ignored here)."""
+    files = [f for f in sorted(SENTENCES_DIR.glob("*.yaml")) if f.name != "musica_biblioteca.yaml"]
+    files.append(SENTENCES_DIR / "musica_biblioteca.yaml.example")
     return files
 
 
