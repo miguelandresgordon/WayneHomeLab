@@ -26,16 +26,21 @@ def test_prompt_is_within_whisper_prompt_budget() -> None:
     assert len(_prompt().split()) * 1.6 <= 224
 
 
-def test_prompt_models_full_radio_commands_with_leading_verb() -> None:
+def test_prompt_is_vocabulary_not_example_commands() -> None:
+    # A/B 2026-11-26 on 462 real WAVs: a prompt of example commands made Groq
+    # write «Pon la C.» for «Pon la SER» (12x) and hallucinate «Sube el volumen»
+    # / «Activa el modo reunión» on silence (long-clip false actions 4 -> 10).
+    # Keep a vocabulary list (the original style), never imperative examples.
     text = _prompt()
-    # Written as example commands so Whisper keeps the leading "Pon".
-    for needle in ("Pon la Cadena SER", "Para la radio", "Radio 3", "RadioVoz", "Filispim", "Almenara"):
+    for bad in ("Pon la Cadena SER.", "Sube el volumen.", "Activa el modo reunión.", "Siguiente canción."):
+        assert bad not in text, bad
+    for needle in ("SER", "Radio 3", "RadioVoz", "Filispim", "Almenara"):
         assert needle in text, needle
 
 
 def test_prompt_keeps_core_device_vocabulary() -> None:
     text = _prompt().lower()
-    for word in ("lámpara", "tele", "radio", "música", "siguiente", "modo reunión"):
+    for word in ("lámpara", "tele", "radio"):
         assert word in text, word
 
 
