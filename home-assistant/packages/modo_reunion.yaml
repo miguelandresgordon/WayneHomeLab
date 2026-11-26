@@ -7,7 +7,7 @@
 #   - doble pulsación del botón Action del Satellite1 (sin otro uso en el firmware)
 #   - pulsación simple del Action + «desactiva el modo reunión» (abre la escucha)
 #   - temporizador de 2 h
-#   - 10 min de silencio (< −45 dBFS)
+#   - 10 min de silencio (< −38 dBFS)
 # Estado: aro LED ámbar tenue + dashboard.
 #
 # Requiere el firmware F3 (OTA #1): switch «Wake word activo» y sensor
@@ -105,7 +105,7 @@ automation:
     triggers:
       - trigger: numeric_state
         entity_id: sensor.satellite1_c7ffe4_mic_level
-        below: -45
+        below: -38
         for: "00:10:00"
     conditions:
       - condition: state
@@ -116,8 +116,8 @@ automation:
         target:
           entity_id: input_boolean.modo_reunion
 
-  # Entrada automática con histéresis: > −30 dBFS sostenido 2 min (salida a
-  # < −45 dBFS 10 min). Nunca con la tele encendida (guardia de TV) ni con el
+  # Entrada automática con histéresis: > −22 dBFS sostenido 2 min (salida a
+  # < −38 dBFS 10 min). Nunca con la tele encendida (guardia de TV) ni con el
   # Satellite1 reproduciendo radio/música.
   - id: modo_reunion_auto
     alias: "Modo reunión — entrar solo con habla alta sostenida"
@@ -125,7 +125,7 @@ automation:
     triggers:
       - trigger: numeric_state
         entity_id: sensor.satellite1_c7ffe4_mic_level
-        above: -30
+        above: -22
         for: "00:02:00"
     conditions:
       - condition: state
