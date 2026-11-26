@@ -41,3 +41,56 @@ def match(custom_intents: Intents):
         return res.intent.name, {k: v.value for k, v in res.entities.items()}
 
     return _match
+
+
+# --------------------------------------------------------------------------- #
+# HA-faithful simulator: built-in HA intents (home-assistant-intents, es) +
+# our custom sentences, ranked exactly like HA's DefaultAgent
+# (custom sentences first, then non-wildcard {name}, then fewer wildcards).
+# --------------------------------------------------------------------------- #
+EXPOSED_NAMES = [
+    ("lámpara", "light.yeelink_mono6_6409_light", "light"),
+    ("tele", "media_player.tv_ga_2", "media_player"),
+    ("satellite1", "media_player.satellite1", "media_player"),
+]
+
+
+@pytest.fixture(scope="session")
+def ha_match():
+    import copy
+
+    home_assistant_intents = pytest.importorskip("home_assistant_intents")
+    from hassil import recognize_best
+    from hassil.intents import TextSlotList
+
+    base = copy.deepcopy(home_assistant_intents.get_intents("es"))
+    for path in sorted(SENTENCES_DIR.glob("*.yaml")):
+        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        for name, value in (data.get("intents") or {}).items():
+            blocks = copy.deepcopy(value["data"])
+            for blk in blocks:
+                blk.setdefault("metadata", {})["hass_custom_sentence"] = True
+            base["intents"].setdefault(name, {"data": []})["data"].extend(blocks)
+        base["lists"].update(data.get("lists") or {})
+        base.setdefault("expansion_rules", {}).update(data.get("expansion_rules") or {})
+    intents = Intents.from_dict(base)
+    lists = {
+        "name": TextSlotList.from_tuples([(n, e, {"domain": d}) for n, e, d in EXPOSED_NAMES]),
+        "area": TextSlotList.from_strings(["salón", "dormitorio"]),
+        "floor": TextSlotList.from_strings(["planta baja"]),
+    }
+
+    def _match(text: str) -> tuple[str | None, dict]:
+        res = recognize_best(
+            text,
+            intents,
+            slot_lists=lists,
+            best_metadata_key="hass_custom_sentence",
+            best_slot_name="name",
+            language="es",
+        )
+        if res is None:
+            return None, {}
+        return res.intent.name, {k: v.value for k, v in res.entities.items()}
+
+    return _match
