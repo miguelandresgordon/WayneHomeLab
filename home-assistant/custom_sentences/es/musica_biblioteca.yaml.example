@@ -1,0 +1,27 @@
+# Plantilla — el fichero real (musica_biblioteca.yaml, gitignored) lo genera
+# infrastructure/voice/music/sync_music_lists.py desde tu biblioteca de
+# Music Assistant y lo copia a /config/custom_sentences/es/.
+language: "es"
+lists:
+  artista_biblioteca:
+    values:
+      - in: "sabrina carpenter"
+        out: "Sabrina Carpenter"
+      - in: "rosalía"
+        out: "ROSALÍA"
+      - in: "rosalia"
+        out: "ROSALÍA"
+      - in: "los caños"
+        out: "Los Caños"
+      - in: "asap rocky"
+        out: "A$AP Rocky"
+      - in: "c tangana"
+        out: "C. Tangana"
+  playlist_biblioteca:
+    values:
+      - in: "alicia y miguel"
+        out: "Alicia + Miguel"
+      - in: "en bucle"
+        out: "En bucle"
+      - in: "camarón"
+        out: "Camarón"

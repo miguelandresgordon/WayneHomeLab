@@ -231,3 +231,144 @@ poner_entrada_tele:
       data:
         source: "{{ entrada }}"
       continue_on_error: true
+
+# Spotify por voz vía Music Assistant (F2). Busca en Spotify (búsqueda difusa
+# del propio Spotify) + tus playlists de la biblioteca, puntúa cada candidato
+# por solapamiento de palabras normalizadas (sin tildes ni signos) entre la
+# consulta y «título + artistas», y reproduce el mejor en el Satellite1.
+# Devuelve {encontrado, nombre, artista, tipo} para la respuesta por voz.
+# Tests: tests/test_musica_script.py (renderiza estas plantillas con jinja2).
+musica_buscar_y_poner:
+  alias: Buscar y poner música (Spotify vía MA)
+  description: Busca canción, disco, playlist o artista en Music Assistant y pone el mejor resultado en el Satellite1
+  icon: mdi:spotify
+  mode: restart
+  fields:
+    tipo:
+      name: Tipo
+      required: true
+      default: track
+      selector:
+        select:
+          options: [track, album, playlist, artist]
+    nombre:
+      name: Nombre (título, disco, playlist o artista)
+      required: false
+      default: ""
+      selector:
+        text:
+    artista:
+      name: Artista
+      required: false
+      default: ""
+      selector:
+        text:
+  sequence:
+    - variables:
+        tipo_n: "{{ tipo | default('track') }}"
+        clave: "{{ {'track': 'tracks', 'album': 'albums', 'playlist': 'playlists', 'artist': 'artists'}[tipo | default('track')] }}"
+        ma_entry: "{{ config_entry_id('media_player.satellite1') }}"
+        nombre_limpio: >-
+          {%- set ns = namespace(n=(nombre | default('') | lower | trim), done=false) -%}
+          {%- for a in ['la canción ', 'la cancion ', 'el tema ', 'una canción ', 'una cancion '] -%}
+          {%- if not ns.done and ns.n.startswith(a) -%}{%- set ns.n = ns.n[a | length:] -%}{%- set ns.done = true -%}{%- endif -%}
+          {%- endfor -%}{{ ns.n }}
+    - variables:
+        consulta: "{{ (nombre_limpio ~ ' ' ~ (artista | default(''))) | trim }}"
+    - action: music_assistant.search
+      data:
+        config_entry_id: "{{ ma_entry }}"
+        name: "{{ consulta }}"
+        media_type:
+          - "{{ tipo_n }}"
+        limit: 8
+      response_variable: res
+      continue_on_error: true
+    - if:
+        - condition: template
+          value_template: "{{ tipo_n == 'playlist' }}"
+      then:
+        - action: music_assistant.get_library
+          data:
+            config_entry_id: "{{ ma_entry }}"
+            media_type: playlist
+            search: "{{ nombre_limpio }}"
+            limit: 25
+          response_variable: lib
+          continue_on_error: true
+    - variables:
+        cands: >-
+          {{ ((lib['items'] if lib is defined and lib is mapping and 'items' in lib else [])
+              + (res[clave] if res is defined and res is mapping and clave in res else [])) }}
+    - variables:
+        mejor: >-
+          {%- macro toks(s) -%}
+          {%- set ns = namespace(t=(s | string | lower)) -%}
+          {%- for k, v in [['á', 'a'], ['é', 'e'], ['í', 'i'], ['ó', 'o'], ['ú', 'u'], ['ü', 'u'], ['ñ', 'n']] -%}{%- set ns.t = ns.t.replace(k, v) -%}{%- endfor -%}
+          {%- for ch in ['(', ')', '[', ']', '-', ':', '.', ',', '!', '?', '¿', '¡', "'", '"', '/', '+', '&', '$', '*'] -%}{%- set ns.t = ns.t.replace(ch, ' ') -%}{%- endfor -%}
+          {{- ns.t.split() | reject('in', ['de', 'del', 'la', 'el', 'los', 'las', 'the', 'y', 'and', 'a', 'feat', 'ft']) | unique | join(' ') -}}
+          {%- endmacro -%}
+          {%- set q = toks(consulta).split() -%}
+          {%- set ns = namespace(best=-1, score=-1.0) -%}
+          {%- for c in cands -%}
+          {%- set ct = toks(c.name ~ ' ' ~ (c.artists | default([]) | map(attribute='name') | join(' '))).split() -%}
+          {%- set nt = toks(c.name).split() -%}
+          {%- set inter = q | select('in', ct) | list | length -%}
+          {%- set union = (q + ct) | unique | list | length -%}
+          {%- set title_hit = (nt | length > 0) and ((nt | select('in', q) | list | length) == (nt | length)) -%}
+          {%- set s = ((inter / union) if union > 0 else 0) + (0.5 if title_hit else 0) -%}
+          {%- if s > ns.score -%}{%- set ns.best = loop.index0 -%}{%- set ns.score = s -%}{%- endif -%}
+          {%- endfor -%}
+          {{- ns.best if ns.score > 0 else (0 if cands | length > 0 else -1) -}}
+    - variables:
+        elegido: "{{ cands[mejor | int] if (mejor | int) >= 0 else {} }}"
+    - if:
+        - condition: template
+          value_template: "{{ (mejor | int) >= 0 }}"
+      then:
+        # Sin esperar: MA tarda ~30 s en cargar una playlist/disco entero.
+        - action: script.turn_on
+          target:
+            entity_id: script.musica_reproducir_uri
+          data:
+            variables:
+              uri: "{{ elegido.uri }}"
+              tipo: "{{ tipo_n }}"
+    - variables:
+        resultado:
+          encontrado: "{{ (mejor | int) >= 0 }}"
+          nombre: "{{ elegido.name | default('') }}"
+          artista: "{{ (elegido.artists | default([]) | map(attribute='name') | list)[:2] | join(' y ') }}"
+          tipo: "{{ tipo_n }}"
+    - stop: ""
+      response_variable: resultado
+
+musica_reproducir_uri:
+  alias: Reproducir URI de Music Assistant en Satellite1
+  description: Reproduce un elemento de Music Assistant (lo lanza musica_buscar_y_poner sin esperar)
+  icon: mdi:play
+  mode: restart
+  fields:
+    uri:
+      name: URI
+      required: true
+      selector:
+        text:
+    tipo:
+      name: Tipo
+      required: true
+      selector:
+        text:
+  sequence:
+    - action: media_player.media_stop
+      target:
+        entity_id: media_player.satellite1_c7ffe4_media_player
+      continue_on_error: true
+    - action: music_assistant.play_media
+      target:
+        entity_id: media_player.satellite1
+      data:
+        media_id: "{{ uri }}"
+        media_type: "{{ tipo }}"
+        enqueue: replace
+      continue_on_error: true
