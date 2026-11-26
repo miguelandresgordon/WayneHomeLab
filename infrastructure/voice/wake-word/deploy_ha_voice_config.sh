@@ -43,10 +43,14 @@ if ! ping -c 1 -W 2 "$HA_HOST" >/dev/null 2>&1; then
   exit 1
 fi
 
+log "Backup previo (infrastructure/ha/ha_backup_config.sh)..."
+BACKUP_PATH="$(HA_HOST="$HA_HOST" HA_USER="$HA_USER" "$REPO_ROOT/infrastructure/ha/ha_backup_config.sh")"
+log "Backup: ${BACKUP_PATH} (restaurar: ha_backup_config.sh --restore ${BACKUP_PATH})"
+
 log "Desplegando a ${HA_USER}@${HA_HOST}:${HA_CONFIG}"
 
 ssh "${HA_USER}@${HA_HOST}" \
-  "mkdir -p ${HA_CONFIG}/includes ${HA_CONFIG}/packages ${HA_CONFIG}/themes ${HA_CONFIG}/custom_sentences/es"
+  "mkdir -p ${HA_CONFIG}/includes ${HA_CONFIG}/packages ${HA_CONFIG}/themes ${HA_CONFIG}/custom_sentences/es ${HA_CONFIG}/dashboards ${HA_CONFIG}/www/wayne"
 
 scp "$REPO_ROOT/home-assistant/configuration.haos.yaml" \
   "${HA_USER}@${HA_HOST}:${HA_CONFIG}/configuration.yaml"
@@ -76,6 +80,20 @@ fi
 for src in "${sentence_files[@]}"; do
   log "Copiando custom_sentences/es/$(basename "$src")..."
   scp "$src" "${HA_USER}@${HA_HOST}:${HA_CONFIG}/custom_sentences/es/$(basename "$src")"
+done
+
+# UI: tema, recursos locales (fuentes, vendor) y dashboards YAML
+for src in "$REPO_ROOT"/home-assistant/themes/*.yaml; do
+  log "Copiando themes/$(basename "$src")..."
+  scp "$src" "${HA_USER}@${HA_HOST}:${HA_CONFIG}/themes/$(basename "$src")"
+done
+if [[ -d "$REPO_ROOT/home-assistant/www/wayne" ]]; then
+  log "Copiando www/wayne/ (fuentes y recursos locales)..."
+  scp -r "$REPO_ROOT/home-assistant/www/wayne/." "${HA_USER}@${HA_HOST}:${HA_CONFIG}/www/wayne/"
+fi
+for src in "$REPO_ROOT"/home-assistant/dashboards/*.yaml; do
+  log "Copiando dashboards/$(basename "$src")..."
+  scp "$src" "${HA_USER}@${HA_HOST}:${HA_CONFIG}/dashboards/$(basename "$src")"
 done
 
 log "Validando configuración (ha core check)..."

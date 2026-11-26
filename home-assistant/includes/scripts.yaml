@@ -1,6 +1,52 @@
 # Scripts de voz (radio / tele). Sin rutinas de hábitos (noche, cine, presencia).
 # Entity IDs reales de la instancia HAOS (2026.8). Antela aún no está en HA.
 
+# Ruta de audio para streams de radio en el Satellite1 (F1b, medido 2026-11-26
+# con infrastructure/voice/radio/radio_probe.py, SER):
+#   - ESPHome player vía proxy ffmpeg de HA: arranca en ~1 s pero el satélite
+#     corta el stream a los 97-173 s y no vuelve.
+#   - Music Assistant (Sendspin): arranca en ~6 s y no se corta.
+# Por eso MA primero; ESPHome solo si MA no está disponible.
+reproducir_stream_satellite:
+  alias: Reproducir stream en Satellite1
+  description: Reproduce una URL de radio en el Satellite1 vía Music Assistant (fallback ESPHome)
+  icon: mdi:radio-tower
+  mode: restart
+  fields:
+    url:
+      name: URL
+      description: URL del stream (mp3/aac/HLS)
+      required: true
+      selector:
+        text:
+  sequence:
+    - variables:
+        ma_ok: "{{ states('media_player.satellite1') not in ['unavailable', 'unknown'] }}"
+    # Cortar lo que esté sonando por la otra ruta para no solapar audio.
+    - action: media_player.media_stop
+      target:
+        entity_id: media_player.satellite1_c7ffe4_media_player
+      continue_on_error: true
+    - if:
+        - condition: template
+          value_template: "{{ ma_ok }}"
+      then:
+        - action: media_player.play_media
+          target:
+            entity_id: media_player.satellite1
+          data:
+            media_content_type: music
+            media_content_id: "{{ url }}"
+          continue_on_error: true
+      else:
+        - action: media_player.play_media
+          target:
+            entity_id: media_player.satellite1_c7ffe4_media_player
+          data:
+            media_content_type: music
+            media_content_id: "{{ url }}"
+          continue_on_error: true
+
 poner_radio:
   alias: Poner radio
   description: Reproduce una emisora favorita en el Satellite1
@@ -34,22 +80,13 @@ poner_radio:
             'radio3': 'https://rtvelivestream.rtve.es/rtvesec/rne/rne_r3_main.m3u8',
             'roncudo': ''
           } %}{{ stations.get(key, stations['ser']) }}
-    - action: media_player.media_stop
-      target:
-        entity_id: media_player.satellite1
-      continue_on_error: true
-    - choose:
-        - conditions:
-            - condition: template
-              value_template: "{{ (stream_url | default('')) | length > 0 }}"
-          sequence:
-            - action: media_player.play_media
-              target:
-                entity_id: media_player.satellite1_c7ffe4_media_player
-              data:
-                media_content_type: music
-                media_content_id: "{{ stream_url }}"
-              continue_on_error: true
+    - if:
+        - condition: template
+          value_template: "{{ (stream_url | default('')) | length > 0 }}"
+      then:
+        - action: script.reproducir_stream_satellite
+          data:
+            url: "{{ stream_url }}"
 
 poner_radio_browser:
   alias: Poner radio (Radio Browser)
@@ -100,22 +137,13 @@ poner_radio_browser:
         rb_ok: "{{ (rb_response is defined) and (rb_response.status == 200) and ((rb_response.content | default([])) | length > 0) }}"
         rb_name: "{{ rb_response.content[0].name if rb_ok else '' }}"
         rb_stream: "{{ (rb_response.content[0].url_resolved | default(rb_response.content[0].url, true)) if rb_ok else '' }}"
-    - action: media_player.media_stop
-      target:
-        entity_id: media_player.satellite1
-      continue_on_error: true
-    - choose:
-        - conditions:
-            - condition: template
-              value_template: "{{ rb_ok and (rb_stream | length > 0) }}"
-          sequence:
-            - action: media_player.play_media
-              target:
-                entity_id: media_player.satellite1_c7ffe4_media_player
-              data:
-                media_content_type: music
-                media_content_id: "{{ rb_stream }}"
-              continue_on_error: true
+    - if:
+        - condition: template
+          value_template: "{{ rb_ok and (rb_stream | length > 0) }}"
+      then:
+        - action: script.reproducir_stream_satellite
+          data:
+            url: "{{ rb_stream }}"
     - variables:
         resultado:
           encontrada: "{{ rb_ok and (rb_stream | length > 0) }}"
