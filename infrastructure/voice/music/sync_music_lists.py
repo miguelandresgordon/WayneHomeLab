@@ -62,14 +62,27 @@ def build_lists(artists: list[str], playlists: list[str]) -> dict:
     }
 
 
-def _library(session, media_type: str) -> list[str]:
+def _library_items(session, media_type: str) -> list[dict]:
     r = session.post(
         f"{HA_URL}/api/services/music_assistant/get_library?return_response",
         json={"config_entry_id": _ma_entry(session), "media_type": media_type, "limit": 1000},
         timeout=60,
     )
     r.raise_for_status()
-    return [i["name"] for i in r.json()["service_response"]["items"] if i.get("name")]
+    return r.json()["service_response"]["items"]
+
+
+def _library(session, media_type: str) -> list[str]:
+    return [i["name"] for i in _library_items(session, media_type) if i.get("name")]
+
+
+def _all_artists(session) -> list[str]:
+    """Followed artists + artists of saved albums and tracks."""
+    names = set(_library(session, "artist"))
+    for mt in ("album", "track"):
+        for item in _library_items(session, mt):
+            names.update(a["name"] for a in item.get("artists") or [] if a.get("name"))
+    return sorted(names)
 
 
 def _ma_entry(session) -> str:
@@ -92,7 +105,7 @@ def main() -> int:
         sys.exit("HA token missing")
     s = requests.Session()
     s.headers["Authorization"] = f"Bearer {tok}"
-    doc = build_lists(_library(s, "artist"), _library(s, "playlist"))
+    doc = build_lists(_all_artists(s), _library(s, "playlist"))
     header = "# GENERADO por infrastructure/voice/music/sync_music_lists.py — no editar ni commitear\n"
     OUT.write_text(header + yaml.safe_dump(doc, allow_unicode=True, sort_keys=False), encoding="utf-8")
     n_a = len(doc["lists"]["artista_biblioteca"]["values"])
