@@ -17,7 +17,9 @@ EXPECTATIONS = REPO / "home-assistant" / "voice" / "nlu_expectations.yaml"
 
 def test_expectations_file_covers_daily_domains() -> None:
     data = yaml.safe_load(EXPECTATIONS.read_text(encoding="utf-8"))
-    intents = {c["intent"] for c in data["cases"]}
+    intents: set = set()
+    for c in data["cases"]:
+        intents |= set(c["intent"]) if isinstance(c["intent"], list) else {c["intent"]}
     for needed in ("PonRadioFavorita", "ParaRadioFavorita", "LamparaBrillo", "EnciendeLaLampara", "ApagaLaTele", "HassLightSet"):
         assert needed in intents, needed
 
