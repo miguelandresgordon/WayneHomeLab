@@ -9,7 +9,7 @@ language: "es"
 
 expansion_rules:
   # Verbo de «poner la radio», incluidas las formas recortadas por el STT.
-  poner: "(pon|ponme|ponla|pone|von|con|o|hola|sintoniza|sintonízame|sintonizame|reproduce|escucha|enciende|quiero (oír|oir|escuchar)|me pones|puedes poner)"
+  poner: "(pon|por|ponme|ponla|pone|von|con|o|hola|sintoniza|sintonízame|sintonizame|reproduce|escucha|enciende|quiero (oír|oir|escuchar)|me pones|puedes poner)"
   parar: "(para|apaga|quita|stop|detén|deten|corta)"
   cortesia: "[por favor]"
 
@@ -32,6 +32,7 @@ intents:
           - "<parar> [la] radio"
           - "<parar> [la] {emisora}"
           - "(silencia|silencio) [la] radio"
+          - "(cállate|callate|calla|silencio)"
           - "para de (escuchar|reproducir) [la radio]"
           - "deja de (escuchar|reproducir) [la radio]"
 

@@ -17,6 +17,8 @@ intents:
           - "cierra [la] (tele|televisión|television|tv)"
           - "para [la] (tele|televisión|television|tv)"
           - "quita [la] (tele|televisión|television|tv)"
+          # Verbo mal transcrito por Groq (F0, 2026-11-26)
+          - "(aparar|apágame|apagame|apágala|apagala) [la] (tele|televisión|television|tv)"
 
   EnciendeLaTele:
     data:
