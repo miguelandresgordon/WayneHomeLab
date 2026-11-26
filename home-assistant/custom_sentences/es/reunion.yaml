@@ -1,0 +1,15 @@
+# Frases Assist (ES) — modo reunión (F3). Handlers: packages/modo_reunion.yaml
+# Destino HAOS: /config/custom_sentences/es/reunion.yaml
+language: "es"
+
+intents:
+  ModoReunionOn:
+    data:
+      - sentences:
+          - "[activa|pon|enciende|entra en] [el] modo (reunión|reunion)"
+          - "(estoy|estamos) en [una] (reunión|reunion)"
+  ModoReunionOff:
+    data:
+      - sentences:
+          - "(desactiva|quita|apaga|sal del|salir del|termina) [el] modo (reunión|reunion)"
+          - "[ya] (he|hemos) (terminado|acabado) la (reunión|reunion)"

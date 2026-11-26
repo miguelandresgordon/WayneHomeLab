@@ -19,7 +19,11 @@ def _custom_intents() -> set[str]:
 
 
 def _scripts() -> dict:
-    return yaml.safe_load((HA / "includes" / "intent_scripts.yaml").read_text(encoding="utf-8"))
+    scripts = yaml.safe_load((HA / "includes" / "intent_scripts.yaml").read_text(encoding="utf-8"))
+    # Packages may bring their own intent_script (merged by HA).
+    for p in (HA / "packages").glob("*.yaml"):
+        scripts.update((yaml.safe_load(p.read_text(encoding="utf-8")) or {}).get("intent_script") or {})
+    return scripts
 
 
 def test_every_custom_intent_has_a_handler() -> None:
@@ -37,3 +41,20 @@ def test_lamp_brightness_is_pinned_to_the_xiaomi_lamp() -> None:
     blob = yaml.dump(s)
     assert "light.yeelink_mono6_6409_light" in blob
     assert "brightness_pct" in blob
+
+
+def test_speech_reads_action_response_not_internal_variables() -> None:
+    """intent_script only exposes `action_response` (what the action returns via
+    `stop: response_variable`) to speech; internal response variables are
+    undefined there (live 2026-11-26: «'r' is undefined» -> error inesperado)."""
+    for name, s in _scripts().items():
+        actions = s.get("action") or []
+        rvars = [a["response_variable"] for a in actions if isinstance(a, dict) and "response_variable" in a and "stop" not in a]
+        if not rvars:
+            continue
+        speech = yaml.dump(s.get("speech", {}), allow_unicode=True)
+        for rv in rvars:
+            assert f"{rv}." not in speech and f"{rv} " not in speech.replace("action_response", ""), f"{name}: speech uses internal {rv}"
+        assert "action_response" in speech, name
+        last = actions[-1]
+        assert "stop" in last and last.get("response_variable") in rvars, f"{name}: action must end with stop+response_variable"

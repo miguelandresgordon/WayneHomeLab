@@ -34,3 +34,21 @@ cases:
   # Ruido real de TV / alucinaciones: no deben disparar radio ni luces
   - {text: "Gracias por ver el video.", intent: IgnorarRuido}
   - {text: "¿Qué va a ser movido?", intent: [null, HassNevermind, HassGetState]}  # consulta inocua
+  # Spotify vía Music Assistant (F2)
+  - {text: "Pon House Tour de Sabrina Carpenter.", intent: [MusicaCancion, HassMediaSearchAndPlay]}  # artista fuera de la biblioteca
+  - {text: "Pon Malamente de Rosalía.", intent: MusicaCancion}
+  - {text: "Pon la canción Despacito de Luis Fonsi.", intent: MusicaCancion}
+  - {text: "Reproduce una canción de Los Caños.", intent: MusicaArtista}
+  - {text: "Pon el disco Motomami de Rosalía.", intent: MusicaDisco}
+  - {text: "Pon mi playlist En bucle.", intent: MusicaPlaylist}
+  - {text: "Pon música de Bad Bunny.", intent: MusicaArtista}
+  - {text: "Siguiente canción.", intent: MusicaSiguiente}
+  - {text: "Canción anterior.", intent: MusicaAnterior}
+  - {text: "Pausa la música.", intent: MusicaPausa}
+  - {text: "Sigue.", intent: MusicaSigue}
+  - {text: "Sube el volumen.", intent: VolumenSube}
+  - {text: "Baja el volumen.", intent: VolumenBaja}
+  - {text: "Volumen al 30.", intent: VolumenPon}
+  - {text: "¿Qué suena?", intent: MusicaQueSuena}
+  - {text: "pon un temporizador de 5 minutos", intent: HassStartTimer}
+  - {text: "sube el volumen de la tele", intent: SubeVolumenTele}

@@ -8,6 +8,7 @@ ignore: |
   weather-intelligence/
   Xiaomi-cloud-tokens-extractor/
   node_modules/
+  .esphome/
 
 rules:
   line-length: disable          # Jinja templates and URLs are long by nature

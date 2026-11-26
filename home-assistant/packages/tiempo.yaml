@@ -1,0 +1,49 @@
+# Tiempo (F5) — caché de la previsión de AEMET para los gráficos del
+# dashboard Tiempo. HA ya no guarda la previsión como atributo del weather;
+# esto la pide cada 30 min (weather.get_forecasts) y guarda solo los campos
+# que pintan las gráficas (filas pequeñas en el recorder).
+# Destino HAOS: /config/packages/tiempo.yaml
+
+template:
+  - triggers:
+      - trigger: time_pattern
+        minutes: "/30"
+      - trigger: homeassistant
+        event: start
+      # Refresco manual (p. ej. tras recargar plantillas): evento wayne_tiempo_refresh
+      - trigger: event
+        event_type: wayne_tiempo_refresh
+    actions:
+      - action: weather.get_forecasts
+        target:
+          entity_id: weather.aemet
+        data:
+          type: hourly
+        response_variable: h
+        continue_on_error: true
+      - action: weather.get_forecasts
+        target:
+          entity_id: weather.aemet
+        data:
+          type: daily
+        response_variable: d
+        continue_on_error: true
+    sensor:
+      - name: AEMET previsión
+        unique_id: aemet_prevision
+        default_entity_id: sensor.aemet_prevision
+        icon: mdi:weather-cloudy-clock
+        state: "{{ now().isoformat(timespec='minutes') }}"
+        # Listas compactas: horaria [fecha, temp, prob. lluvia, viento],
+        # diaria [fecha, máx, mín, prob. lluvia, estado].
+        attributes:
+          horaria: >-
+            {%- set f = (h['weather.aemet'].forecast if h is defined and 'weather.aemet' in h else [])[:41] -%}
+            {%- set ns = namespace(o=[]) -%}
+            {%- for x in f -%}{%- set ns.o = ns.o + [[x.datetime, x.temperature, x.precipitation_probability | default(0), x.wind_speed | default(0)]] -%}{%- endfor -%}
+            {{ ns.o }}
+          diaria: >-
+            {%- set f = (d['weather.aemet'].forecast if d is defined and 'weather.aemet' in d else [])[:7] -%}
+            {%- set ns = namespace(o=[]) -%}
+            {%- for x in f -%}{%- set ns.o = ns.o + [[x.datetime, x.temperature, x.templow | default(x.temperature), x.precipitation_probability | default(0), x.condition]] -%}{%- endfor -%}
+            {{ ns.o }}
