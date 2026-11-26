@@ -56,7 +56,7 @@ def main() -> int:
     with sync_playwright() as p:
         browser = p.chromium.launch()
         for vname, (vp, dpr) in VIEWPORTS.items():
-            ctx = browser.new_context(viewport=vp, device_scale_factor=dpr, locale="es-ES", color_scheme="dark")
+            ctx = browser.new_context(viewport=vp, device_scale_factor=dpr, locale="es-ES", timezone_id="Europe/Madrid", color_scheme="dark")
             ctx.add_init_script(
                 f"window.localStorage.setItem('hassTokens', {json.dumps(json.dumps(tokens))});"
             )

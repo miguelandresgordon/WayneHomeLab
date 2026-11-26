@@ -1,0 +1,20 @@
+# Telemetría de voz (F5/Mariano): último texto reconocido por el STT.
+# El firmware del Satellite1 emite esphome.satellite1_stt_end {text} en cada
+# orden (voice_assistant.on_stt_end); hasta ahora nadie lo escuchaba.
+# Destino HAOS: /config/packages/voz_telemetria.yaml
+
+automation:
+  - id: voz_ultimo_stt
+    alias: "Voz — guardar último texto del STT"
+    mode: queued
+    max: 5
+    triggers:
+      - trigger: event
+        event_type: esphome.satellite1_stt_end
+    actions:
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.last_stt_text
+        data:
+          value: "{{ (trigger.event.data.text | default('') | trim)[:255] }}"
+        continue_on_error: true

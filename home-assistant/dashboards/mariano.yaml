@@ -1,7 +1,208 @@
+# Mariano — estado del asistente de voz (F5). Modo YAML, tema wayne_default.
+# Chuleta = frases reales de custom_sentences/es (tests/ui/test_mariano.py).
 title: Mariano
 views:
-  - title: Mariano
-    path: inicio
-    theme: wayne_default
-    type: sections
-    sections: []
+- title: Mariano
+  path: inicio
+  icon: mdi:account-voice
+  theme: wayne_default
+  type: sections
+  max_columns: 3
+  dense_section_placement: true
+  sections:
+  - type: grid
+    cards:
+    - type: heading
+      heading: WAKE WORD
+      heading_style: subtitle
+      icon: mdi:account-voice
+    - type: tile
+      entity: assist_satellite.satellite1_c7ffe4_satelite_assist
+      name: Satellite1
+      grid_options:
+        columns: full
+    - type: tile
+      entity: switch.satellite1_c7ffe4_wake_word_activo
+      name: Wake word activo
+      features:
+      - type: toggle
+      grid_options:
+        columns: full
+    - type: tile
+      entity: select.satellite1_c7ffe4_wake_word_sensitivity
+      name: Sensibilidad
+      features:
+      - type: select-options
+      grid_options:
+        columns: full
+    - type: tile
+      entity: switch.satellite1_c7ffe4_mute_microphones
+      name: Micro silenciado
+      grid_options:
+        columns: full
+  - type: grid
+    cards:
+    - type: heading
+      heading: ÚLTIMA ORDEN
+      heading_style: subtitle
+      icon: mdi:text-recognition
+    - type: markdown
+      content: '## {{ states(''input_text.last_stt_text'') or ''—'' }}
+
+        <sub>STT Groq · {{ as_timestamp(states.input_text.last_stt_text.last_changed) | timestamp_custom(''%d/%m %H:%M'') }}</sub>'
+      grid_options:
+        columns: full
+    - type: tile
+      entity: input_text.current_speaker
+      name: Hablante
+      icon: mdi:account-question-outline
+      grid_options:
+        columns: 6
+        rows: 1
+    - type: tile
+      entity: sensor.satellite1_c7ffe4_wi_fi_signal_strength
+      name: Wi‑Fi
+      icon: mdi:wifi
+      grid_options:
+        columns: 6
+        rows: 1
+    - type: custom:apexcharts-card
+      graph_span: 1h
+      header:
+        show: true
+        title: MIC LEVEL · 1 h (dBFS)
+        show_states: true
+        colorize_states: true
+      apex_config:
+        chart:
+          background: transparent
+          fontFamily: JetBrains Mono, monospace
+          foreColor: '#71767B'
+          toolbar:
+            show: false
+          dropShadow:
+            enabled: false
+          animations:
+            enabled: false
+          height: 200
+        grid:
+          borderColor: '#2F3336'
+        stroke:
+          width: 2
+          curve: straight
+        fill:
+          type: solid
+          opacity: 1
+        legend:
+          show: false
+        tooltip:
+          theme: dark
+          x:
+            format: HH:mm
+        xaxis:
+          labels:
+            datetimeUTC: false
+        dataLabels:
+          enabled: false
+      series:
+      - entity: sensor.satellite1_c7ffe4_mic_level
+        name: nivel
+        color: '#1D9BF0'
+        group_by:
+          func: avg
+          duration: 30s
+        extend_to: now
+      yaxis:
+      - min: -60
+        max: 0
+        decimals: 0
+        apex_config:
+          tickAmount: 4
+      grid_options:
+        columns: full
+  - type: grid
+    cards:
+    - type: heading
+      heading: MODO REUNIÓN
+      heading_style: subtitle
+      icon: mdi:account-group
+    - type: tile
+      entity: input_boolean.modo_reunion
+      name: Modo reunión
+      features:
+      - type: toggle
+      grid_options:
+        columns: full
+    - type: tile
+      entity: timer.modo_reunion
+      name: Fin automático
+      grid_options:
+        columns: full
+    - type: heading
+      heading: MUSIC ASSISTANT
+      heading_style: subtitle
+      icon: mdi:music
+    - type: tile
+      entity: media_player.satellite1
+      name: Reproductor MA
+      grid_options:
+        columns: full
+    - type: tile
+      entity: update.music_assistant_actualizar
+      name: Versión MA
+      grid_options:
+        columns: full
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: CHULETA DE FRASES
+      heading_style: subtitle
+      icon: mdi:card-text-outline
+    - type: markdown
+      content: '**Radio** · pon la SER · pon radio 3 · sintoniza RadioVoz · pon la radio BBC · para la radio · cállate
+
+
+        **Spotify** · pon Malamente de Rosalía · pon la canción X de Y · pon el disco X · pon mi playlist En bucle · pon música de X · siguiente
+        · anterior · pausa · sigue · ¿qué suena?
+
+
+        **Volumen** · sube el volumen · baja el volumen · volumen al 30
+
+
+        **Luz** · enciende la lámpara · apaga la lámpara · pon la lámpara al 50 %
+
+
+        **Tele** · enciende la tele · apaga la tele · pon el HDMI 3 en la tele
+
+
+        **Reunión** · activa el modo reunión · (para salir: doble pulsación del botón, o pulsación + «desactiva el modo reunión»)'
+      grid_options:
+        columns: full
+  - type: grid
+    cards:
+    - type: heading
+      heading: LATENCIAS MEDIDAS
+      heading_style: subtitle
+      icon: mdi:timer-outline
+    - type: markdown
+      content: '| Medida | Valor |
+
+        |---|---|
+
+        | STT Groq (mediana / p90) | 0,36 s / 0,50 s |
+
+        | Radio: arranque (MA) | 1,2–1,8 s |
+
+        | Radio: cortes en 30 min | **0** (antes 1 cada 1,5–3 min) |
+
+        | Spotify: «pon …» → responde | < 0,1 s |
+
+        | Spotify: siguiente → suena | ≤ 2 s |
+
+        | Wi‑Fi Satellite1 | −29…−32 dBm |
+
+
+        <sub>Medido el 26‑nov‑2026 · docs/radio.md · docs/spotify.md</sub>'
+      grid_options:
+        columns: full
