@@ -1,7 +1,320 @@
+# Tiempo — AEMET con gráficos propios (F5). apexcharts-card local; historial
+# acotado (≤ 48 h) y estadísticas a largo plazo para 7 días. Sin contenedores.
+# Previsión: sensor.aemet_prevision (packages/tiempo.yaml).
 title: Tiempo
 views:
-  - title: Tiempo
-    path: inicio
-    theme: wayne_default
-    type: sections
-    sections: []
+- title: Tiempo
+  path: inicio
+  icon: mdi:weather-partly-cloudy
+  theme: wayne_default
+  type: sections
+  max_columns: 3
+  dense_section_placement: true
+  sections:
+  - type: grid
+    column_span: 1
+    cards:
+    - type: heading
+      heading: AHORA · MADRID (AEMET)
+      heading_style: subtitle
+      icon: mdi:map-marker-outline
+    - type: entity
+      entity: sensor.aemet_temperature
+      name: Temperatura
+      icon: mdi:thermometer
+      grid_options:
+        columns: 6
+        rows: 2
+    - type: entity
+      entity: sensor.aemet_temperature_feeling
+      name: Sensación
+      icon: mdi:account-outline
+      grid_options:
+        columns: 6
+        rows: 2
+    - type: entity
+      entity: sensor.aemet_humidity
+      name: Humedad
+      icon: mdi:water-percent
+      grid_options:
+        columns: 6
+        rows: 2
+    - type: entity
+      entity: sensor.aemet_wind_speed
+      name: Viento
+      icon: mdi:weather-windy
+      grid_options:
+        columns: 6
+        rows: 2
+    - type: entity
+      entity: sensor.aemet_rain_probability
+      name: Prob. lluvia
+      icon: mdi:umbrella-outline
+      grid_options:
+        columns: 6
+        rows: 2
+    - type: entity
+      entity: sensor.aemet_rain
+      name: Lluvia
+      icon: mdi:weather-pouring
+      grid_options:
+        columns: 6
+        rows: 2
+  - type: grid
+    column_span: 2
+    cards:
+    - type: custom:apexcharts-card
+      graph_span: 48h
+      header:
+        show: true
+        title: TEMPERATURA · 24 h y previsión 24 h
+        show_states: true
+        colorize_states: true
+      apex_config:
+        chart: &id001
+          background: transparent
+          fontFamily: JetBrains Mono, monospace
+          foreColor: '#71767B'
+          toolbar:
+            show: false
+          dropShadow:
+            enabled: false
+          animations:
+            enabled: false
+          height: 230
+        grid: &id002
+          borderColor: '#2F3336'
+          strokeDashArray: 0
+        stroke: &id003
+          width: 2
+          curve: straight
+        fill: &id004
+          type: solid
+          opacity: 1
+        legend: &id005
+          show: true
+          position: top
+          horizontalAlign: left
+          fontFamily: JetBrains Mono, monospace
+        tooltip: &id006
+          theme: dark
+          x:
+            format: ddd HH:mm
+        xaxis: &id007
+          labels:
+            datetimeUTC: false
+        dataLabels: &id008
+          enabled: false
+      series:
+      - entity: sensor.aemet_temperature
+        name: medida
+        color: '#1D9BF0'
+        type: line
+        group_by:
+          func: avg
+          duration: 30min
+        show:
+          in_header: true
+          header_color_threshold: false
+        extend_to: now
+      - entity: sensor.aemet_prevision
+        name: previsión
+        color: '#71767B'
+        type: line
+        data_generator: return (entity.attributes.horaria || []).map(f => [new Date(f[0]).getTime(), f[1]]);
+        show:
+          in_header: false
+        stroke_dash: 4
+      now:
+        show: true
+        color: '#E7E9EA'
+        label: ahora
+      grid_options:
+        columns: full
+      span:
+        offset: +24h
+      yaxis:
+      - decimals: 0
+        apex_config:
+          tickAmount: 4
+    - type: custom:apexcharts-card
+      graph_span: 40h
+      header:
+        show: true
+        title: LLUVIA · probabilidad próximas 40 h
+        show_states: false
+        colorize_states: true
+      apex_config:
+        chart: *id001
+        grid: *id002
+        stroke: *id003
+        fill: *id004
+        legend: *id005
+        tooltip: *id006
+        xaxis: *id007
+        dataLabels: *id008
+        plotOptions:
+          bar:
+            columnWidth: 70%
+            borderRadius: 0
+      series:
+      - entity: sensor.aemet_prevision
+        name: prob. lluvia %
+        color: '#1D9BF0'
+        type: column
+        data_generator: return (entity.attributes.horaria || []).map(f => [new Date(f[0]).getTime(), f[2]]);
+      now:
+        show: true
+        color: '#E7E9EA'
+        label: ahora
+      grid_options:
+        columns: full
+      span:
+        offset: +40h
+      yaxis:
+      - min: 0
+        max: 100
+        decimals: 0
+        apex_config:
+          tickAmount: 4
+  - type: grid
+    column_span: 3
+    cards:
+    - type: custom:apexcharts-card
+      graph_span: 7d
+      header:
+        show: true
+        title: 7 DÍAS · máx / mín
+        show_states: false
+        colorize_states: true
+      apex_config:
+        chart: *id001
+        grid: *id002
+        stroke: *id003
+        fill: *id004
+        legend: *id005
+        tooltip:
+          theme: dark
+          x:
+            format: ddd d
+        xaxis: *id007
+        dataLabels: *id008
+        plotOptions:
+          bar:
+            columnWidth: 60%
+            borderRadius: 0
+      series:
+      - entity: sensor.aemet_prevision
+        name: máx
+        color: '#FFAD1F'
+        type: column
+        data_generator: return (entity.attributes.diaria || []).map(f => [new Date(f[0]).getTime() + 12*3600*1000, f[1]]);
+      - entity: sensor.aemet_prevision
+        name: mín
+        color: '#1D9BF0'
+        type: column
+        data_generator: return (entity.attributes.diaria || []).map(f => [new Date(f[0]).getTime() + 12*3600*1000, f[2]]);
+      now:
+        show: false
+      grid_options:
+        columns: full
+      span:
+        start: day
+      yaxis:
+      - decimals: 0
+        apex_config:
+          tickAmount: 4
+        min: 0
+    - type: custom:apexcharts-card
+      graph_span: 7d
+      header:
+        show: true
+        title: TEMPERATURA · últimos 7 días (estadísticas)
+        show_states: false
+        colorize_states: true
+      apex_config:
+        chart: *id001
+        grid: *id002
+        stroke: *id003
+        fill: *id004
+        legend: *id005
+        tooltip: *id006
+        xaxis: *id007
+        dataLabels: *id008
+      series:
+      - entity: sensor.aemet_temperature
+        name: máx
+        color: '#FFAD1F'
+        statistics:
+          type: max
+          period: hour
+      - entity: sensor.aemet_temperature
+        name: media
+        color: '#E7E9EA'
+        statistics:
+          type: mean
+          period: hour
+      - entity: sensor.aemet_temperature
+        name: mín
+        color: '#1D9BF0'
+        statistics:
+          type: min
+          period: hour
+      now:
+        show: false
+      grid_options:
+        columns: full
+      yaxis:
+      - decimals: 0
+        apex_config:
+          tickAmount: 4
+    - type: custom:apexcharts-card
+      graph_span: 48h
+      header:
+        show: true
+        title: HUMEDAD Y VIENTO · 48 h
+        show_states: false
+        colorize_states: true
+      apex_config:
+        chart: *id001
+        grid: *id002
+        stroke: *id003
+        fill: *id004
+        legend: *id005
+        tooltip: *id006
+        xaxis: *id007
+        dataLabels: *id008
+      series:
+      - entity: sensor.aemet_humidity
+        name: humedad %
+        color: '#00BA7C'
+        yaxis_id: h
+        group_by:
+          func: avg
+          duration: 30min
+        extend_to: now
+      - entity: sensor.aemet_wind_speed
+        name: viento km/h
+        color: '#E7E9EA'
+        yaxis_id: w
+        group_by:
+          func: avg
+          duration: 30min
+        extend_to: now
+      now:
+        show: false
+      grid_options:
+        columns: full
+      yaxis:
+      - id: h
+        min: 0
+        max: 100
+        decimals: 0
+        apex_config:
+          tickAmount: 4
+      - id: w
+        opposite: true
+        min: 0
+        decimals: 0
+        apex_config:
+          tickAmount: 4
