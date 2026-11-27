@@ -1,0 +1,145 @@
+# Laboratorio privado de aprendizaje (F7). Reglas: docs/hacking-lab.md
+#
+# - gluetun (Mullvad por WireGuard) es la ÚNICA salida a internet: kali y tor
+#   comparten su espacio de red (network_mode: service:gluetun). Kill switch:
+#   el firewall de gluetun bloquea todo lo que no vaya por el túnel.
+# - Objetivos deliberadamente vulnerables en lab_internal (internal: true):
+#   sin salida a internet y sin puertos publicados en la LAN.
+# - DNS: el resolvedor de Mullvad dentro del túnel (10.64.0.1); nunca Pi-hole
+#   ni el router.
+#
+#   cp .env.example .env    # pon tu clave de Mullvad (nunca al repo)
+#   docker compose up -d                       # perfil ligero (RPi 3 incluido)
+#   docker compose --profile full up -d        # + WebGoat (Java, ~600 MB)
+#   docker compose --profile tor up -d tor     # Tor sobre Mullvad
+#   ./lab.sh shell                             # entrar en Kali
+name: hacking-lab
+
+networks:
+  lab_internal:
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.31.77.0/24
+
+services:
+  gluetun:
+    image: qmcgaw/gluetun:v3.41.3
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      VPN_SERVICE_PROVIDER: mullvad
+      VPN_TYPE: wireguard
+      # Nombre fijo de la interfaz del túnel (lo usa verify_lab.sh).
+      VPN_INTERFACE: wg0
+      WIREGUARD_PRIVATE_KEY: ${WIREGUARD_PRIVATE_KEY:?pon tu clave de Mullvad en .env}
+      WIREGUARD_ADDRESSES: ${WIREGUARD_ADDRESSES:?dirección WireGuard de Mullvad en .env}
+      SERVER_COUNTRIES: ${MULLVAD_COUNTRIES:-Spain}
+      # DNS del túnel: el resolvedor de Mullvad (solo accesible por el túnel).
+      DOT: "off"
+      DNS_ADDRESS: 10.64.0.1
+      DNS_KEEP_NAMESERVER: "off"
+      # Lo único que puede salir sin túnel: la red interna del laboratorio.
+      FIREWALL_OUTBOUND_SUBNETS: 172.31.77.0/24
+      BLOCK_MALICIOUS: "off"
+      TZ: Europe/Madrid
+    networks:
+      default: {}
+      lab_internal:
+        ipv4_address: 172.31.77.2
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: ${GLUETUN_MEM:-128m}
+          cpus: "0.50"
+
+  kali:
+    build: ./kali
+    image: hacking-lab/kali:2026.11
+    network_mode: service:gluetun
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    hostname: kali
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./workspace:/root/workspace
+    deploy:
+      resources:
+        limits:
+          memory: ${KALI_MEM:-1g}
+          cpus: "${KALI_CPUS:-2.0}"
+
+  tor:
+    build: ./tor
+    image: hacking-lab/tor:0.4
+    profiles: [tor]
+    network_mode: service:gluetun
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: ${TOR_MEM:-128m}
+          cpus: "0.50"
+
+  juice-shop:
+    image: bkimminich/juice-shop:v20.4.0
+    networks:
+      lab_internal:
+        ipv4_address: 172.31.77.10
+    deploy:
+      resources:
+        limits:
+          memory: ${JUICE_MEM:-512m}
+          cpus: "1.0"
+
+  dvwa-db:
+    image: mariadb:10.11
+    networks:
+      lab_internal:
+        ipv4_address: 172.31.77.12
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DVWA_DB_ROOT_PASSWORD:-dvwa-lab-only}
+      MYSQL_DATABASE: dvwa
+      MYSQL_USER: dvwa
+      MYSQL_PASSWORD: ${DVWA_DB_PASSWORD:-p@ssw0rd}
+    deploy:
+      resources:
+        limits:
+          memory: ${DB_MEM:-256m}
+          cpus: "0.50"
+
+  dvwa:
+    image: ghcr.io/digininja/dvwa@sha256:61167ec23fbf861f7d96a7beb4be3612d043d48dbc6b239d4f90d7e8cdff8115
+    networks:
+      lab_internal:
+        ipv4_address: 172.31.77.11
+    depends_on: [dvwa-db]
+    environment:
+      DB_SERVER: dvwa-db
+      DB_DATABASE: dvwa
+      DB_USERNAME: dvwa
+      DB_PASSWORD: ${DVWA_DB_PASSWORD:-p@ssw0rd}
+    deploy:
+      resources:
+        limits:
+          memory: ${DVWA_MEM:-256m}
+          cpus: "0.50"
+
+  webgoat:
+    image: webgoat/webgoat:v2026.5
+    profiles: [full]
+    networks:
+      lab_internal:
+        ipv4_address: 172.31.77.13
+    deploy:
+      resources:
+        limits:
+          memory: ${WEBGOAT_MEM:-768m}
+          cpus: "1.0"

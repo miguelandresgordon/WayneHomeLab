@@ -54,6 +54,7 @@ def test_targets_live_on_internal_network_without_egress() -> None:
     for t in TARGETS:
         s = c["services"][t]
         assert list(s["networks"]) == ["lab_internal"], t
+        assert s["networks"]["lab_internal"]["ipv4_address"].startswith("172.31.77."), t
         assert "ports" not in s, f"{t} must not be published on the LAN"
     assert "lab_internal" in c["services"]["gluetun"]["networks"]
 

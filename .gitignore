@@ -126,3 +126,8 @@ infrastructure/voice/wake-word/retrain_data/
 
 # Tarjetas de terceros descargadas con checksum (fetch_frontend_vendor.sh)
 home-assistant/www/wayne/vendor/
+
+# Laboratorio de hacking (F7): clave Mullvad y trabajo local
+hacking-lab/.env
+hacking-lab/workspace/*
+!hacking-lab/workspace/.gitkeep
