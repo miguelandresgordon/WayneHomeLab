@@ -1,0 +1,5 @@
+# Objetivos del laboratorio (red interna lab_internal, sin salida a internet)
+172.31.77.10 juice-shop
+172.31.77.11 dvwa
+172.31.77.12 dvwa-db
+172.31.77.13 webgoat
