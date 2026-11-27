@@ -24,7 +24,7 @@ This project is a private voice assistant ecosystem ("Private Alexa") running on
 - **TTS**: Piper add-on (Wyoming, `core-piper:10200`, voice `es_ES-davefx-medium`)
 - **Conversation**: Home Assistant built-in (Spanish)
 - **Wake word**: Mariano on-device (MicroWakeWord; Okay Nabu en firmware como fallback). Objetivo: reentrenar con negativos de TV en **RunPod GPU Pod**, volume **200 GB**; fallback Windows 11 + Docker CPU, RX 6750 XT — CUDA no aplica
-- **Dev Machine**: MacBook Air M3 (ARM64) — no tiene disco para train completo
+- **Dev Machine**: MacBook Air M3 (ARM64) — no tiene disco para train completo. WIC v1 se desarrolla aquí en Docker (`weather-intelligence/`).
 - **Training PC (Windows 11)**: DHCP | Ryzen 5 3600 + RX 6750 XT, 16 GB RAM (fallback Docker CPU). RunPod: [docs/runpod-train-mariano.md](docs/runpod-train-mariano.md) · móvil: [docs/runpod-train-mariano-movil.md](docs/runpod-train-mariano-movil.md)
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed diagrams and data flow.
@@ -44,25 +44,17 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed diagrams and data 
 
 ## Known Issues & Fixes
 
-### Proxmox cluster IPC (recurrent after every reboot)
-Cloud-init rewrites `/etc/hosts` on each boot, setting `waynelab-core → 127.0.1.1`, which breaks `pve-cluster` and `pvestatd`.
+### Proxmox cluster IPC (todas las VMs caídas tras reboot)
+**Síntoma**: tras un reboot del host `192.168.1.100` responde pero HAOS/Pi-hole/WireGuard no (`:8123` cerrado). `pve-cluster`/`pvestatd` en `failed`, `pve-guests` con `status=111`; el log dice `Unable to resolve node name 'waynelab-core' to a non-loopback IP`.
 
-**Fix** (run after every unexpected reboot):
+**Causa raíz**: `/boot/firmware/user-data` (seed NoCloud) tenía `manage_etc_hosts: true`. El user-data **pisa** `/etc/cloud/cloud.cfg` y `cloud.cfg.d/`, así que editar solo `cloud.cfg` (fix antiguo) no sobrevivía al reboot: cloud-init reescribía `/etc/hosts` con `127.0.1.1 waynelab-core` y `pmxcfs` no arrancaba.
+
+**Fix permanente** (idempotente; una sola vez, y también como recuperación):
 ```bash
-ssh -t pi@192.168.1.100 "sudo bash /tmp/fix_proxmox_cluster.sh && sudo qm start 100"
+scp -r infrastructure/nodes/core pi@192.168.1.100:/tmp/waynelab-core
+ssh -t pi@192.168.1.100 "sudo bash /tmp/waynelab-core/fix_proxmox_cluster.sh"
 ```
-
-If the script is missing from `/tmp` (lost after reboot), copy it again:
-```bash
-scp infrastructure/nodes/core/fix_proxmox_cluster.sh pi@192.168.1.100:/tmp/
-```
-
-The fix is in `infrastructure/nodes/core/fix_proxmox_cluster.sh`.
-
-### Permanent cloud-init fix
-```bash
-ssh -t pi@192.168.1.100 "sudo sed -i 's/^manage_etc_hosts:.*/manage_etc_hosts: false/' /etc/cloud/cloud.cfg"
-```
+Hace: `manage_etc_hosts: false` en user-data + cloud.cfg + cloud.cfg.d; instala `/usr/local/sbin/waynelab-ensure-hosts` y el drop-in `pve-cluster.service.d/waynelab.conf` (repara `/etc/hosts` en cada arranque de `pve-cluster`, sin límite de reintentos); reinicia servicios y arranca las VMs `onboot` con `pvesh create /nodes/<nodo>/startall` (`pve-guests` rechaza `systemctl restart`). Verificar tras reboot: `grep manage_etc_hosts /boot/firmware/user-data` → `false`.
 
 ### HAOS VM not starting after Proxmox fix
 ```bash
@@ -92,6 +84,19 @@ ssh -t pi@192.168.1.100 "sudo qm start 102"   # onboot=1; startup order=2
 ### SSH to Proxmox host
 - User: `pi` (not `root` — root SSH requires key, not configured)
 - Always use `ssh -t` for sudo commands
+
+### Satellite1 + lámpara + Tuya «no disponibles» con HA y Proxmox sanos (Wi-Fi 2,4 GHz)
+**Síntoma**: HA responde (`:8123`), pero Satellite1 (`.85`), lámpara Xiaomi (`.121`) y bombilla Tuya (`.118`, `tuya_local`) no resuelven ARP ni ping; el interruptor de HA no hace nada. Log HA: `Can't connect to ESPHome API … [Errno 113]`, `Lámpara: Unable to discover the device`, `tuya_local … error 901`.
+
+**Causa raíz (2026-10-29)**: el radio 2,4 GHz del router Movistar HGU quedó colgado (≈ 07:03 del 2026-10-28) aunque el portal lo mostraba activo con SSID/clave correctos. Los tres dispositivos son **solo 2,4 GHz** y cayeron a la vez; no es Proxmox/HAOS/Pi-hole (sin cortes de enlace, VMs vivas, sin DHCP en Pi-hole) ni DHCP (ningún MAC IoT en otra IP). Reiniciar solo el Wi-Fi desde el portal **no** lo arregló; el **reinicio completo del router** (desenchufar 30 s, esperar ~3 min) sí: Satellite1 y lámpara volvieron solos con la misma IP/clave API. No es corregible desde este repo: el router no está bajo IaC.
+
+**Pendiente**: la bombilla Tuya (`light.luz_habitacion`, `tuya_local`, `.118`, error 901) sigue fuera de la LAN tras el reinicio: sin ARP, sin 6668/tcp en ningún host y sin broadcast UDP Tuya. Necesita ciclo de corriente físico + reserva DHCP por MAC a `.118` (no tiene). Watchdog HA + runbook: [docs/tuya-watchdog.md](docs/tuya-watchdog.md).
+
+**Verificar y arreglar**:
+```bash
+bash infrastructure/nodes/core/verify_iot_wifi.sh      # veredicto: Wi-Fi 2,4 GHz vs. DHCP vs. HA caído
+```
+Si falla: 1) reinicio completo del router (no basta reiniciar el Wi-Fi desde el portal); 2) apagar/encender la lámpara y reconectar el USB-C del Satellite1; HA los recupera solo. Si persiste, en `http://192.168.1.1` comprobar que el 2,4 GHz usa `wifi_ssid`/`wifi_password` de `/config/esphome/secrets.yaml` (HAOS), WPA2 personal, canal fijo 1/6/11 a 20 MHz, sin «Smart WiFi»/band-steering. Si el SSID/clave cambió definitivamente, actualiza `secrets.yaml` de ESPHome y reflashea el Satellite1 (`infrastructure/voice/wake-word/esphome/USB_BOOTLOADER.md`).
 
 ### RunPod Mariano (train en curso / reintentos)
 - Network volume mínimo **200 GB**. Con 100 GB AudioSet agota cuota → Exit **999**.
@@ -123,7 +128,7 @@ Satellite1 (MicroWakeWord "Mariano")
 | Dispositivo | Integración | IP/ID | Notas |
 |-------------|-------------|-------|-------|
 | Lámpara Xiaomi (yeelink.light.mono6) | Xiaomi Miot Auto (HACS) | IP reservada `.121` | Token en gestor contraseñas |
-| Bombilla Antela | Smart Life / Tuya | IP reservada `.122` | Pendiente Local Tuya |
+| Bombilla Antela (`light.luz_habitacion`) | Tuya Local (HACS `tuya_local`, v3.3) | `.118` (reserva DHCP pendiente) | Watchdog `packages/tuya_watchdog.yaml`; Tuya nube cargada con su luz deshabilitada |
 | Satellite1 c7ffe4 | ESPHome | `192.168.1.85` | Wake word: Mariano |
 | Sony BRAVIA 4K | Android TV Remote | — | Descubierto automáticamente |
 | Google TV Streamer (TV GA) | Android TV Remote | — | Descubierto automáticamente |
@@ -159,7 +164,9 @@ Satellite1 (MicroWakeWord "Mariano")
 
 ## Automatizaciones HA
 
-YAML canónico: `home-assistant/includes/automations.yaml` → `/config/includes/automations.yaml`. Única automatización: sensibilidad Mariano según TV (`satellite1_tv_wake_word_sensitivity`; Slightly si `tv_ga_2` o Bravia on/playing, Moderately tras 5 min paradas). Sin mute, botones, Speaker ID ni hábitos.
+YAML canónico: `home-assistant/includes/automations.yaml` → `/config/includes/automations.yaml`. Única automatización de voz: sensibilidad Mariano según TV (`satellite1_tv_wake_word_sensitivity`; Slightly si `tv_ga_2` o Bravia on/playing, Moderately tras 5 min paradas). Sin mute, botones, Speaker ID ni hábitos.
+
+Packages (`home-assistant/packages/` → `/config/packages/`, `homeassistant.packages: !include_dir_named`): features autocontenidas. `tuya_watchdog.yaml`: watchdog de `light.luz_habitacion` (gracia 2 min, sonda 6668/tcp, `reload_config_entry` solo si la bombilla está en la LAN, backoff 2→60 min, máx. 3 recargas/h, historial en `sensor.tuya_watchdog_luz_habitacion`, pausa `input_boolean.tuya_watchdog_pausado`). Runbook: [docs/tuya-watchdog.md](docs/tuya-watchdog.md).
 
 Scripts Assist (solo voz/UI): `script.poner_radio` / `parar_radio` / `pon_la_radio`, `script.apagar_tele` / `encender_tele` (siempre `media_player.tv_ga_2`). Frases: `custom_sentences/es/{luces,tv,radio}.yaml`.
 
@@ -208,7 +215,10 @@ WayneHomeLab/
 │   │   └── wireguard.conf
 │   └── nodes/
 │       ├── core/                # RPi 5 (Proxmox host)
-│       │   ├── fix_proxmox_cluster.sh  # Fix cloud-init /etc/hosts bug (frecuente)
+│       │   ├── fix_proxmox_cluster.sh  # Fix permanente cloud-init /etc/hosts (user-data + guard systemd)
+│       │   ├── verify_iot_wifi.sh      # Diagnóstico Satellite1/lámpara/Tuya (Wi-Fi 2,4 GHz vs DHCP vs HA)
+│       │   ├── ensure_hosts.sh         # Guard /etc/hosts → waynelab-ensure-hosts (ExecStartPre pve-cluster)
+│       │   ├── systemd/pve-cluster-waynelab.conf  # Drop-in pve-cluster (self-heal, sin límite de reintentos)
 │       │   ├── setup_host.sh
 │       │   └── sysctl.conf
 │       ├── pihole/              # install_pihole.sh + pihole.toml.example
@@ -225,7 +235,10 @@ WayneHomeLab/
 │   │   ├── automations.yaml     # sensibilidad Mariano según TV (única)
 │   │   ├── scripts.yaml
 │   │   └── sensors.yaml
+│   ├── packages/
+│   │   └── tuya_watchdog.yaml   # watchdog light.luz_habitacion (tuya_local)
 │   └── secrets.yaml.example
+├── weather-intelligence/        # WIC v1 slim (Docker local; docs/wic.md)
 ├── voice-pipeline/              # Docker Compose STT/TTS (para RPi 3b cuando esté listo)
 │   ├── docker-compose.yaml      # Whisper + Piper Wyoming
 │   └── .env.example
@@ -243,6 +256,7 @@ WayneHomeLab/
     ├── runpod-train-mariano-movil.md
     ├── speaker-id-mariano.md
     ├── reservas-dhcp-bombillas-iot.md
+    ├── tuya-watchdog.md
     ├── api-costs.md
     └── job-finder.md
 ```
@@ -255,8 +269,11 @@ WayneHomeLab/
 - [x] WireGuard VM 102 (`.55`) + Caddy + peers + DNAT UDP 51820 — en producción — [docs/wireguard.md](docs/wireguard.md)
 - [x] Pi-hole local DNS `ha.waynehomelab.com` → `10.44.0.1` + HA Trust XFF (`192.168.1.55`)
 - [x] HA HTTPS remoto vía WireGuard (`https://ha.waynehomelab.com` con túnel; `verify_wireguard.sh` OK)
+- [ ] Weather Intelligence Center v1 slim: Docker local en el Mac (`weather-intelligence/`, rama `feature/wic-v1-slim`) — [docs/wic.md](docs/wic.md). Sin despliegue RPi/Caddy.
 - [ ] RPi 3b: instalar DietPi + Docker + `voice-pipeline/` (Whisper+Piper) para descargar HA VM
-- [ ] Bombilla Antela (Dormitorio): Tuya nube → entidad `light.bombilla_dormitorio`, luego Local Tuya IP `.122`. No agrupar con la lámpara del salón.
+- [x] Bombilla Antela (Dormitorio) en Tuya Local: `light.luz_habitacion` (`.118`). No agrupar con la lámpara del salón.
+- [x] Watchdog Tuya (`packages/tuya_watchdog.yaml`) desplegado — [docs/tuya-watchdog.md](docs/tuya-watchdog.md)
+- [ ] Bombilla Antela: reserva DHCP por MAC a `.118` en el router + ciclo de corriente (fuera de la LAN desde el 2026-10-28)
 - [ ] Wake word personalizada «Mariano» — ver [docs/wake-word-mariano.md](docs/wake-word-mariano.md) y `infrastructure/voice/wake-word/`
 - [x] Wake word "Mariano": infra en `infrastructure/voice/wake-word/` + runbook `docs/wake-word-mariano.md`
 - [x] Captura de muestras personales (34 WAV Assist) + export `export_personal_samples.sh`

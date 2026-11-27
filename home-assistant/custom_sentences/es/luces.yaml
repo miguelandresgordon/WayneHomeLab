@@ -18,6 +18,8 @@ intents:
           - "activa [la] (lámpara|lampara)"
           - "enciende [las] luces"
           - "enciende [las] luces [del] (salón|salon)"
+          # Verbo recortado/mal transcrito por Groq (F0, 2026-11-26)
+          - "(entiende|conciende|enciendera|enciéndeme|enciendeme) [la] (lámpara|lampara)"
 
   ApagaLaLampara:
     data:
@@ -30,6 +32,23 @@ intents:
           - "apaga [las] luces"
           - "apaga [las] luces [del] (salón|salon)"
           - "cierra [la] (lámpara|lampara)"
+          # Verbo recortado/mal transcrito por Groq (F0, 2026-11-26)
+          - "(apagada|apágala|apagala|apágame|apagame) [la] (lámpara|lampara)"
+
+  # Brillo con verbo recortado («Con la lámpara al 50%»). Sin frase estricta,
+  # el fuzzy matching de HA lo mandaba a PonRadioFavorita.
+  LamparaBrillo:
+    data:
+      - sentences:
+          - "<verbo_brillo> [el brillo de] [la] (lámpara|lampara) [del (salón|salon)] (al|a|el) {brillo}[%| por ciento]"
+      - sentences:
+          - "<verbo_brillo> [el brillo de] [la] (lámpara|lampara) [del (salón|salon)] (al|a|el) (mínimo|minimo)"
+        slots:
+          brillo: 1
+      - sentences:
+          - "<verbo_brillo> [el brillo de] [la] (lámpara|lampara) [del (salón|salon)] (al|a|el) (máximo|maximo)"
+        slots:
+          brillo: 100
 
   ToggleLaLampara:
     data:
@@ -39,3 +58,12 @@ intents:
           - "alterna [la] (lámpara|lampara)"
           - "conmuta [la] (lámpara|lampara)"
           - "toggle [la] (lámpara|lampara)"
+
+expansion_rules:
+  verbo_brillo: "(pon|ponme|ponla|con|o)"
+
+lists:
+  brillo:
+    range:
+      from: 1
+      to: 100

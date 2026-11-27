@@ -2,12 +2,18 @@
 # shellcheck shell=bash
 set -euo pipefail
 
-export LOG_LEVEL="$(bashio::config 'log_level')"
-export THRESHOLD="$(bashio::config 'threshold')"
-export MARGIN="$(bashio::config 'margin')"
-export MODEL_PATH="$(bashio::config 'model_path')"
-export PROFILES_PATH="$(bashio::config 'profiles_dir')/speaker_profiles.json"
-export NUM_THREADS="$(bashio::config 'num_threads')"
+LOG_LEVEL="$(bashio::config 'log_level')"
+export LOG_LEVEL
+THRESHOLD="$(bashio::config 'threshold')"
+export THRESHOLD
+MARGIN="$(bashio::config 'margin')"
+export MARGIN
+MODEL_PATH="$(bashio::config 'model_path')"
+export MODEL_PATH
+PROFILES_PATH="$(bashio::config 'profiles_dir')/speaker_profiles.json"
+export PROFILES_PATH
+NUM_THREADS="$(bashio::config 'num_threads')"
+export NUM_THREADS
 
 bashio::log.info "Starting Speaker ID Mariano on port 10400"
 bashio::log.info "Profiles: ${PROFILES_PATH}"

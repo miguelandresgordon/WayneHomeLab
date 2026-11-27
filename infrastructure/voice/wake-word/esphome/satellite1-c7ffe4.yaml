@@ -14,16 +14,18 @@ esphome:
 packages:
   FutureProofHomes.Satellite1:
     url: &repo_url https://github.com/futureproofhomes/satellite1-esphome
-    ref: &repo_ref staging
-    refresh: 1d
+    # Fijado al commit de staging con el que se compiló el firmware vivo
+    # (2026-09-10). «staging» a secas trae XMOS 1.1.0-beta y +5000 líneas:
+    # sin rollback OTA, solo cambiamos lo nuestro. Subir de versión = decisión aparte.
+    ref: &repo_ref 9814bf598976060a5a5b999448398877d15333e8
     files:
       # Main config files, don't remove
-    - config/satellite1.base.yaml
-    - config/common/dashboard_build.yaml
-    - path: config/common/components.external.yaml
-      vars:
-        ext_comp_repo_url: *repo_url
-        ext_comp_repo_ref: *repo_ref
+      - config/satellite1.base.yaml
+      - config/common/dashboard_build.yaml
+      - path: config/common/components.external.yaml
+        vars:
+          ext_comp_repo_url: *repo_url
+          ext_comp_repo_ref: *repo_ref
 
       ## OPTIONALLY, uncomment if want extra memory, wifi and xmos control of the device.
       # - config/common/debug.yaml
@@ -31,6 +33,9 @@ packages:
 
 logger:
   level: ${log_level}
+  logs:
+    # El sensor de luz avisa cada segundo («Sensors blacked out»): ruido en HA.
+    ltr_als_ps: ERROR
 
 ## API encryption is REQUIRED on this device (factory/Take Control).
 ## Without this key, Device Builder loops: RequiresEncryptionAPIError
@@ -89,3 +94,63 @@ select:
             id(hey_jarvis).set_probability_cutoff(212);   // 0.83
             id(mariano).set_probability_cutoff(217);      // 0.85
           }
+
+
+## Nivel del micro (F3, modo reunión automático en HA).
+## Canal 0 del XMOS (salida procesada) a 16 kHz, int32 estéreo intercalado.
+## El callback solo acumula; el sensor publica dBFS cada 2 s y resetea.
+globals:
+  - id: mic_sq_sum
+    type: double
+    restore_value: false
+    initial_value: '0.0'
+  - id: mic_sq_n
+    type: uint32_t
+    restore_value: false
+    initial_value: '0'
+
+microphone:
+  - id: !extend sat1_mics
+    on_data:
+      - lambda: |-
+          const int32_t *s = reinterpret_cast<const int32_t *>(x.data());
+          const size_t n = x.size() / sizeof(int32_t);
+          double acc = 0.0;
+          for (size_t i = 0; i < n; i += 2) {
+            const double v = s[i] / 2147483648.0;
+            acc += v * v;
+          }
+          id(mic_sq_sum) += acc;
+          id(mic_sq_n) += n / 2;
+
+sensor:
+  - platform: template
+    id: mic_level
+    name: "Mic level"
+    icon: mdi:microphone-settings
+    unit_of_measurement: dBFS
+    accuracy_decimals: 1
+    state_class: measurement
+    update_interval: 2s
+    lambda: |-
+      if (id(mic_sq_n) == 0) return {};
+      const double ms = id(mic_sq_sum) / id(mic_sq_n);
+      id(mic_sq_sum) = 0.0;
+      id(mic_sq_n) = 0;
+      return (float) (10.0 * log10(ms + 1e-12));
+
+## Wake word activo (F3, modo reunión). Desactiva los modelos sin parar
+## micro_wake_word: el micro sigue vivo y «Mic level» sigue midiendo.
+switch:
+  - platform: template
+    id: wake_word_enabled
+    name: "Wake word activo"
+    icon: mdi:account-voice
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+    on_turn_off:
+      - micro_wake_word.disable_model: mariano
+      - micro_wake_word.disable_model: okay_nabu
+      - micro_wake_word.disable_model: hey_jarvis
+    on_turn_on:
+      - micro_wake_word.enable_model: mariano

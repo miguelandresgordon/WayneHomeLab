@@ -1,0 +1,280 @@
+# Casa — controles del día a día (F5 esencial). Modo YAML, tema wayne_default.
+# Destino HAOS: /config/dashboards/casa.yaml (registrado en configuration.haos.yaml)
+title: Casa
+views:
+- title: Casa
+  path: inicio
+  icon: mdi:home-variant-outline
+  theme: wayne_default
+  type: sections
+  max_columns: 3
+  dense_section_placement: true
+  sections:
+  - type: grid
+    cards:
+    - type: heading
+      heading: AHORA SUENA
+      heading_style: subtitle
+      icon: mdi:music-note
+    - type: media-control
+      entity: media_player.satellite1
+      grid_options:
+        columns: full
+    - type: tile
+      entity: media_player.satellite1_c7ffe4_media_player
+      name: Volumen Satellite1
+      icon: mdi:volume-high
+      vertical: false
+      hide_state: true
+      features:
+      - type: media-player-volume-slider
+      grid_options:
+        columns: full
+  - type: grid
+    cards:
+    - type: heading
+      heading: LUCES
+      heading_style: subtitle
+      icon: mdi:lightbulb-outline
+    - type: tile
+      entity: light.yeelink_mono6_6409_light
+      name: Lámpara salón
+      features:
+      - type: light-brightness
+      grid_options:
+        columns: full
+    - type: tile
+      entity: light.luz_habitacion
+      name: Dormitorio
+      features:
+      - type: light-brightness
+      grid_options:
+        columns: full
+  - type: grid
+    cards:
+    - type: heading
+      heading: TELE
+      heading_style: subtitle
+      icon: mdi:television
+    - type: tile
+      entity: media_player.tv_ga_2
+      name: Tele
+      features:
+      - type: media-player-volume-slider
+      grid_options:
+        columns: full
+    - type: button
+      name: PS5
+      icon: mdi:sony-playstation
+      tap_action:
+        action: perform-action
+        perform_action: script.poner_entrada_tele
+        data:
+          entrada: PlayStation 5
+      grid_options:
+        columns: 6
+        rows: 1
+    - type: button
+      name: TV GA
+      icon: mdi:google-play
+      tap_action:
+        action: perform-action
+        perform_action: script.poner_entrada_tele
+        data:
+          entrada: TV GA
+      grid_options:
+        columns: 6
+        rows: 1
+  - type: grid
+    cards:
+    - type: heading
+      heading: RADIO
+      heading_style: subtitle
+      icon: mdi:radio
+    - type: button
+      name: SER
+      icon: mdi:radio
+      show_state: false
+      icon_height: 28px
+      tap_action:
+        action: perform-action
+        perform_action: script.poner_radio
+        data:
+          emisora: ser
+      grid_options:
+        columns: 4
+        rows: 2
+    - type: button
+      name: Radio 3
+      icon: mdi:radio-tower
+      show_state: false
+      icon_height: 28px
+      tap_action:
+        action: perform-action
+        perform_action: script.poner_radio
+        data:
+          emisora: radio3
+      grid_options:
+        columns: 4
+        rows: 2
+    - type: button
+      name: RadioVoz
+      icon: mdi:radio
+      show_state: false
+      icon_height: 28px
+      tap_action:
+        action: perform-action
+        perform_action: script.poner_radio
+        data:
+          emisora: radiovoz
+      grid_options:
+        columns: 4
+        rows: 2
+    - type: button
+      name: Filispim
+      icon: mdi:radio
+      show_state: false
+      icon_height: 28px
+      tap_action:
+        action: perform-action
+        perform_action: script.poner_radio
+        data:
+          emisora: filispim
+      grid_options:
+        columns: 4
+        rows: 2
+    - type: button
+      name: Almenara
+      icon: mdi:radio
+      show_state: false
+      icon_height: 28px
+      tap_action:
+        action: perform-action
+        perform_action: script.poner_radio
+        data:
+          emisora: almenara
+      grid_options:
+        columns: 4
+        rows: 2
+    - type: button
+      name: Parar
+      icon: mdi:stop
+      show_state: false
+      icon_height: 28px
+      tap_action:
+        action: perform-action
+        perform_action: script.parar_radio
+        data: {}
+      grid_options:
+        columns: 4
+        rows: 2
+  - type: grid
+    cards:
+    - type: heading
+      heading: SPOTIFY
+      heading_style: subtitle
+      icon: mdi:spotify
+    - type: button
+      name: En bucle
+      icon: mdi:repeat
+      show_state: false
+      icon_height: 28px
+      tap_action:
+        action: perform-action
+        perform_action: script.musica_buscar_y_poner
+        data:
+          tipo: playlist
+          nombre: En bucle
+      grid_options:
+        columns: 4
+        rows: 2
+    - type: button
+      name: Alicia + Miguel
+      icon: mdi:heart-outline
+      show_state: false
+      icon_height: 28px
+      tap_action:
+        action: perform-action
+        perform_action: script.musica_buscar_y_poner
+        data:
+          tipo: playlist
+          nombre: Alicia + Miguel
+      grid_options:
+        columns: 4
+        rows: 2
+    - type: button
+      name: Favoritas
+      icon: mdi:star-outline
+      show_state: false
+      icon_height: 28px
+      tap_action:
+        action: perform-action
+        perform_action: script.musica_buscar_y_poner
+        data:
+          tipo: playlist
+          nombre: All favorited tracks
+      grid_options:
+        columns: 4
+        rows: 2
+    - type: button
+      name: Anterior
+      icon: mdi:skip-previous
+      show_name: false
+      icon_height: 28px
+      tap_action:
+        action: perform-action
+        perform_action: media_player.media_previous_track
+        target:
+          entity_id: media_player.satellite1
+      grid_options:
+        columns: 4
+        rows: 1
+    - type: button
+      name: Play/Pausa
+      icon: mdi:play-pause
+      show_name: false
+      icon_height: 28px
+      tap_action:
+        action: perform-action
+        perform_action: media_player.media_play_pause
+        target:
+          entity_id: media_player.satellite1
+      grid_options:
+        columns: 4
+        rows: 1
+    - type: button
+      name: Siguiente
+      icon: mdi:skip-next
+      show_name: false
+      icon_height: 28px
+      tap_action:
+        action: perform-action
+        perform_action: media_player.media_next_track
+        target:
+          entity_id: media_player.satellite1
+      grid_options:
+        columns: 4
+        rows: 1
+  - type: grid
+    cards:
+    - type: heading
+      heading: ACCIONES
+      heading_style: subtitle
+      icon: mdi:lightning-bolt-outline
+    - type: tile
+      entity: input_boolean.modo_reunion
+      name: Modo reunión
+      icon: mdi:account-group
+      grid_options:
+        columns: full
+    - type: button
+      name: Apagar todo
+      icon: mdi:power
+      tap_action:
+        action: perform-action
+        perform_action: script.apagar_todo
+        confirmation:
+          text: ¿Apagar lámpara, tele y música?
+      grid_options:
+        columns: full
+        rows: 1

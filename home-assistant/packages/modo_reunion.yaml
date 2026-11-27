@@ -1,0 +1,188 @@
+# Modo reunión (F3) — desactiva el wake word del Satellite1 mientras dura.
+#
+# Entrada: voz («activa el modo reunión»), dashboard, o automática si el micro
+#   capta habla alta sostenida sin TV ni reproducción propia (guardia de TV).
+# Salida (sin wake word no hay voz directa):
+#   - botón del dashboard (input_boolean)
+#   - doble pulsación del botón Action del Satellite1 (sin otro uso en el firmware)
+#   - pulsación simple del Action + «desactiva el modo reunión» (abre la escucha)
+#   - temporizador de 2 h
+#   - 10 min de silencio (< −38 dBFS)
+# Estado: aro LED ámbar tenue + dashboard.
+#
+# Requiere el firmware F3 (OTA #1): switch «Wake word activo» y sensor
+# «Mic level». Umbrales en dBFS: calibrados con el histórico de
+# sensor.satellite1_c7ffe4_mic_level (ver docs/wake-word-mariano.md).
+# Destino HAOS: /config/packages/modo_reunion.yaml
+
+input_boolean:
+  modo_reunion:
+    name: Modo reunión
+    icon: mdi:account-group
+
+timer:
+  modo_reunion:
+    name: Modo reunión (fin automático)
+    duration: "02:00:00"
+    restore: true
+
+automation:
+  - id: modo_reunion_on
+    alias: "Modo reunión — activar"
+    mode: restart
+    triggers:
+      - trigger: state
+        entity_id: input_boolean.modo_reunion
+        to: "on"
+    actions:
+      - action: switch.turn_off
+        target:
+          entity_id: switch.satellite1_c7ffe4_wake_word_activo
+        continue_on_error: true
+      - action: timer.start
+        target:
+          entity_id: timer.modo_reunion
+      - action: light.turn_on
+        target:
+          entity_id: light.satellite1_c7ffe4_led_ring
+        data:
+          rgb_color: [255, 173, 31]  # ámbar del tema
+          brightness_pct: 15
+        continue_on_error: true
+
+  - id: modo_reunion_off
+    alias: "Modo reunión — desactivar"
+    mode: restart
+    triggers:
+      - trigger: state
+        entity_id: input_boolean.modo_reunion
+        to: "off"
+    actions:
+      - action: switch.turn_on
+        target:
+          entity_id: switch.satellite1_c7ffe4_wake_word_activo
+        continue_on_error: true
+      - action: timer.cancel
+        target:
+          entity_id: timer.modo_reunion
+        continue_on_error: true
+      - action: light.turn_off
+        target:
+          entity_id: light.satellite1_c7ffe4_led_ring
+        continue_on_error: true
+
+  - id: modo_reunion_fin_temporizador
+    alias: "Modo reunión — fin por temporizador (2 h)"
+    triggers:
+      - trigger: event
+        event_type: timer.finished
+        event_data:
+          entity_id: timer.modo_reunion
+    actions:
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.modo_reunion
+
+  - id: modo_reunion_boton
+    alias: "Modo reunión — doble pulsación del botón Action"
+    triggers:
+      - trigger: state
+        entity_id: event.satellite1_c7ffe4_action_button_press
+        attribute: event_type
+        to: double_press
+      - trigger: state
+        entity_id: event.satellite1_c7ffe4_action_button_press
+    conditions:
+      - condition: template
+        value_template: "{{ trigger.to_state.attributes.event_type == 'double_press' }}"
+    actions:
+      - action: input_boolean.toggle
+        target:
+          entity_id: input_boolean.modo_reunion
+
+  - id: modo_reunion_silencio
+    alias: "Modo reunión — salir tras 10 min de silencio"
+    triggers:
+      - trigger: numeric_state
+        entity_id: sensor.satellite1_c7ffe4_mic_level
+        below: -38
+        for: "00:10:00"
+    conditions:
+      - condition: state
+        entity_id: input_boolean.modo_reunion
+        state: "on"
+    actions:
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.modo_reunion
+
+  # Entrada automática con histéresis: > −22 dBFS sostenido 2 min (salida a
+  # < −38 dBFS 10 min). Nunca con la tele encendida (guardia de TV) ni con el
+  # Satellite1 reproduciendo radio/música.
+  - id: modo_reunion_auto
+    alias: "Modo reunión — entrar solo con habla alta sostenida"
+    mode: single
+    triggers:
+      - trigger: numeric_state
+        entity_id: sensor.satellite1_c7ffe4_mic_level
+        above: -22
+        for: "00:02:00"
+    conditions:
+      - condition: state
+        entity_id: input_boolean.modo_reunion
+        state: "off"
+      - condition: template
+        value_template: >-
+          {{ states('media_player.tv_ga_2') not in ['on', 'playing']
+             and states('media_player.bravia_kd_43xf8596') not in ['on', 'playing']
+             and states('media_player.satellite1') != 'playing'
+             and states('media_player.satellite1_c7ffe4_media_player') != 'playing' }}
+    actions:
+      - action: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.modo_reunion
+      - action: logbook.log
+        data:
+          name: Modo reunión
+          message: "activado solo (habla alta sostenida sin TV ni música)"
+          entity_id: input_boolean.modo_reunion
+
+  # El firmware redibuja el aro en sus eventos: reponer el ámbar si se apaga.
+  - id: modo_reunion_led
+    alias: "Modo reunión — mantener LED ámbar"
+    mode: single
+    triggers:
+      - trigger: state
+        entity_id: light.satellite1_c7ffe4_led_ring
+        to: "off"
+        for: "00:00:03"
+    conditions:
+      - condition: state
+        entity_id: input_boolean.modo_reunion
+        state: "on"
+    actions:
+      - action: light.turn_on
+        target:
+          entity_id: light.satellite1_c7ffe4_led_ring
+        data:
+          rgb_color: [255, 173, 31]
+          brightness_pct: 15
+        continue_on_error: true
+
+intent_script:
+  ModoReunionOn:
+    description: Activa el modo reunión (desactiva el wake word)
+    action:
+      - action: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.modo_reunion
+    speech:
+      text: "Modo reunión activado. Para salir, pulsa dos veces el botón."
+  ModoReunionOff:
+    description: Desactiva el modo reunión
+    action:
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.modo_reunion
+    speech:
+      text: "Modo reunión desactivado. Te vuelvo a escuchar."

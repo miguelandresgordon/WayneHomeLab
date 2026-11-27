@@ -1,6 +1,6 @@
-# =========================
+# ==================
 # macOS
-# =========================
+# ==================
 .DS_Store
 .AppleDouble
 .LSOverride
@@ -8,16 +8,16 @@
 .Spotlight-V100
 .Trashes
 
-# =========================
+# ==================
 # VS Code
-# =========================
+# ==================
 .vscode/settings.json
 .vscode/launch.json
 *.code-workspace
 
-# =========================
+# ==================
 # Python
-# =========================
+# ==================
 __pycache__/
 *.py[cod]
 *.egg-info/
@@ -25,9 +25,9 @@ __pycache__/
 venv/
 .pytest_cache/
 
-# =========================
+# ==================
 # Secrets & Credentials
-# =========================
+# ==================
 home-assistant/secrets.yaml
 infrastructure/voice/wake-word/esphome/secrets.yaml
 voice-pipeline/.env
@@ -42,9 +42,9 @@ id_rsa
 id_ed25519
 .ssh/
 
-# =========================
+# ==================
 # Home Assistant
-# =========================
+# ==================
 home-assistant/.storage/
 home-assistant/home-assistant_v2.db
 home-assistant/home-assistant_v2.db-shm
@@ -52,23 +52,23 @@ home-assistant/home-assistant_v2.db-wal
 home-assistant/tts/
 home-assistant/blueprints/
 
-# =========================
+# ==================
 # Proxmox / VM Images
-# =========================
+# ==================
 *.qcow2
 *.img
 *.iso
 *.vmdk
 
-# =========================
+# ==================
 # Docker
-# =========================
+# ==================
 voice-pipeline/data/
 voice-pipeline/models/
 
-# =========================
+# ==================
 # Job Finder
-# =========================
+# ==================
 job-finder/.env
 job-finder/data/
 job-finder/*.db
@@ -78,15 +78,15 @@ job-finder/docs/f8-trial-log.md
 job-finder/safari-extension/**/xcuserdata/
 job-finder/safari-extension/**/DerivedData/
 
-# =========================
+# ==================
 # Logs
-# =========================
+# ==================
 *.log
 logs/
 
-# =========================
+# ==================
 # Wake word models (trained locally)
-# =========================
+# ==================
 infrastructure/voice/wake-word/models/*.tflite
 infrastructure/voice/wake-word/models/mariano.json
 infrastructure/voice/wake-word/personal_samples/*.wav
@@ -98,14 +98,36 @@ infrastructure/voice/speaker-id/models/
 infrastructure/voice/speaker-id/export/
 infrastructure/voice/speaker-id/samples/
 
-# =========================
+# ==================
 # Misc
-# =========================
+# ==================
 *.swp
 *.swo
 *~
 .env
 .env.local
 
+# Weather Intelligence Center (local)
+weather-intelligence/node_modules/
+weather-intelligence/web/dist/
+weather-intelligence/data/*.db
+weather-intelligence/data/*.db-*
+weather-intelligence/data/*.db-shm
+weather-intelligence/data/*.db-wal
+
 # Third-party token extractor (local only)
 Xiaomi-cloud-tokens-extractor/
+
+# Listas de la biblioteca de Spotify (datos personales; generado)
+home-assistant/custom_sentences/es/musica_biblioteca.yaml
+
+# Datos de reentrenamiento Mariano (audio; nunca al repo)
+infrastructure/voice/wake-word/retrain_data/
+
+# Tarjetas de terceros descargadas con checksum (fetch_frontend_vendor.sh)
+home-assistant/www/wayne/vendor/
+
+# Laboratorio de hacking (F7): clave Mullvad y trabajo local
+hacking-lab/.env
+hacking-lab/workspace/*
+!hacking-lab/workspace/.gitkeep

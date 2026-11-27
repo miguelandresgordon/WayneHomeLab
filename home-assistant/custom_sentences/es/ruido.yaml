@@ -1,0 +1,15 @@
+# Frases Assist (ES) — alucinaciones típicas de Whisper con silencio o TV.
+# Sin frase estricta, el fuzzy matching de HA las convertía en órdenes
+# («Gracias por ver el video.» -> PonRadioFavorita, 2026-11-26).
+# Destino HAOS: /config/custom_sentences/es/ruido.yaml
+language: "es"
+
+intents:
+  IgnorarRuido:
+    data:
+      - sentences:
+          - "gracias"
+          - "[muchas] gracias por ver el (video|vídeo) [suscríbete al canal]"
+          - "suscríbete al canal"
+          - "subtítulos realizados por la comunidad de amara[.org| punto org]"
+          - "(aplausos|música|musica|risas|adiós|adios)"

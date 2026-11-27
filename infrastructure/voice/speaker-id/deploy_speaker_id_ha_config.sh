@@ -9,6 +9,7 @@
 # Layout desplegado (alineado con home-assistant/includes/ del repo):
 #   /config/configuration.yaml   ← home-assistant/configuration.haos.yaml
 #   /config/includes/*.yaml      ← home-assistant/includes/*.yaml (subcarpeta)
+#   /config/packages/*.yaml      ← home-assistant/packages/*.yaml
 #   /config/themes/*.yaml        ← home-assistant/themes/*.yaml
 
 set -euo pipefail
@@ -44,11 +45,12 @@ fi
 
 log "Backup y despliegue → ${HA_USER}@${HA_HOST}:${HA_CONFIG}"
 
-ssh "${HA_USER}@${HA_HOST}" "mkdir -p ${HA_CONFIG}/backups ${HA_CONFIG}/includes ${HA_CONFIG}/themes /share/assist_pipeline"
+ssh "${HA_USER}@${HA_HOST}" "mkdir -p ${HA_CONFIG}/backups ${HA_CONFIG}/includes ${HA_CONFIG}/packages ${HA_CONFIG}/themes /share/assist_pipeline"
 
 ssh "${HA_USER}@${HA_HOST}" "
   cp -a ${HA_CONFIG}/configuration.yaml ${HA_CONFIG}/backups/configuration.yaml.${TS} 2>/dev/null || true
   cp -a ${HA_CONFIG}/includes ${HA_CONFIG}/backups/includes.${TS} 2>/dev/null || true
+  cp -a ${HA_CONFIG}/packages ${HA_CONFIG}/backups/packages.${TS} 2>/dev/null || true
   cp -a ${HA_CONFIG}/.storage/core.config_entries ${HA_CONFIG}/backups/core.config_entries.${TS} 2>/dev/null || true
 "
 
@@ -65,10 +67,20 @@ for f in "${INCLUDE_FILES[@]}"; do
   scp "$src" "${HA_USER}@${HA_HOST}:${HA_CONFIG}/includes/${f}"
 done
 
+# configuration.yaml carga packages/ con !include_dir_named (puede estar vacío)
+shopt -s nullglob
+for src in "${REPO_ROOT}"/home-assistant/packages/*.yaml; do
+  log "Copiando packages/$(basename "$src")..."
+  scp "$src" "${HA_USER}@${HA_HOST}:${HA_CONFIG}/packages/$(basename "$src")"
+done
+shopt -u nullglob
+
 scp "${REPO_ROOT}/home-assistant/themes/wayne_default.yaml" \
   "${HA_USER}@${HA_HOST}:${HA_CONFIG}/themes/wayne_default.yaml"
 
 log "Registrando integración Folder Watcher (config entry)..."
+# Mixed expansion on purpose: ${HA_CONFIG}/${FOLDER_WATCHER_ENTRY_ID} local, \$vars remote.
+# shellcheck disable=SC2087
 ssh "${HA_USER}@${HA_HOST}" bash -s <<EOF
 set -euo pipefail
 CFG="${HA_CONFIG}/.storage/core.config_entries"

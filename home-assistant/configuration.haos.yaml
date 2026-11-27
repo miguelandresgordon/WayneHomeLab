@@ -5,7 +5,8 @@
 # Layout en HAOS (alineado con home-assistant/includes/ del repo):
 #   /config/configuration.yaml   ← este archivo
 #   /config/includes/*.yaml      ← home-assistant/includes/*.yaml (subcarpeta, no plano)
-#   /config/secrets.yaml         ← NO se despliega (gitignored; se gestiona en HAOS)
+#   /config/packages/*.yaml      ← home-assistant/packages/*.yaml (features autocontenidas)
+#   /config/secrets.yaml        ← NO se despliega (gitignored; se gestiona en HAOS)
 #
 # No incluir bloque http:: HA 2026.x lo ignora (repair) y se elimina en 2027.2.
 # Proxy Caddy: Ajustes → Sistema → Red → Trust X-Forwarded-For + 192.168.1.55
@@ -19,6 +20,9 @@ homeassistant:
   allowlist_external_dirs:
     - /share/assist_pipeline
     - /share/speaker-id
+  # Una feature por archivo (helpers + automatizaciones + sensores juntos).
+  # tuya_watchdog.yaml: watchdog de light.luz_habitacion (docs/tuya-watchdog.md)
+  packages: !include_dir_named packages
 
 # HA 2026.8+: HTTP / reverse proxy in Settings → System → Network
 # Trust X-Forwarded-For + trusted_proxies: 192.168.1.55 (Caddy on WireGuard VM)
@@ -26,6 +30,35 @@ homeassistant:
 
 frontend:
   themes: !include_dir_merge_named themes
+  # Fuentes locales del tema wayne_default (sin peticiones externas)
+  extra_module_url:
+    - /local/wayne/wayne-fonts.js
+    # apexcharts-card v2.2.3 local (infrastructure/ha/fetch_frontend_vendor.sh)
+    - /local/wayne/vendor/apexcharts-card.js
+
+# Dashboards YAML versionados (home-assistant/dashboards/). Los de la UI siguen
+# en modo storage. Sin require_admin: Alicia (no admin) los ve.
+lovelace:
+  mode: storage
+  dashboards:
+    wayne-casa:
+      mode: yaml
+      title: Casa
+      icon: mdi:home-variant-outline
+      show_in_sidebar: true
+      filename: dashboards/casa.yaml
+    wayne-tiempo:
+      mode: yaml
+      title: Tiempo
+      icon: mdi:weather-partly-cloudy
+      show_in_sidebar: true
+      filename: dashboards/tiempo.yaml
+    wayne-mariano:
+      mode: yaml
+      title: Mariano
+      icon: mdi:account-voice
+      show_in_sidebar: true
+      filename: dashboards/mariano.yaml
 
 automation: !include includes/automations.yaml
 script: !include includes/scripts.yaml
@@ -44,6 +77,8 @@ logger:
   logs:
     homeassistant.components.assist_pipeline: info
     homeassistant.components.conversation: info
+    # Watchdog Tuya (system_log.write): caídas/reconexiones en info, intentos en warning
+    tuya_watchdog: info
   # Diagnóstico Antela/Tuya (quitar tras depurar):
   #   homeassistant.components.tuya: debug
   #   custom_components.tuya_local: debug

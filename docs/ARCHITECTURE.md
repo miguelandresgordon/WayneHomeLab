@@ -56,7 +56,7 @@ graph LR
 | RPi 3b | 192.168.1.101 | waynelab-edge | Edge (no operativo aún) |
 | Satellite1 | 192.168.1.85 | — | ESPHome mic + speaker |
 | Lámpara Xiaomi | 192.168.1.121 | — | Xiaomi Miot Auto |
-| Bombilla Antela | 192.168.1.122 | — | Tuya (pendiente Local Tuya) |
+| Bombilla Antela | 192.168.1.118 | — | Tuya Local (`light.luz_habitacion`) + watchdog ([tuya-watchdog.md](tuya-watchdog.md)) |
 | MacBook | DHCP | — | Development |
 | Training PC | DHCP | — | Windows 11, fallback train CPU |
 
@@ -144,6 +144,10 @@ Entity IDs reales documentados en `AGENTS.md` y `includes/scripts.yaml`.
 | Network volume 200 GB | Primer train con AudioSet+FMA+CHiME supera 100 GB si no se borran tars |
 | No Spot / Instant Cluster | Preemption o multi-nodo innecesario para MicroWakeWord |
 
+## Weather Intelligence Center (desarrollo local)
+
+App propia (Vite + Hono) en `weather-intelligence/`. Se ejecuta **solo en Docker Desktop** en el Mac (`feature/wic-v1-slim`). No corre en la RPi 3b ni en Proxmox. Runbook: [wic.md](wic.md).
+
 ## Related docs
 
 - [setup-desde-cero-ssd-pi5-haos.md](setup-desde-cero-ssd-pi5-haos.md)
@@ -154,3 +158,4 @@ Entity IDs reales documentados en `AGENTS.md` y `includes/scripts.yaml`.
 - [api-costs.md](api-costs.md)
 - [reservas-dhcp-bombillas-iot.md](reservas-dhcp-bombillas-iot.md)
 - [job-finder.md](job-finder.md)
+- [wic.md](wic.md)

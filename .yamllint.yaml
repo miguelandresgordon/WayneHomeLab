@@ -1,0 +1,24 @@
+# yamllint — WayneHomeLab (HA + ESPHome + Compose)
+# HA tags (!include, !secret, !extend, !lambda) are fine for yamllint.
+extends: default
+
+ignore: |
+  .venv/
+  job-finder/
+  weather-intelligence/
+  Xiaomi-cloud-tokens-extractor/
+  node_modules/
+  .esphome/
+
+rules:
+  line-length: disable          # Jinja templates and URLs are long by nature
+  document-start: disable       # HA/ESPHome files never start with ---
+  truthy:
+    allowed-values: ["true", "false"]
+    check-keys: false           # Compose/GitHub-style `on:` keys
+  comments:
+    min-spaces-from-content: 1
+  comments-indentation: disable
+  indentation:
+    spaces: 2
+    indent-sequences: consistent

@@ -109,6 +109,7 @@ def _load_yaml_with_ha_tags(path: Path) -> dict:
 
     HAYamlLoader.add_constructor("!include", _include_constructor)
     HAYamlLoader.add_constructor("!include_dir_merge_named", _include_constructor)
+    HAYamlLoader.add_constructor("!include_dir_named", _include_constructor)
     HAYamlLoader.add_constructor("!secret", _secret_constructor)
 
     data = yaml.load(text, Loader=HAYamlLoader)
@@ -371,7 +372,17 @@ class TestVoiceAssistChecklist:
 
 class TestCaptureWorkflow:
     def test_run_capture_workflow_check_exits_zero(self) -> None:
+        import os
         import subprocess
+
+        trainer = Path(
+            os.environ.get(
+                "MWW_TRAINER_DIR",
+                str(Path.home() / "Proyectos" / "microWakeWord-Trainer-AppleSilicon"),
+            )
+        )
+        if not trainer.is_dir():
+            pytest.skip(f"local trainer not installed ({trainer}); env probe only")
 
         result = subprocess.run(
             [str(WAKE_WORD_DIR / "run_capture_workflow.sh"), "check"],
